@@ -150,8 +150,19 @@ Constraints learned the hard way — do not undo:
   footprint actually compiled; names from a different one can mis-map pads. (D-023)
 - **Parts-engine hits require an exact package-string match.** A part-number hit
   with a different package is a rejection, not a warning. (D-021)
-- `server/data/*-cache.json` are committed so re-runs are deterministic and
-  offline. Delete to re-fetch.
+- `server/data/*-cache.json` and `server/data/http-cache/` are committed so
+  re-runs are deterministic and offline. Delete to re-fetch.
+- **A `real` claim may only be made from compiled ground truth** (D-027). Never
+  infer one field's provenance from another's. An unread flag is worse than no
+  flag — that's what caused the false `model_3d.real = true`.
+- **Never cache a failed HTTP response** (D-028) — it pins a transient outage
+  permanently. A real 504 from the parts service is covered by a test.
+- **Curated pinouts are keyed by part number, not package** (D-030), and each
+  entry needs `evidence` that pad numbering corresponds to the compiled footprint.
+- `runDrc` must `await` — `runAllChecks` is async, and an unawaited call inspects
+  as an empty result, silently reporting "no DRC findings" for every board.
+- Determinism is **per-mode**: offline↔offline and online↔online are
+  byte-identical; online↔offline are not (D-029). Don't claim more than that.
 
 ## Failure handling (non-negotiable)
 

@@ -1,0 +1,10 @@
+{
+  "url": "https://easyeda.com/api/components/search",
+  "status": 200,
+  "statusText": "",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "bytes": 1601,
+  "cachedAt": "2026-08-08T21:54:38.926Z"
+}

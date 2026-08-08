@@ -15,6 +15,8 @@ import crypto from "node:crypto";
 import { renderCircuitDiagram } from "../render/circuitDiagram.js";
 import { collectTscircuitIssues } from "../design/tscircuitErrors.js";
 import { assertPadIntegrity, assertNetsRealized } from "../design/assertions.js";
+import { runDrc } from "../design/drc.js";
+import { confirmModel3d } from "../design/resolver.js";
 import { generateTscircuitSource } from "./toTscircuit.js";
 
 const sha256 = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
@@ -70,6 +72,14 @@ export async function compileDesign({ upstream, resolvedComponents, outDir }) {
 
   // --- ingest tscircuit's own errors --------------------------------------
   const issues = collectTscircuitIssues(circuitJson);
+
+  // --- confirm 3D-model claims against compiled ground truth --------------
+  // Must run before the manifest is written: resolution leaves model_3d
+  // unconfirmed, and this is the only place the claim is allowed to be made.
+  const model3dConfirmation = confirmModel3d(circuitJson, resolvedComponents);
+
+  // --- DRC ----------------------------------------------------------------
+  const drc = await runDrc(circuitJson);
 
   // --- independent assertions (do NOT trust silence) ----------------------
   const expectedPads = new Map();
@@ -169,7 +179,12 @@ export async function compileDesign({ upstream, resolvedComponents, outDir }) {
     notes.push(`netlist export failed: ${error.message}`);
   }
 
-  const allErrors = [...issues.errors, ...padCheck.errors, ...netCheck.errors];
+  const allErrors = [
+    ...issues.errors,
+    ...padCheck.errors,
+    ...netCheck.errors,
+    ...drc.errors,
+  ];
 
   return {
     artifacts,
@@ -177,12 +192,15 @@ export async function compileDesign({ upstream, resolvedComponents, outDir }) {
     pinMaps,
     compileMs,
     tscircuitIssues: issues,
+    drc,
+    model3dConfirmation,
     assertions: {
       padIntegrity: padCheck,
       netsRealized: netCheck,
       passed: padCheck.ok && netCheck.ok,
     },
     errors: allErrors,
+    warnings: [...drc.warnings, ...model3dConfirmation.errors],
     notes,
     stats: {
       elements: circuitJson.length,

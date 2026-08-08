@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phases 1–5 complete. Stop here for the checkpoint review before Phase 6.
+**Status:** Phases 1-5.6 complete + Phase 6 first slice. Checkpoint review due.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -133,8 +133,25 @@ Push both through: parse → resolve (real-first, mock-fallback-per-field) → v
 
 **Definition of done:** working code in the repo; all 4 output files present for both fixtures with a manifest; the manifest/design record shows per-field resolution source for every component (not a single mock/real flag); the `SOT-23-6`-containing fixture demonstrates at least one component with a genuinely real (not mocked) footprint end-to-end; `docs/POC_RESULTS.md` stating exactly what resolved for real, what fell back to mock and why, and confirmation the 4 known bugs were caught. **Do not report Phase 5 as successful on the basis of a fully-mocked design when real resolution was available and unused.**
 
-### Phase 6 — Broader parts coverage (post-checkpoint, deferred)
-Beyond what the cached `jlcpcb:` engine already resolves: additional datasheet verification for parts the engine can't confidently match, broader catalogue sources if needed, and hardening the resolution pipeline for parts outside the current fixture set. Decision on scope/approach at checkpoint review.
+### Phase 5.5 — Wire in DRC (small, before Phase 6)
+`@tscircuit/checks` is already integrated per Phase 2 but not invoked — `DRC_FAILURE` never fires. This is closing a dead path in the existing taxonomy, not new scope: call the existing checks against both Phase 5 fixtures and confirm `DRC_FAILURE` populates correctly when expected.
+**Definition of done:** DRC checks run as part of the pipeline; at least one deliberately-bad test case (can reuse a known-bug fixture) confirms `DRC_FAILURE` fires.
+
+### Phase 5.6 — Fix resolution-integrity defects (before Phase 6 continues)
+Two real defects surfaced by the resolution audit — both must be fixed before Phase 6 builds further on top of this layer:
+
+1. **False `real: true` claim on 3D models.** `resolver.js:100` sets `model_3d.source` equal to the footprint's source with a `pendingCompileConfirmation` flag that's written once and never read; `compile.js` counts `cad_components` but never feeds the result back to correct the manifest. This produced a false-real claim (U6 reported `real: true` with no actual 3D model) — exactly the failure mode this whole system exists to prevent (section 4/14). Fix: the flag must actually gate the claim, or the manifest must be corrected post-compile from ground truth (actual `cad_components` presence), not from an unverified pre-compile guess.
+2. **False determinism/offline claim.** Only the LCSC code and pin names are cached (`parts-cache.json`, `pinout-cache.json`) — footprint geometry and 3D model are fetched live at compile time from `registry-api.tscircuit.com` and `modules.easyeda.com`, no local cache. D-011's offline/deterministic intent is only half-implemented. Fix: cache resolved footprint geometry and 3D model data locally after first fetch (same pattern as the well-known `jlcparts` project — download once, query locally), so re-runs are genuinely deterministic and don't depend on tscircuit's community infrastructure staying up. Note: this infrastructure has been shut down before under similar circumstances (a comparable community JLCPCB-data tool was taken down in 2022) — local caching also reduces that exposure, not just a purity concern.
+
+**On data source (resolved, not changing):** JLCPCB has an official Components API, but it's partner-gated (approval tied to order history/business relationship via api.jlcpcb.com) — not obtainable in this timeline and not guaranteed at all. The current `jlcsearch.tscircuit.com` → LCSC/EasyEDA chain is the same category of community-standard approach the wider ecosystem relies on (no meaningful public alternative exists). Not changing the source. Optionally, applying for official JLCPCB API access is worth doing in parallel as a non-blocking future-hardening step — not Phase 6 work.
+
+**Definition of done:** manifest `real` claims are verified against actual compiled output, not pre-compile assumptions (add a test proving a case like U6 now reports correctly); a second run of an already-resolved fixture produces identical output with zero new network calls for previously-resolved components.
+
+### Phase 6 — Pin-name resolution via datasheet mux tables (post-checkpoint)
+**Reframed from "broader parts coverage" now that Phase 5 proved coverage is already strong (18/19 parts resolve via the cached engine).** The actual remaining gap is structural: upstream logical pin names (`SDA`, `MOSI`) vs. physical pin schemes that don't share that vocabulary — BGA ball coordinates (`A1`), MCU ports (`PTA0`), or footprints with only positional pins (e.g. `sot23_6`, which cost `HY2111-GB` 0/2 real pin names despite resolving via the most-trusted curated path). Requires per-part datasheet mux tables, not a generic algorithm.
+
+First concrete item: verified pin names for the curated `sot23_6` entry (and any other curated-table entries with the same positional-only gap) — small, well-scoped, a good first slice of this phase rather than a standalone patch. Don't borrow names from a different footprint than the one actually compiled (D-023's rule stands) — the fix is adding real data to the curated entry, not bypassing the rule.
+**Definition of done:** at least the `sot23_6`-based fixtures show real (not positional-fallback) pin names where a verified datasheet mapping exists; approach documented for extending to the BGA/MCU cases.
 
 ---
 
@@ -163,9 +180,11 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
-- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless+offline)*
-- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion)*
-- [x] Phase 4 — Architecture doc *(`docs/ARCHITECTURE.md`)*
-- [x] Phase 5 — Minimal POC *(rc_car + smart_dustbin: 4/4 outputs each, 10/10 real footprints, 4 known bugs caught; `npm test` → 41/41)*
-- [ ] Phase 6 — Parts resolution (deferred, post-checkpoint)
+- [ ] Phase 1 — Repo & job skeleton
+- [ ] Phase 2 — tscircuit feasibility report
+- [ ] Phase 3 — ValidatedDesign schema
+- [ ] Phase 4 — Architecture doc
+- [x] Phase 5 — Minimal POC (real-first resolution: rc_car.json + smart_dustbin.json end-to-end, 18/19 parts resolved for real; validator proven against noise_pollution_monitor.json, all 4 known bugs + 5th I2C SCL↔SDA bug caught)
+- [x] Phase 5.5 — DRC wired in *(DRC_FAILURE proven to fire on overlapping components)*
+- [x] Phase 5.6 — Resolution-integrity fixes *(3D now 9/10 verified from compiled output; offline run = 0 network calls)*
+- [~] Phase 6 — Pin-name resolution *(first slice done: HY2111-GB 0/2 → 2/2 real. BGA/MCU mux tables remain)*

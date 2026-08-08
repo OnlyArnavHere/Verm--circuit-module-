@@ -11,6 +11,7 @@
 import { resolveFootprint } from "./footprintMap.js";
 import { resolvePart } from "./partsEngine.js";
 import { extractPinout, matchLogicalPin } from "./pinout.js";
+import { curatedPinout } from "./curatedPinouts.js";
 
 /**
  * Provenance values, most trusted first. `source` records *how* a value was
@@ -94,25 +95,17 @@ export async function resolveComponent(component, options = {}) {
   }
 
   // --- 3D model ------------------------------------------------------------
-  // The JLCPCB catalogue attaches a 3D model to most parts; whether one actually
-  // materialised is confirmed post-compile from cad_component elements.
-  const model3d = isReal(footprint.source)
-    ? field(footprint.source, null, { pendingCompileConfirmation: true })
-    : field(SOURCE.MOCK, null, {
-        reason: "no resolved part, so no catalogue 3D model is available",
-      });
-
-  if (!isReal(model3d.source)) {
-    errors.push({
-      code: "MODEL_3D_NOT_FOUND",
-      severity: "warning",
-      message:
-        `No verified 3D model for "${component.part_number}" (${component.ref_id}); ` +
-        `the 3D output will contain a placeholder body for this component.`,
-      target: component.ref_id,
-      detail: {},
-    });
-  }
+  // NEVER claimed real here. A resolved footprint does NOT imply a 3D model
+  // exists: `HY2111-GB` resolves via the curated table yet has no model at all.
+  // The earlier version inherited the footprint's source and set a
+  // `pendingCompileConfirmation` flag that nothing ever read, producing a
+  // false `real: true` in the manifest — the exact failure this system exists to
+  // prevent. The claim is now made only by confirmModel3d(), from actual
+  // cad_component elements in the compiled output. (D-027)
+  const model3d = field(SOURCE.UNRESOLVED, null, {
+    unconfirmed: true,
+    reason: "3D model presence is unknown until the design is compiled",
+  });
 
   // --- schematic symbol ----------------------------------------------------
   // tscircuit draws chips as a labelled box sized from the pin count. That is
@@ -133,9 +126,20 @@ export async function resolveComponent(component, options = {}) {
   const pinMap = {};
   const pinDetail = {};
   let realPins = 0;
+  // Provenance of the pin mapping as a whole: curated (part-specific verified
+  // table) or parts_engine (names read off the catalogue footprint).
+  let pinsResolvedFrom = SOURCE.PARTS_ENGINE;
 
   if (isReal(footprint.source) && footprint.value && logicalPins.length > 0) {
-    const pinout = await extractPinout(footprint.value, options);
+    // Curated part-specific pinout wins: it is human-verified and, unlike the
+    // catalogue extraction, is available for footprints that expose only
+    // positional pins (e.g. footprinter's sot23_6).
+    const curatedPins = curatedPinout(component.part_number, component.package);
+    const pinout = curatedPins.ok
+      ? { ok: true, pins: curatedPins.pins }
+      : await extractPinout(footprint.value, options);
+    const pinSource = curatedPins.ok ? SOURCE.CURATED : SOURCE.PARTS_ENGINE;
+    pinsResolvedFrom = pinSource;
 
     for (const logical of logicalPins) {
       const match = pinout.ok ? matchLogicalPin(logical, pinout) : { ok: false };
@@ -143,10 +147,11 @@ export async function resolveComponent(component, options = {}) {
         pinMap[logical] = match.pad;
         pinDetail[logical] = {
           pad: match.pad,
-          source: SOURCE.PARTS_ENGINE,
+          source: pinSource,
           real: true,
           via: match.via,
           ...(match.reason ? { reason: match.reason } : {}),
+          ...(curatedPins.ok ? { evidence: curatedPins.evidence } : {}),
         };
         realPins += 1;
       } else {
@@ -193,7 +198,9 @@ export async function resolveComponent(component, options = {}) {
   // logical pin matched a real named pad.
   const allReal = logicalPins.length > 0 && realPins === logicalPins.length;
   const pins = field(
-    allReal ? SOURCE.PARTS_ENGINE : realPins > 0 ? SOURCE.MOCK : SOURCE.MOCK,
+    // Real only when EVERY logical pin matched; a single positional fallback
+    // makes the whole mapping unsafe to manufacture from.
+    allReal ? pinsResolvedFrom : SOURCE.MOCK,
     pinMap,
     {
       realCount: realPins,
@@ -247,6 +254,90 @@ export async function resolveComponents(components, nets = [], options = {}) {
     errors.push(...result.errors);
   }
   return { components: resolved, errors };
+}
+
+/**
+ * Confirm 3D-model claims against compiled ground truth.
+ *
+ * MUST be called after compilation and before the manifest is written. A
+ * component's `model_3d` is `real` only when the compiled Circuit JSON contains
+ * a `cad_component` for it carrying an actual model reference — not because its
+ * footprint resolved. Mutates each component's `resolution.model_3d` in place
+ * and returns any MODEL_3D_NOT_FOUND findings.
+ *
+ * @param {Array<object>} circuitJson compiled output
+ * @param {Array<object>} resolvedComponents from resolveComponents
+ */
+export function confirmModel3d(circuitJson, resolvedComponents) {
+  const errors = [];
+
+  // ref_id -> cad_component, resolved via source_component -> pcb_component.
+  const sourceNames = new Map();
+  for (const element of circuitJson ?? []) {
+    if (element?.type === "source_component") {
+      sourceNames.set(element.source_component_id, element.name);
+    }
+  }
+  const refByPcbId = new Map();
+  for (const element of circuitJson ?? []) {
+    if (element?.type === "pcb_component") {
+      refByPcbId.set(element.pcb_component_id, sourceNames.get(element.source_component_id));
+    }
+  }
+  const cadByRef = new Map();
+  for (const element of circuitJson ?? []) {
+    if (element?.type !== "cad_component") continue;
+    const ref = refByPcbId.get(element.pcb_component_id);
+    if (ref) cadByRef.set(ref, element);
+  }
+
+  const modelUrlOf = (cad) =>
+    cad?.model_obj_url ?? cad?.model_stl_url ?? cad?.model_gltf_url ?? cad?.model_glb_url ?? null;
+
+  for (const component of resolvedComponents ?? []) {
+    const cad = cadByRef.get(component.ref_id);
+    const url = modelUrlOf(cad);
+    const hasJscad = Boolean(cad?.model_jscad);
+
+    if (url) {
+      component.resolution.model_3d = field(SOURCE.PARTS_ENGINE, url, {
+        confirmedFromCompiledOutput: true,
+      });
+    } else if (hasJscad) {
+      // A procedurally-generated body: deterministic, but not the real part model.
+      component.resolution.model_3d = field(SOURCE.GENERATED, "jscad", {
+        confirmedFromCompiledOutput: true,
+        reason: "procedural body generated from the footprint; not the part's own 3D model",
+      });
+      errors.push({
+        code: "MODEL_3D_NOT_FOUND",
+        severity: "warning",
+        message:
+          `No catalogue 3D model for "${component.part_number}" (${component.ref_id}); ` +
+          `the 3D output contains a generated body, not the real part.`,
+        target: component.ref_id,
+        detail: {},
+      });
+    } else {
+      component.resolution.model_3d = field(SOURCE.MOCK, null, {
+        confirmedFromCompiledOutput: true,
+        reason: cad
+          ? "compiled cad_component carries no model reference"
+          : "no cad_component was produced for this component",
+      });
+      errors.push({
+        code: "MODEL_3D_NOT_FOUND",
+        severity: "warning",
+        message:
+          `No 3D model for "${component.part_number}" (${component.ref_id}) — ` +
+          `this component is absent from the 3D output.`,
+        target: component.ref_id,
+        detail: {},
+      });
+    }
+  }
+
+  return { errors, confirmed: resolvedComponents?.length ?? 0 };
 }
 
 /**

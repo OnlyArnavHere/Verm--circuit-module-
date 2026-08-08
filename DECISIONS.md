@@ -468,3 +468,117 @@ Fixed by clearing `S3_ENDPOINT` and setting `S3_FORCE_PATH_STYLE=false`
 (`.env.bak` retains the previous file). `.env` is gitignored, so the keys are not
 committed. Dev can return to MinIO by restoring the endpoint — the code path is
 unchanged and still supported.
+
+---
+
+## D-027 — A `real` claim may only be made from compiled ground truth
+
+**Phase:** 5.6
+**Status:** Accepted — binding rule
+
+The resolver set `model_3d.source` to the *footprint's* source and attached
+`pendingCompileConfirmation: true` — a flag **written once and never read**.
+`compile.js` counted `cad_component`s but never fed the result back. U6
+(`HY2111-GB`) therefore reported `model_3d.real = true` while having no 3D model
+at all.
+
+That is a false-real claim: precisely the failure this system exists to prevent,
+produced by our own code rather than by tscircuit. The generalisable lesson is
+that **an unread flag is worse than no flag** — it looks like a safeguard while
+guaranteeing nothing.
+
+The rule now: resolution records `unresolved`/`unconfirmed` for anything it cannot
+itself verify, and the claim is made only by `confirmModel3d()` from actual
+compiled output. A test asserts the claim tracks reality in both directions and
+that the dead flag no longer exists, so this cannot regress into "always real".
+
+Corrected result: 9/10 real 3D models, not 10/10.
+
+---
+
+## D-028 — Cache component data on disk; wrap `fetch`, not the parts engine
+
+**Phase:** 5.6
+**Status:** Accepted — supersedes the partial implementation of D-011
+
+Only the LCSC code and pin names were cached. Footprint **geometry** and **3D
+models** were fetched live on every compile from `registry-api.tscircuit.com` and
+`modules.easyeda.com`, so "deterministic and offline" was false and every build
+depended on third-party infrastructure. Community JLCPCB-data infrastructure has
+been shut down before, so this is exposure, not just impurity.
+
+Implemented as an on-disk HTTP cache (`services/httpCache.js`) following the
+`jlcparts` pattern: fetch once, query locally. **Wrapping `fetch` rather than
+tscircuit's parts engine is deliberate** — the 3D models are downloaded by
+`circuit-json-to-gltf`, not by the parts engine, so a parts-engine-level cache
+would have silently missed exactly half the problem.
+
+Failed responses are never cached: caching a 504 would pin a transient outage
+permanently. Asserted by test using the real HTTP 504 encountered during this
+phase.
+
+Verified: `--offline` (readonly cache, misses throw) produces all 4 outputs for
+both fixtures with **0 network calls**.
+
+---
+
+## D-029 — Determinism is per-mode, and stated as such
+
+**Phase:** 5.6
+**Status:** Accepted
+
+Measured, not assumed:
+
+| Comparison | Result |
+|---|---|
+| offline ↔ offline | byte-identical |
+| online ↔ online | byte-identical |
+| online ↔ offline | schematic/PCB/3D differ |
+
+tscircuit makes 8 best-effort enrichment lookups per run
+(`jlcsearch.tscircuit.com/chips/list?package=…`) that fail and are therefore
+correctly not cached. They fail *differently* in the two modes — failed response
+vs. thrown error — which perturbs downstream output.
+
+Rather than claim universal byte-determinism, the honest claim is: **each mode is
+internally deterministic; the two modes are not identical to each other.** Caching
+failures to force agreement was rejected — it would pin outages permanently
+(D-028).
+
+---
+
+## D-030 — Curated pinouts are keyed by part number, and require correspondence evidence
+
+**Phase:** 6
+**Status:** Accepted
+
+`HY2111-GB` resolved via the most-trusted curated footprint path yet got 0/2 real
+pins, because footprinter's `sot23_6` exposes only positional pins.
+
+Fixed by adding real data (`curatedPinouts.js`), **not** by relaxing D-023. Two
+constraints make it safe:
+
+1. **Keyed by part number, not package.** `HY2111-GB` and `LP103SB6F` are both
+   `SOT-23-6` with entirely different pin functions; a package-keyed table would
+   have handed one part's pinout to the other. The upstream package is kept as a
+   guard, and a test asserts `LP103SB6F` inherits nothing.
+2. **Correspondence must be proven, not assumed.** Pad positions were compared
+   between `sot23_6` and `jlcpcb:C82747`: both number pins 1-3 along one side and
+   4-6 along the other in the same order, so pin *N* is the same physical pin in
+   both — they differ by a 180° rotation, which changes orientation but not pin
+   identity. That reasoning lives in the entry's mandatory `evidence` field.
+
+An entry without correspondence evidence does not belong in this table.
+
+---
+
+## D-031 — Producing four files is not success if assertions failed
+
+**Phase:** 5.6
+**Status:** Accepted
+
+The POC runner reported "All required outputs produced" on a run where
+`padIntegrity` had **failed** (the HTTP 504 zero-pad case), because the success
+flag only tracked missing files. Four well-formed files describing a broken board
+is exactly the "looks fine, is wrong" outcome the assertions exist to catch. The
+exit status now requires assertions to pass as well.

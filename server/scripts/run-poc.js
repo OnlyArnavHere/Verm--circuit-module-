@@ -17,6 +17,7 @@ import { runElectricalChecks } from "../src/design/electricalChecks.js";
 import { resolveComponents, resolutionSummary, isReal } from "../src/design/resolver.js";
 import { compileDesign } from "../src/compile/compile.js";
 import { putObject, artifactKey, STORAGE_BUCKET } from "../src/services/storage.js";
+import { installHttpCache, httpCacheStats } from "../src/services/httpCache.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.resolve(here, "../../test-fixtures");
@@ -24,7 +25,14 @@ const outRoot = path.resolve(here, "../../artifacts");
 
 const args = process.argv.slice(2);
 const noUpload = args.includes("--no-upload");
+// --offline proves the cache is complete: any request not already on disk throws
+// rather than silently reaching the network.
+const offline = args.includes("--offline");
 const named = args.filter((a) => !a.startsWith("--"));
+
+// Component data (footprint geometry, 3D models) is cached on disk so a re-run
+// is genuinely deterministic and offline-capable. See services/httpCache.js.
+const httpCache = installHttpCache({ mode: offline ? "readonly" : "readwrite" });
 
 /**
  * Default set is deliberately two fixtures: rc_car alone would only exercise the
@@ -76,10 +84,10 @@ async function runFixture(name) {
 
   // --- resolve (real first, mock per field) --------------------------------
   const resolution = await resolveComponents(upstream.components, deduped.nets);
-  const summary = resolutionSummary(resolution.components);
 
-  console.log("\nper-field resolution:");
-  for (const [field, tally] of Object.entries(summary)) {
+  console.log("\npre-compile resolution (model_3d is deliberately unresolved here —");
+  console.log("it is only claimed after compilation, from actual cad_components):");
+  for (const [field, tally] of Object.entries(resolutionSummary(resolution.components))) {
     const parts = Object.entries(tally)
       .map(([source, count]) => `${source}=${count}`)
       .join(" ");
@@ -114,6 +122,19 @@ async function runFixture(name) {
     `assertions: padIntegrity=${compiled.assertions.padIntegrity.ok ? "PASS" : "FAIL"} ` +
       `netsRealized=${compiled.assertions.netsRealized.ok ? "PASS" : "FAIL"}`
   );
+  console.log(
+    `DRC: ${compiled.drc.ran ? `${compiled.drc.total} finding(s) — ` +
+      `${compiled.drc.errors.length} DRC_FAILURE, ${compiled.drc.warnings.length} warning(s)` : "did not run"}`
+  );
+
+  const real3d = resolution.components.filter((c) => c.resolution.model_3d.real).length;
+  console.log(
+    `3D models (confirmed from compiled output): ${real3d}/${resolution.components.length}`
+  );
+
+  // Recomputed AFTER compilation, because confirmModel3d corrects model_3d in
+  // place. The manifest must carry the confirmed values, not the pre-compile ones.
+  const summary = resolutionSummary(resolution.components);
   for (const error of compiled.assertions.padIntegrity.errors.slice(0, 4)) {
     console.log(`  ! ${error.message.slice(0, 100)}`);
   }
@@ -238,6 +259,14 @@ async function runFixture(name) {
         failures: compiled.assertions.padIntegrity.errors.map((e) => e.message),
       },
       tscircuitErrors: compiled.tscircuitIssues.errors.length,
+      drc: {
+        ran: compiled.drc.ran,
+        total: compiled.drc.total,
+        failures: compiled.drc.errors.length,
+        warnings: compiled.drc.warnings.length,
+        byType: compiled.drc.byType,
+      },
+      model3dConfirmedFromCompiledOutput: true,
     },
 
     stats: compiled.stats,
@@ -251,7 +280,14 @@ async function runFixture(name) {
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`manifest: ${manifestPath}`);
 
-  return { name, manifest, missing, compiled, realFootprints: realFootprints.length };
+  return {
+    name,
+    manifest,
+    missing,
+    compiled,
+    realFootprints: realFootprints.length,
+    assertionsPassed: compiled.assertions.passed,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -268,9 +304,14 @@ for (const result of results) {
   console.log(
     `${result.name.padEnd(26)} outputs=${4 - result.missing.length}/4  ` +
       `real footprints=${realCount}/${total}  ` +
-      `padAssert=${result.manifest.validation.assertions.padIntegrity ? "PASS" : "FAIL"}`
+      `padAssert=${result.manifest.validation.assertions.padIntegrity ? "PASS" : "FAIL"}  ` +
+      `netAssert=${result.manifest.validation.assertions.netsRealized ? "PASS" : "FAIL"}  ` +
+      `3D=${result.manifest.resolutionSummary.model_3d.parts_engine ?? 0}/${total}`
   );
-  if (result.missing.length > 0) ok = false;
+  // Producing four files is not success if the board they describe failed its
+  // integrity assertions — that is precisely the "looks fine, is wrong" outcome
+  // the assertions exist to catch.
+  if (result.missing.length > 0 || !result.assertionsPassed) ok = false;
 }
 
 // The plan's explicit bar: a fully-mocked run is not a success when real
@@ -281,5 +322,24 @@ if (!anyReal) {
   ok = false;
 }
 
+const cache = httpCacheStats();
+console.log(
+  `\ncomponent-data cache: ${cache.entries} entries, ${(cache.bytes / 1e6).toFixed(1)} MB` +
+    `  |  this run: ${httpCache.stats.hits} hit(s), ${httpCache.stats.networkCalls} network call(s)` +
+    (offline ? "  [offline mode]" : "")
+);
+if (httpCache.stats.missedUrls.length > 0) {
+  // Anything listed here was NOT served from cache. If it recurs on every run it
+  // is a response that failed and was therefore (correctly) not cached.
+  const hosts = {};
+  for (const url of httpCache.stats.missedUrls) {
+    const host = new URL(url).hostname;
+    hosts[host] = (hosts[host] ?? 0) + 1;
+  }
+  console.log(`  cache misses by host: ${JSON.stringify(hosts)}`);
+  console.log(`  first miss: ${httpCache.stats.missedUrls[0].slice(0, 110)}`);
+}
+
 console.log(ok ? "\nAll required outputs produced." : "\nIncomplete.");
+httpCache.uninstall();
 process.exit(ok ? 0 : 1);
