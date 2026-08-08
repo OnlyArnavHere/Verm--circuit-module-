@@ -1,0 +1,37 @@
+[
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_0",
+  "ftype": "simple_chip",
+  "name": "U1",
+  "supplier_part_numbers": {
+   "jlcpcb": []
+  },
+  "source_group_id": "source_group_0"
+ },
+ {
+  "type": "source_invalid_component_property_error",
+  "source_invalid_component_property_error_id": "source_invalid_component_property_error_0",
+  "source_component_id": "source_component_0",
+  "property_name": "footprint",
+  "message": "Invalid footprint prop on chip \"U1\": \"MAPBGA-289\". Parser details: Invalid footprint function, got \"mapbga\", from string \"MAPBGA-289\"",
+  "error_type": "source_invalid_component_property_error"
+ },
+ {
+  "type": "pcb_component",
+  "pcb_component_id": "pcb_component_0",
+  "center": {
+   "x": 0,
+   "y": 0
+  },
+  "width": 2,
+  "height": 3,
+  "layer": "top",
+  "rotation": 0,
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "do_not_place": false,
+  "obstructs_within_bounds": true,
+  "is_allowed_to_be_off_board": false
+ }
+]

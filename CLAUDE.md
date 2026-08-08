@@ -12,7 +12,7 @@ circuit diagram, schematic, PCB layout, 3D view.
 phase; don't skip ahead. `DECISIONS.md` records every non-trivial choice — keep it
 updated.
 
-**Current status: Phases 1–2 complete.** Phase 3 (ValidatedDesign schema) is next.
+**Current status: Phases 1–3 complete.** Phase 4 (architecture doc) is next.
 Read `docs/FEASIBILITY_REPORT.md` before doing any tscircuit work — it is
 empirically verified, and several of its findings constrain the design.
 
@@ -101,6 +101,31 @@ Determinism: rendered artifacts are byte-identical across runs *and across
 macOS/Linux*. The only varying Circuit JSON field is an instance counter inside a
 warning message string — normalize `#\d+` before hashing. Pin exact versions; every
 tscircuit package is pre-1.0. Re-run `spikes/phase2-tscircuit/` as an upgrade gate.
+
+## Phase 3 layer (`server/src/design/`, `server/src/render/`)
+
+```
+design/validatedDesign.js  buildValidatedDesign(upstream) -> {design, errors, modifications, compilable}
+design/footprintMap.js     resolveFootprint(pkg) -> verified footprint | FOOTPRINT_NOT_FOUND
+design/tscircuitErrors.js  collectTscircuitIssues(circuitJson) -> our taxonomy
+design/assertions.js       assertPadIntegrity / assertNetsRealized  <- catches the silent zero-pad case
+render/circuitDiagram.js   renderCircuitDiagram(design) -> SVG (required output #1)
+render/symbolAdapter.js    schematic-symbols -> SVG fragments
+```
+
+Rules that are easy to "helpfully" break:
+
+- **Never add a footprint mapping without evidence.** Matching pad count is not
+  matching geometry (D-016). Unverified candidates belong in
+  `UNVERIFIED_CANDIDATES` with a `blocker`, never in `CURATED`.
+- **`compilable` is computed from the error list**, never assumed from silence.
+- **The circuit diagram is defined by what it omits** (D-015) — only pins in a
+  net, grounds as symbols, power as one rail. If it starts showing every pin it
+  has become the schematic and no longer satisfies output #1.
+- **`source` on every resolved value** distinguishes verified data from a mock.
+  A mock must be labelled `source: "mock"`; `unresolved` must never reach the compiler.
+- `server/test/fixtures/circuitjson-*.json` are **real captured tscircuit output**
+  (D-019). Regenerate from the Phase 2 spike after a tscircuit upgrade; don't hand-edit.
 
 ## Failure handling (non-negotiable)
 

@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phases 1–2 complete. Phase 3 (ValidatedDesign schema) is next.
+**Status:** Phases 1–3 complete. Phase 4 (architecture doc) is next.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -10,10 +10,10 @@
 
 Downstream of an **already-built Hardware Agent** (do not touch it, do not rebuild it), this module takes its JSON output and produces exactly these four outputs, **each as a real exportable file, not just an in-session render**:
 
-1. **Circuit diagram** — component-to-component wiring/connectivity view → file (e.g. SVG/PNG)
-2. **Schematic diagram** — proper electrical schematic capture → file (e.g. SVG/PNG, ideally also a structured format like KiCad `.sch`/`.kicad_sch` if tscircuit supports it)
-3. **PCB layout** — physical board with footprints, placement, traces, layers → file (e.g. KiCad `.kicad_pcb` and/or Gerber set)
-4. **PCB 3D view** — rendered/interactive 3D representation → file (e.g. `.glb`/`.gltf` or STEP)
+1. **Circuit diagram** — must visually resemble an actual electronics circuit (recognizable component symbols/icons and wire-style connections), distinct from the schematic's formal EE capture (full pin-level annotation, net labels, standard schematic symbol library). A generic node-edge graph (e.g. plain Graphviz output) does **not** satisfy this on its own — see Phase 3 investigation below → file (SVG)
+2. **Schematic diagram** — proper electrical schematic capture, from tscircuit → file (SVG, plus `.kicad_sch`)
+3. **PCB layout** — physical board with footprints, placement, traces, layers → file (`.kicad_pcb` + Gerber set + `.drl`, per Phase 2 findings)
+4. **PCB 3D view** — rendered/interactive 3D representation → file (`.glb`/`.gltf`, per Phase 2 findings)
 
 **This is a hard requirement, not a stretch goal.** A design isn't "done" if any of the four only exists as something rendered live in a browser/session — it must be a file that can be stored (S3) and handed to the frontend/other agents to download or display. If Phase 2 finds tscircuit can't natively export one of these to a real file, that's a Phase 2 blocker to solve (e.g. via a conversion step), not something to quietly downgrade to "rendered only."
 
@@ -100,9 +100,23 @@ Investigate the **current, real** tscircuit ecosystem via its official repos/doc
 
 **Definition of done:** `docs/FEASIBILITY_REPORT.md` answering all of the above with sources, and a **per-output file-export table** (Circuit / Schematic / PCB / 3D → confirmed format, confirmed method, confirmed headless — yes/no/needs-conversion). If any output can't be exported to a real file even via conversion, that's a red flag to raise immediately, not something to soften — it's a hard MVP requirement per section 0.
 
-### Phase 3 — `ValidatedDesign` intermediate schema
-Design the schema that sits between the agent and the compiler — independent enough of tscircuit that it could be swapped later. Must represent: resolved components (symbol/footprint/3D refs, resolved physical pins), resolved nets (physical pads, de-duplicated), board constraints.
-**Definition of done:** `docs/VALIDATED_DESIGN_SCHEMA.md` with the schema and rationale, validated by hand against `rc_car.json`.
+### Phase 3 — `ValidatedDesign` intermediate schema + footprint resolution
+
+**First, before schema work: settle how the circuit diagram gets rendered.** This was left open after Phase 2 — do not default to a generic Graphviz node-edge graph and call it done. Investigate, in order:
+1. **Does tscircuit itself expose any mode that produces a circuit-diagram-style view** — e.g. a simplified/decluttered render (no pin numbers, no net labels, symbol-only), a different export config, or a community package built on top of tscircuit for this purpose? Check current tscircuit repos/docs/examples, don't assume based on Phase 2's schematic-only finding — that finding was about the *schematic* renderer specifically, not necessarily the ceiling of what the ecosystem offers.
+2. **Is there another deterministic renderer** (e.g. `schemdraw`-style symbol-based drawing, KiCad's own schematic plotter run against the `.kicad_sch` we already generate but with annotation layers hidden, or a symbol library keyed by `part_class` rendered with a deterministic layout engine) that produces something that actually looks like a circuit — recognizable component symbols and wire-style connections — rather than an abstract graph?
+3. **Only if 1 and 2 don't pan out within reasonable effort**, fall back to Graphviz — but if you do, it must be deliberately styled to look circuit-like (component-shaped nodes per `part_class`, not generic boxes/circles; wire-style edges, not arbitrary graph edges) and you must show a rendered sample and explicitly state why it satisfies "visually resembles an electronics circuit" before treating it as done. An unstyled default Graphviz render is not an acceptable final answer even as a stopgap — don't ship it silently.
+
+Document the investigation and chosen approach in `docs/CIRCUIT_DIAGRAM_APPROACH.md` with a rendered sample attached/referenced. This is a real decision point, not busywork — pick something and move on, but show your reasoning.
+
+Then: design the `ValidatedDesign` schema that sits between the agent and the compiler — independent enough of tscircuit that it could be swapped later. Must represent: resolved components (symbol/footprint/3D refs, resolved physical pins), resolved nets (physical pads, de-duplicated), board constraints.
+
+**Added scope from Phase 2 findings — this is now mandatory, not optional:**
+- **Package → footprint mapping layer.** Phase 2 found 8/10 real fixture package strings (`MAPBGA-289`, `QFN-16-EP(4x4)`, `SOP-16`, etc.) don't resolve directly as tscircuit footprints — only `SOT-23-6` did. Build this as its own module: input a `package` string, output either a confident footprint match or `FOOTPRINT_NOT_FOUND`. No lookalike/fuzzy substitution when unsure — an honest error beats a wrong footprint every time.
+- **Consume tscircuit's native error elements** (`source_invalid_component_property_error`, `pcb_missing_footprint_error`, etc.) directly into the `ValidatedDesign`/error taxonomy rather than re-deriving equivalent checks from scratch — Phase 2 confirmed these map ~1:1 onto section 4's error codes.
+- **Independent pad-count assertion.** Phase 2 found a footprint (`DFN-8-EP(2x3)`) that renders with zero errors/warnings but zero pads — silkscreen and courtyard draw fine, board is unmanufacturable. "No error elements" is not sufficient for validity. The schema/validator must independently assert expected pad count per component and treat a mismatch as a hard failure, not rely on tscircuit's silence as a green light.
+
+**Definition of done:** `docs/CIRCUIT_DIAGRAM_APPROACH.md` with a chosen, justified rendering approach and a sample proving it looks circuit-like, not graph-like; `docs/VALIDATED_DESIGN_SCHEMA.md` with the schema and rationale, validated by hand against `rc_car.json`; footprint-mapping module resolves `SOT-23-6` correctly and returns `FOOTPRINT_NOT_FOUND` (not a guess) for the other 9 known-unresolved packages from the fixtures; a test proving the zero-pad case is caught.
 
 ### Phase 4 — Agent vs. deterministic-layer architecture
 Document concretely: what the LLM agent layer owns (interpretation, component-resolution decisions, ambiguity handling, explaining errors, modification requests) vs. what the deterministic layer owns (schema validation, pin mapping, connectivity/protocol validation, footprint assignment, routing, DRC, artifact generation). Include the explicit error taxonomy: `COMPONENT_NOT_FOUND`, `PIN_NOT_FOUND`, `FOOTPRINT_NOT_FOUND`, `MODEL_3D_NOT_FOUND`, `INVALID_NET`, `ELECTRICAL_CONFLICT`, `UNSUPPORTED_COMPONENT`, `ROUTING_FAILURE`, `DRC_FAILURE`, `BOARD_CONSTRAINT_FAILURE` — what triggers each, what the response shape looks like.
@@ -141,8 +155,8 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [x] Phase 1 — Repo & job skeleton *(verified: `cd server && npm run verify:phase1` → 8/8)*
-- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs confirmed exportable headless+offline; risks R1/R2 raised)*
-- [ ] Phase 3 — ValidatedDesign schema
+- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
+- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless+offline; risks R1/R2 raised)*
+- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion; `npm test` → 34/34)*
 - [ ] Phase 4 — Architecture doc
 - [ ] Phase 5 — Minimal POC (rc_car.json end-to-end + validator proven against noise_pollution_monitor.json)

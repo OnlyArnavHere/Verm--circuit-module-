@@ -205,3 +205,111 @@ owns third-party licensing.
 Two items need a real look if their features ship: `occt-import-js` (LGPL-2.1,
 STEP/CAD path) and EasyEDA/JLCPCB-sourced footprint and 3D assets, whose data terms
 differ from the code license.
+
+---
+
+## D-014 — Circuit diagram: own symbol-based renderer, not Graphviz, not tscircuit
+
+**Phase:** 3
+**Status:** Accepted
+
+Investigated in the order the plan required. **Option 1 (tscircuit)** — examined
+every view renderer in `circuit-to-svg`, not just the schematic one: assembly,
+pinout, stacked sheets, simulation. The assembly view was actually rendered to be
+sure, and draws component outlines with **zero connectivity**. The schematic
+renderer accepts only `grid`, `labeled`, `shouldDrawErrors` — no simplified or
+symbol-only mode. `schPinArrangement`/`schPinStyles` declutter the *schematic*,
+which is the artifact output #1 must be distinct from. Nothing in the ecosystem
+produces a separate circuit-diagram view.
+
+**Option 2 (chosen):** `schematic-symbols` — already in the tree, the same library
+tscircuit draws from — ships 351 real EE symbols as plain vector primitives with
+named ports. Built `server/src/render/` on top: real ground/VCC glyphs, a labelled
+power rail, orthogonal wire-style routing, junction dots, and only the pins that
+participate in a net. **Option 3 (Graphviz) was never reached** and nothing
+Graphviz-based ships.
+
+Layout is deterministic by construction (sorted by `part_class`, `ref_id`, net
+name; no solver, no randomness) — verified byte-identical across repeated renders.
+Full reasoning and samples: `docs/CIRCUIT_DIAGRAM_APPROACH.md`.
+
+---
+
+## D-015 — The circuit diagram is defined by what it omits
+
+**Phase:** 3
+**Status:** Accepted
+
+Outputs #1 and #2 could have been the same picture twice. They are kept distinct
+by a rule, not by styling: the **schematic** shows every pin with pin numbers and
+net labels; the **circuit diagram** shows only pins that participate in a net,
+renders grounds as ground symbols, and collapses power into one labelled rail.
+
+Concretely: `rc_car`'s U2 is a 289-pad BGA. The schematic draws all of it; the
+circuit diagram draws `VDD` and `SDA`. If a future change makes the circuit
+diagram show all pins, it has stopped being output #1.
+
+---
+
+## D-016 — Only `SOT-23-6` resolves; matching pad count is not evidence
+
+**Phase:** 3
+**Status:** Accepted
+
+The footprint mapper resolves exactly one of the fixtures' ten package strings.
+This is deliberate, and the tempting mistake is worth naming: `soic8` really does
+produce 8 pads for `SOIC-8`, `ssop24` 24 for `SSOP-24`, `bga289` 289 for
+`MAPBGA-289` — all verified empirically. **Pad count agreement is not geometric
+equivalence.** SOP and SOIC use different pitch conventions; `QFN-16-EP(4x4)` has
+an exposed thermal pad that `qfn16` lacks; BGA ball pitch is not derivable from a
+name. A wrong footprint renders perfectly and fails at the fab.
+
+`SOT-23-6` qualifies because it is a single standardised JEDEC body with no
+competing variant, so the name does determine the geometry — and that reasoning is
+stored in the entry's required `evidence` field.
+
+Near-miss candidates are returned inside the `FOOTPRINT_NOT_FOUND` payload with a
+`blocker` explaining the gap, so the agent layer can explain the failure and a
+human can promote one with evidence. They are never auto-selected.
+
+---
+
+## D-017 — `PIN_NOT_FOUND` for every fixture component, by design
+
+**Phase:** 3
+**Status:** Accepted
+
+No verified pinout exists for any fixture part, so `pins.source` is `unresolved`
+and every component raises `PIN_NOT_FOUND`. `rc_car.json` is therefore
+`compilable: false` today. That is the honest answer, not a gap to paper over —
+PROJECT_PLAN §4 forbids inventing a pinout.
+
+Phase 5 makes it compilable with **explicitly labelled mocks**
+(`source: "mock"`), never by weakening this. The `source` field is what keeps a
+mock from silently becoming indistinguishable from verified data.
+
+---
+
+## D-018 — Error raised per component, not per occurrence
+
+**Phase:** 3
+**Status:** Accepted
+
+`PIN_NOT_FOUND` is emitted once per component rather than once per net member.
+`rc_car` has 9 net members across 3 components; per-member reporting would produce
+9 copies of 3 facts and bury the real problem. Applies to any error whose root
+cause is a component-level property.
+
+---
+
+## D-019 — Captured real tscircuit output as test fixtures
+
+**Phase:** 3
+**Status:** Accepted
+
+`server/test/fixtures/circuitjson-*.json` are **real** compiled Circuit JSON
+captured from tscircuit, not hand-written mocks. The zero-pad test asserts its own
+premise first — that tscircuit reports zero errors and zero warnings for
+`DFN-8-EP(2x3)` — before asserting our check catches it. A hand-written mock could
+drift from tscircuit's real behaviour and turn the most important test in the
+suite into a tautology. Regenerate from the Phase 2 spike if tscircuit is upgraded.
