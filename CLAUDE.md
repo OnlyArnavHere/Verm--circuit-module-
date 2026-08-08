@@ -12,7 +12,9 @@ circuit diagram, schematic, PCB layout, 3D view.
 phase; don't skip ahead. `DECISIONS.md` records every non-trivial choice — keep it
 updated.
 
-**Current status: Phase 1 complete.** Phase 2 (tscircuit feasibility) is next.
+**Current status: Phases 1–2 complete.** Phase 3 (ValidatedDesign schema) is next.
+Read `docs/FEASIBILITY_REPORT.md` before doing any tscircuit work — it is
+empirically verified, and several of its findings constrain the design.
 
 ## Commands
 
@@ -66,6 +68,39 @@ code and just run it — stop, and route it through validation first.
   the validator "fixes" upstream data (e.g. the SCK↔MOSI bug), record the original
   value, the correction, and the reason.
 - Field is **`validationErrors`**, not `errors` — Mongoose reserves `errors`.
+
+## tscircuit facts established in Phase 2 (verified, not assumed)
+
+All four required outputs export to real files headlessly and offline — confirmed
+in `node:22-slim` with `--network none`. No headless-browser screenshotting needed.
+
+```
+eval:      @tscircuit/eval CircuitRunner -> execute() -> renderUntilSettled() -> getCircuitJson()
+circuit:   convertCircuitJsonToSchematicSvg (circuit-to-svg) + readable-netlist
+schematic: convertCircuitJsonToSchematicSvg, or CircuitJsonToKicadSchConverter -> .kicad_sch
+pcb:       CircuitJsonToKicadPcbConverter -> .kicad_pcb; convertSoupToGerberCommands -> gerbers
+3d:        convertCircuitJsonToGltf(cj, {format:"glb"}) -> real .glb
+drc:       @tscircuit/checks runAllChecks / runAllRoutingChecks / runAllPlacementChecks
+```
+
+Three findings that **must** shape any code you write here:
+
+1. **A clean tscircuit run is not proof of a valid board.** `DFN-8-EP(2x3)`
+   produces zero errors, zero warnings, and **zero pads**. Always independently
+   assert `pad_count > 0` per component and that it matches the resolved pin count.
+   Never treat "no `*_error` elements" as success. (DECISIONS D-009)
+2. **Fixture `package` strings are not tscircuit footprints.** 8 of 10 are
+   rejected outright. A resolution layer is required, and when it can't resolve
+   confidently the answer is `FOOTPRINT_NOT_FOUND` — never a similar-looking
+   substitute. (D-010)
+3. **`jlcpcb:` lookups hit the network** (1.8–4.2 s/part) and can change upstream.
+   Cache resolved footprints by part number so re-runs stay deterministic and
+   offline. (D-011)
+
+Determinism: rendered artifacts are byte-identical across runs *and across
+macOS/Linux*. The only varying Circuit JSON field is an instance counter inside a
+warning message string — normalize `#\d+` before hashing. Pin exact versions; every
+tscircuit package is pre-1.0. Re-run `spikes/phase2-tscircuit/` as an upgrade gate.
 
 ## Failure handling (non-negotiable)
 

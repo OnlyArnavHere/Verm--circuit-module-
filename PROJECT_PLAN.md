@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phase 1 complete. Phase 2 (tscircuit feasibility) is next.
+**Status:** Phases 1–2 complete. Phase 3 (ValidatedDesign schema) is next.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -142,7 +142,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 ## 6. Checklist (update as phases complete)
 
 - [x] Phase 1 — Repo & job skeleton *(verified: `cd server && npm run verify:phase1` → 8/8)*
-- [ ] Phase 2 — tscircuit feasibility report
+- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs confirmed exportable headless+offline; risks R1/R2 raised)*
 - [ ] Phase 3 — ValidatedDesign schema
 - [ ] Phase 4 — Architecture doc
 - [ ] Phase 5 — Minimal POC (rc_car.json end-to-end + validator proven against noise_pollution_monitor.json)

@@ -1,0 +1,23 @@
+{
+  "name": "phase2-tscircuit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@tscircuit/core": "^0.0.1631",
+    "@tscircuit/eval": "^0.0.1158",
+    "circuit-json": "^0.0.465",
+    "circuit-json-to-gerber": "^0.0.90",
+    "circuit-json-to-gltf": "^0.0.113",
+    "circuit-json-to-kicad": "^0.0.171",
+    "circuit-json-to-readable-netlist": "^0.0.15",
+    "circuit-to-svg": "^0.0.400"
+  }
+}

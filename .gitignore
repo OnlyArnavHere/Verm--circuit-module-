@@ -8,3 +8,6 @@ build/
 coverage/
 tmp/
 artifacts/
+
+# Phase 2 spike outputs (regenerate by running the scripts)
+spikes/**/out/
