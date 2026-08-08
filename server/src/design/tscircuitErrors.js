@@ -22,6 +22,11 @@ const ERROR_TYPE_MAP = Object.freeze({
   schematic_port_not_matched_error: "PIN_NOT_FOUND",
   pcb_trace_error: "ROUTING_FAILURE",
   pcb_autorouting_error: "ROUTING_FAILURE",
+  // Emitted per unrouted connection: "Trace [...] is not connected (it has no PCB
+  // trace)". Without this mapping it fell through to UNSUPPORTED_COMPONENT and
+  // misreported a routing problem as a component problem.
+  pcb_trace_missing_error: "ROUTING_FAILURE",
+  pcb_missing_trace_error: "ROUTING_FAILURE",
   pcb_placement_error: "BOARD_CONSTRAINT_FAILURE",
   pcb_component_outside_board_error: "BOARD_CONSTRAINT_FAILURE",
   pcb_footprint_overlap_error: "DRC_FAILURE",

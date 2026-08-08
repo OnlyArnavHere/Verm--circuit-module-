@@ -11,3 +11,7 @@ artifacts/
 
 # Phase 2 spike outputs (regenerate by running the scripts)
 spikes/**/out/
+
+# Generated POC artifacts (regenerate: cd server && node scripts/run-poc.js)
+artifacts/
+.env.bak

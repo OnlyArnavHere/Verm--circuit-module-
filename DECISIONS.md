@@ -356,3 +356,115 @@ S3_REGION=eu-north-1 S3_BUCKET=pcb-circuit-agent-dev-storage \
 S3_ACCESS_KEY_ID="" S3_SECRET_ACCESS_KEY="" \
 npm run storage:healthcheck
 ```
+
+---
+
+## D-021 — The parts engine overturns Phase 3's "9 of 10 unresolvable"
+
+**Phase:** 5
+**Status:** Accepted — supersedes the practical impact of D-010
+
+Phase 3 concluded that 9 of 10 fixture packages could not be resolved. That was
+true **of the curated table**, and it is worth being precise about, because the
+conclusion could easily have been carried forward as "these parts are
+unresolvable" and used to justify a fully-mocked POC.
+
+With the cached parts engine, **18 of 19 distinct parts across all four fixtures
+resolve for real** by manufacturer part number. D-010's rule is unchanged and
+still doing its job: a catalogue hit is accepted **only when the returned package
+string matches upstream exactly**. A hit on the part number with a different
+package is rejected, not warned about.
+
+Vindication of D-010: `QFN-16-EP(4x4)` resolves to a footprint with **17 pads**
+(16 + exposed thermal pad). Phase 3 refused to substitute plain `qfn16` because it
+lacks the EP — the catalogue confirms that refusal was correct.
+
+---
+
+## D-022 — Pin names come from the catalogue, not from position
+
+**Phase:** 5
+**Status:** Accepted
+
+Catalogue footprints expose the part's real pin names as port hints
+(`LDC1314RGHR` → SCL, SDA, VDD, GND, ADDR, INTB). So logical pins are matched to
+physical pads **by name** — real resolution — instead of assigned positionally.
+15 of 28 logical pins across the two POC fixtures matched a real named pad.
+
+Matching is exact-name only, plus a curated synonym table restricted to universal
+equivalences (`VSS≡GND`, `VCC≡VDD`), each carrying a reason. No fuzzy matching:
+"closest pin" is exactly the guess the whole design forbids.
+
+Unmatched pins are individually tagged `source: "mock"` with a per-pin reason, and
+they are why both boards are marked `manufacturable: false`. The common failure is
+principled, not incidental: upstream logical names are *functions* (`SDA`, `MOSI`)
+while a BGA names pins by ball coordinate (`A1`, `B3`) and an MCU by port
+(`PTA0`). Bridging that needs a datasheet mux table, which we do not have.
+
+---
+
+## D-023 — Pin names are never borrowed across footprints
+
+**Phase:** 5
+**Status:** Accepted
+
+`HY2111-GB` resolves via the curated table (highest trust) and therefore gets
+**0/2 real pins**, because `footprinter`'s `sot23_6` exposes only positional pins.
+The same part via the parts engine would expose real names.
+
+Borrowing the names from the catalogue footprint while compiling the curated one
+was rejected: pad numbering belongs to the footprint actually compiled, so names
+from a different footprint could silently mis-map pads — a wrong pinout that looks
+right, which is the worst failure mode in this system.
+
+Consequence worth flagging: the most-trusted footprint path currently yields the
+least pin information. Resolvable later by adding pin names to curated entries as
+verified data.
+
+---
+
+## D-024 — `pinLabels` silently prevents PCB routing; route on pad selectors
+
+**Phase:** 5
+**Status:** Accepted — behavioural constraint on the compiler
+
+Setting `pinLabels` on a `<chip>` causes tscircuit to emit
+`pcb_trace_missing_error` for **every** connection and produce no copper.
+Verified in a controlled comparison: identical boards route fine without it.
+
+The compiler therefore does not set `pinLabels` and routes on real pad selectors
+(`.U1 > .pin3`). Schematic readability is unaffected — catalogue footprints
+already carry the real pin names.
+
+This was found only because the nets-realized assertion was strengthened; the
+first build reported "success" with 1 of 5 traces routed. Another instance of the
+Phase 2 R1 lesson: **tscircuit's silence is not validity.**
+
+---
+
+## D-025 — Nets-realized assertion counts connections, not nets
+
+**Phase:** 5
+**Status:** Accepted
+
+The original check was `traceCount > 0`, which passes a board where 1 of 5 nets
+routed. It now compares actual `pcb_trace` count against expected connections
+(sum of `members - 1` per net) and fails on a partial route. This is what caught
+D-024. Do not weaken it back to a presence check.
+
+---
+
+## D-026 — `.env` pointed real AWS credentials at the local MinIO endpoint
+
+**Phase:** 5
+**Status:** Resolved
+
+The POC's first S3 upload failed with `InvalidAccessKeyId`. Cause: `.env` had been
+updated with the real bucket, `eu-north-1`, and real `AKIA…` keys, but still had
+`S3_ENDPOINT=http://localhost:9100` and `S3_FORCE_PATH_STYLE=true` — so AWS
+credentials were being sent to the local MinIO container.
+
+Fixed by clearing `S3_ENDPOINT` and setting `S3_FORCE_PATH_STYLE=false`
+(`.env.bak` retains the previous file). `.env` is gitignored, so the keys are not
+committed. Dev can return to MinIO by restoring the endpoint — the code path is
+unchanged and still supported.

@@ -127,19 +127,37 @@ export function assertPadIntegrity(circuitJson, expectedByRef = new Map()) {
 export function assertNetsRealized(circuitJson, validatedDesign) {
   const errors = [];
   const traceCount = (circuitJson ?? []).filter((el) => el?.type === "pcb_trace").length;
-  const expectedNets = (validatedDesign?.nets ?? []).filter(
-    (net) => net.net_class !== "ground" && net.net_class !== "power"
-  ).length;
 
-  if (expectedNets > 0 && traceCount === 0) {
+  // Every net is compiled as a pairwise chain, so an N-member net should yield
+  // N-1 traces. Counting connections rather than nets matters: tscircuit skips
+  // individual traces whose ports lack coordinates while still reporting
+  // success, so "at least one trace exists" would pass a mostly-unrouted board.
+  const expectedTraces = (validatedDesign?.nets ?? []).reduce((total, net) => {
+    const members = net.connections?.length ?? net.members?.length ?? 0;
+    return total + Math.max(0, members - 1);
+  }, 0);
+
+  if (expectedTraces > 0 && traceCount === 0) {
     errors.push({
       code: "ROUTING_FAILURE",
       severity: SEVERITY.ERROR,
       message:
-        `ValidatedDesign declares ${expectedNets} signal net(s) but the compiled board ` +
+        `Design declares ${expectedTraces} connection(s) but the compiled board ` +
         `contains no pcb_trace elements — nothing was routed.`,
       target: null,
-      detail: { expectedNets, traceCount },
+      detail: { expectedTraces, traceCount },
+    });
+  } else if (traceCount < expectedTraces) {
+    errors.push({
+      code: "ROUTING_FAILURE",
+      severity: SEVERITY.ERROR,
+      message:
+        `Only ${traceCount} of ${expectedTraces} expected connections were routed. ` +
+        `tscircuit skips traces whose ports lack coordinates without raising an error, ` +
+        `so the remaining ${expectedTraces - traceCount} net connection(s) exist in the ` +
+        `design but not in copper.`,
+      target: null,
+      detail: { expectedTraces, traceCount },
     });
   }
 

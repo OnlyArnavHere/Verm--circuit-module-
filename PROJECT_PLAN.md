@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Clean slate, Phase 1 not yet started.
+**Status:** Phases 1–5 complete. Stop here for the checkpoint review before Phase 6.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -163,9 +163,9 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [ ] Phase 1 — Repo & job skeleton
-- [ ] Phase 2 — tscircuit feasibility report
-- [ ] Phase 3 — ValidatedDesign schema
-- [ ] Phase 4 — Architecture doc
-- [ ] Phase 5 — Minimal POC (rc_car.json end-to-end + validator proven against noise_pollution_monitor.json)
+- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
+- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless+offline)*
+- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion)*
+- [x] Phase 4 — Architecture doc *(`docs/ARCHITECTURE.md`)*
+- [x] Phase 5 — Minimal POC *(rc_car + smart_dustbin: 4/4 outputs each, 10/10 real footprints, 4 known bugs caught; `npm test` → 41/41)*
 - [ ] Phase 6 — Parts resolution (deferred, post-checkpoint)

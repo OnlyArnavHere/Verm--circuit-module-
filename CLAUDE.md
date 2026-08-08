@@ -12,7 +12,7 @@ circuit diagram, schematic, PCB layout, 3D view.
 phase; don't skip ahead. `DECISIONS.md` records every non-trivial choice — keep it
 updated.
 
-**Current status: Phases 1–3 complete.** Phase 4 (architecture doc) is next.
+**Current status: Phases 1–5 complete — stop for checkpoint review before Phase 6.**
 Read `docs/FEASIBILITY_REPORT.md` before doing any tscircuit work — it is
 empirically verified, and several of its findings constrain the design.
 
@@ -126,6 +126,32 @@ Rules that are easy to "helpfully" break:
   A mock must be labelled `source: "mock"`; `unresolved` must never reach the compiler.
 - `server/test/fixtures/circuitjson-*.json` are **real captured tscircuit output**
   (D-019). Regenerate from the Phase 2 spike after a tscircuit upgrade; don't hand-edit.
+
+## Phase 5 pipeline (`server/src/design/`, `server/src/compile/`)
+
+```
+scripts/run-poc.js  parse -> electrical checks -> dedupe -> resolve -> compile -> S3 -> manifest
+design/partsEngine.js  MPN -> LCSC via jlcsearch, package-matched, disk-cached
+design/pinout.js       real pin NAMES from catalogue footprints, disk-cached
+design/resolver.js     per-field real/mock resolution
+design/electricalChecks.js  the 4 known bugs
+compile/toTscircuit.js compiles to tscircuit source
+compile/compile.js     -> the 4 required output files
+```
+
+Constraints learned the hard way — do not undo:
+
+- **Never set `pinLabels` on a `<chip>`.** It silently prevents ALL PCB routing
+  (`pcb_trace_missing_error` for every connection). Route on pad selectors
+  (`.U1 > .pin3`). (D-024)
+- **`assertNetsRealized` counts connections, not nets.** `traceCount > 0` would
+  pass a board with 1 of 5 nets routed — that's the bug it caught. (D-025)
+- **Never borrow pin names across footprints.** Pad numbering belongs to the
+  footprint actually compiled; names from a different one can mis-map pads. (D-023)
+- **Parts-engine hits require an exact package-string match.** A part-number hit
+  with a different package is a rejection, not a warning. (D-021)
+- `server/data/*-cache.json` are committed so re-runs are deterministic and
+  offline. Delete to re-fetch.
 
 ## Failure handling (non-negotiable)
 

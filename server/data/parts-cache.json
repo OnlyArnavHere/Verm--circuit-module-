@@ -1,0 +1,174 @@
+{
+  "BLE-SER-A-ANT::SMD,10.6x10.2mm": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"BLE-SER-A-ANT\".",
+    "detail": {
+      "partNumber": "BLE-SER-A-ANT",
+      "package": "SMD,10.6x10.2mm",
+      "packageMismatches": []
+    }
+  },
+  "CD4543BM96::SOIC-16": {
+    "ok": true,
+    "lcsc": "C28326",
+    "footprint": "jlcpcb:C28326",
+    "package": "SOIC-16",
+    "description": "-55℃~+125℃ 3V~18V 40nA 7 Segment SOIC-16 LCD Drivers ROHS",
+    "stock": 11090,
+    "matchedOn": "part_number+package"
+  },
+  "ESPC2-12-N4::SMD,24x16mm": {
+    "ok": true,
+    "lcsc": "C19949080",
+    "footprint": "jlcpcb:C19949080",
+    "package": "SMD,24x16mm",
+    "description": "-40℃~+105℃ -90dBm、-76dBm、-74dBm 20.5dBm 370mA 3V~3.6V 65mA Bluetooth5.0 ESP32-C2、ESP8684H2/H4 UART、SPI、I2C、GPIO、PWM、ADC SMD,24x16mm WiFi Modules ROHS",
+    "stock": 983,
+    "matchedOn": "part_number+package"
+  },
+  "FS32K116LFT0MLFT::LQFP-48(7x7)": {
+    "ok": true,
+    "lcsc": "C1137392",
+    "footprint": "jlcpcb:C1137392",
+    "package": "LQFP-48(7x7)",
+    "description": "128KB 12bit 2.7V~5.5V 43 48MHz 8bit ARM Cortex-M0+ FLASH LQFP-48(7x7) Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 895,
+    "matchedOn": "part_number+package"
+  },
+  "HDSP-521G::DIP-18": {
+    "ok": true,
+    "lcsc": "C5650089",
+    "footprint": "jlcpcb:C5650089",
+    "package": "DIP-18",
+    "description": "0.56 105mW 18.6mmx25mmx8mm 2 7 Segment Common Anode Green DIP-18 LED Segment Displays ROHS",
+    "stock": 10,
+    "matchedOn": "part_number+package"
+  },
+  "HY2111-GB::SOT-23-6": {
+    "ok": true,
+    "lcsc": "C82747",
+    "footprint": "jlcpcb:C82747",
+    "package": "SOT-23-6",
+    "description": "-40℃~+85℃ 1 1.5V~8V 100nA 2.9V 4.28V Protection IC Support SOT-23-6 Battery Management ROHS",
+    "stock": 6048,
+    "matchedOn": "part_number+package"
+  },
+  "IS25LP080D-JNLE-TR::SOIC-8": {
+    "ok": true,
+    "lcsc": "C521286",
+    "footprint": "jlcpcb:C521286",
+    "package": "SOIC-8",
+    "description": "-40℃~+105℃ 100,000 cycles 133MHz 2.3V~3.6V 20 Years 200us 8Mbit 8uA Hardware write protection、Software write protection、Write enable latch SPI SOIC-8 NOR FLASH ROHS",
+    "stock": 290,
+    "matchedOn": "part_number+package"
+  },
+  "LDC1314RGHR::QFN-16-EP(4x4)": {
+    "ok": true,
+    "lcsc": "C2667027",
+    "footprint": "jlcpcb:C2667027",
+    "package": "QFN-16-EP(4x4)",
+    "description": "I2C Inductance-to-Digital Converter Low power mode、Digital communication interface、Interrupt output、Integrated ADC、Digital filtering/signal processing QFN-16-EP(4x4) Specialized Sensors ROHS",
+    "stock": 120,
+    "matchedOn": "part_number+package"
+  },
+  "LMA2718T421-OA5-2::SMD-4P,2.8x1.9mm": {
+    "ok": true,
+    "lcsc": "C7587901",
+    "footprint": "jlcpcb:C7587901",
+    "package": "SMD-4P,2.8x1.9mm",
+    "description": "-40℃~+100℃ -42dB 0.9mm 1.6V~3.6V 1.85mm 120uA 2.75mm 300Ω 55dB Omnidirectional SMD-4P,2.8x1.9mm MEMS Microphones ROHS",
+    "stock": 33076,
+    "matchedOn": "part_number+package"
+  },
+  "LP103SB6F::SOT-23-6": {
+    "ok": true,
+    "lcsc": "C387729",
+    "footprint": "jlcpcb:C387729",
+    "package": "SOT-23-6",
+    "description": "-40℃~+105℃ 3.1V~6.3V 5V、9V、12V、20V Power Supply Controller QC 2.0、QC 3.0、FCP、BC 1.2、SFCP SOT-23-6 USB PD ROHS",
+    "stock": 2641,
+    "matchedOn": "part_number+package"
+  },
+  "MBI5124GP-B::SSOP-24": {
+    "ok": true,
+    "lcsc": "C256866",
+    "footprint": "jlcpcb:C256866",
+    "package": "SSOP-24",
+    "description": "-40℃~+85℃ 1.5% 16 25mA 3V~5.5V SSOP-24 LED Drivers ROHS",
+    "stock": 27838,
+    "matchedOn": "part_number+package"
+  },
+  "MC9RS08KA1CSCR::SOIC-8": {
+    "ok": true,
+    "lcsc": "C2053131",
+    "footprint": "jlcpcb:C2053131",
+    "package": "SOIC-8",
+    "description": "1.8V~5.5V 10MHz 1KB 4 FLASH Others SOIC-8 Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 20,
+    "matchedOn": "part_number+package"
+  },
+  "MC9S08DZ32ACLC::LQFP-32(7x7)": {
+    "ok": true,
+    "lcsc": "C1337499",
+    "footprint": "jlcpcb:C1337499",
+    "package": "LQFP-32(7x7)",
+    "description": "12bit 2.7V~5.5V 25 32KB 40MHz LQFP-32(7x7) Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 10,
+    "matchedOn": "part_number+package"
+  },
+  "MCP7940NT-I/SN::SOIC-8": {
+    "ok": true,
+    "lcsc": "C148052",
+    "footprint": "jlcpcb:C148052",
+    "package": "SOIC-8",
+    "description": "-40℃~+85℃ 1.2uA 1.8V~5.5V 925nA External I2C Temperature compensation、Backup power management and battery charging、InsideSRAM/NVRAM、Timestamp function、Programmable clock output、Alarm function、Power-off retention of registers、ESD/Overvoltage protection、Periodic interrupt output Yes SOIC-8 Real Time Clocks ROHS",
+    "stock": 2595,
+    "matchedOn": "part_number+package"
+  },
+  "MCP9808T-E/MC::DFN-8-EP(2x3)": {
+    "ok": true,
+    "lcsc": "C194710",
+    "footprint": "jlcpcb:C194710",
+    "package": "DFN-8-EP(2x3)",
+    "description": "-40℃~+125℃ 2.7V~5.5V 250ms I2C、SMBus ±0.5℃ DFN-8-EP(2x3) Temperature Sensors ROHS",
+    "stock": 668,
+    "matchedOn": "part_number+package"
+  },
+  "MIMXRT1172CVM8A::MAPBGA-289": {
+    "ok": true,
+    "lcsc": "C3220126",
+    "footprint": "jlcpcb:C3220126",
+    "package": "MAPBGA-289",
+    "description": "",
+    "stock": 513,
+    "matchedOn": "part_number+package"
+  },
+  "PS-5850SVB-6PNW::SMD,5.8x5.8mm": {
+    "ok": true,
+    "lcsc": "C5155573",
+    "footprint": "jlcpcb:C5155573",
+    "package": "SMD,5.8x5.8mm",
+    "description": "",
+    "stock": 2422,
+    "matchedOn": "part_number+package"
+  },
+  "RF-BM-2340A2I::SMD,15.2x11.2mm": {
+    "ok": true,
+    "lcsc": "C20624106",
+    "footprint": "jlcpcb:C20624106",
+    "package": "SMD,15.2x11.2mm",
+    "description": "-102dBm、-99dBm、-96.5dBm、-92dBm -40℃~+85℃ 1.71V~3.8V 11mA 5.3mA 8dBm Bluetooth 5.3 CC2340R5 chip IPEX interface SPI、ADC、UART、I2C SMD,15.2x11.2mm Bluetooth Modules ROHS",
+    "stock": 42,
+    "matchedOn": "part_number+package"
+  },
+  "TP4110::SOP-16": {
+    "ok": true,
+    "lcsc": "C382136",
+    "footprint": "jlcpcb:C382136",
+    "package": "SOP-16",
+    "description": "-20℃~+85℃ 1 2.9V 4.35V 4.5V~5.5V SOP-16 Power Management - Specialized ROHS",
+    "stock": 3664,
+    "matchedOn": "part_number+package"
+  }
+}

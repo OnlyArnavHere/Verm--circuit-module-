@@ -56,17 +56,37 @@ test("empty circuit json fails rather than vacuously passing", () => {
   assert.equal(result.errors[0].code, "FOOTPRINT_NOT_FOUND");
 });
 
-test("declared signal nets with zero routed traces is a ROUTING_FAILURE", async () => {
+test("declared connections with zero routed traces is a ROUTING_FAILURE", async () => {
   const circuitJson = await load("circuitjson-zero-pad-dfn.json");
-  const design = { nets: [{ name: "I2C_3", net_class: "signal" }] };
+  const design = {
+    nets: [{ name: "I2C_3", net_class: "signal", connections: ["U1.SDA", "U2.SDA"] }],
+  };
   const result = assertNetsRealized(circuitJson, design);
   assert.equal(result.ok, false);
   assert.equal(result.errors[0].code, "ROUTING_FAILURE");
 });
 
-test("ground and power nets are not required to produce signal traces", async () => {
+test("a partially routed board fails — not just a fully unrouted one", async () => {
+  // tscircuit skips individual traces whose ports lack coordinates without
+  // erroring, so "at least one trace exists" would wave through a broken board.
+  const circuitJson = [
+    { type: "pcb_trace", pcb_trace_id: "t1" },
+    { type: "pcb_component", pcb_component_id: "c1" },
+    { type: "pcb_smtpad", pcb_component_id: "c1" },
+  ];
+  const design = {
+    nets: [
+      { name: "GND", net_class: "ground", connections: ["U1.GND", "U2.GND", "U3.GND"] },
+    ],
+  };
+  const result = assertNetsRealized(circuitJson, design);
+  assert.equal(result.ok, false, "1 of 2 expected traces must fail");
+  assert.match(result.errors[0].message, /Only 1 of 2 expected connections/);
+});
+
+test("nets with no connections require no traces", async () => {
   const circuitJson = await load("circuitjson-zero-pad-dfn.json");
-  const design = { nets: [{ name: "GND", net_class: "ground" }] };
+  const design = { nets: [{ name: "GND", net_class: "ground", connections: [] }] };
   assert.equal(assertNetsRealized(circuitJson, design).ok, true);
 });
 
