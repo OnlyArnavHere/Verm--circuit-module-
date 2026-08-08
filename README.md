@@ -43,6 +43,24 @@ cd web    && npm run dev      # dev upload UI on :5173
 
 Then open http://localhost:5173 and upload any file from `test-fixtures/`.
 
+## First run (cold start)
+
+The component-data cache (footprint geometry + 3D models, ~12 MB) is **not
+committed** — too large for the repo. Warm it with a single online run:
+
+```bash
+cd server && node scripts/run-poc.js      # fetches and caches component data
+```
+
+That one run costs ~30-60s of network time. Afterwards the cache is local and
+
+```bash
+node scripts/run-poc.js --offline         # zero network calls
+```
+
+works with the network blocked. `--offline` puts the cache in readonly mode: any
+request not already cached throws rather than silently fetching.
+
 ## Verify
 
 ```bash

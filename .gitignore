@@ -15,3 +15,9 @@ spikes/**/out/
 # Generated POC artifacts (regenerate: cd server && node scripts/run-poc.js)
 artifacts/
 .env.bak
+
+# Component-data cache (footprint geometry + 3D models, ~12 MB).
+# Not committed: too large for the repo. Warm it with a single online run:
+#   cd server && node scripts/run-poc.js
+# After that, `--offline` works with zero network calls.
+server/data/http-cache/

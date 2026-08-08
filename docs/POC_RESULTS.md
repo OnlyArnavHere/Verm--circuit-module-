@@ -346,3 +346,18 @@ the entry's mandatory `evidence` field.
 port (`PTA0`). Mapping `SDA`/`MOSI` onto those needs per-part datasheet mux
 tables. The curated-pinout table is the mechanism for that; it just needs verified
 data per part.
+
+---
+
+# Known open items (tracked, not yet actioned)
+
+**`gas_leakage_detector.json` — `U1.GPIO1` appears in two different nets.**
+`GPIO_5` (`U1.GPIO1` ↔ `U6.GPIO1`) and `GPIO_6` (`U1.GPIO1` ↔ `U7.GPIO1`) both
+terminate on the same logical pin. Same shape as the split-bus bug already caught
+at `U1.SDA`, but the current `SPLIT_BUS_HALF_NETS` check only fires for
+`bidir_data`/`clock` roles, so a GPIO fan-out is deliberately not flagged.
+
+That exclusion is right in general — one GPIO driving several loads is legal —
+but two *named* nets on one pin is more likely upstream modelling error than
+intent. Worth a distinct check that reports the shape without asserting it is a
+fault. Not urgent; recorded here so it is not lost.

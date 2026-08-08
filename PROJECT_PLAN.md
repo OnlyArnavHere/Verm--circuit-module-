@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phases 1-5.6 complete + Phase 6 first slice. Checkpoint review due.
+**Status:** Clean slate, Phase 1 not yet started.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -148,10 +148,13 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 **Definition of done:** manifest `real` claims are verified against actual compiled output, not pre-compile assumptions (add a test proving a case like U6 now reports correctly); a second run of an already-resolved fixture produces identical output with zero new network calls for previously-resolved components.
 
 ### Phase 6 — Pin-name resolution via datasheet mux tables (post-checkpoint)
-**Reframed from "broader parts coverage" now that Phase 5 proved coverage is already strong (18/19 parts resolve via the cached engine).** The actual remaining gap is structural: upstream logical pin names (`SDA`, `MOSI`) vs. physical pin schemes that don't share that vocabulary — BGA ball coordinates (`A1`), MCU ports (`PTA0`), or footprints with only positional pins (e.g. `sot23_6`, which cost `HY2111-GB` 0/2 real pin names despite resolving via the most-trusted curated path). Requires per-part datasheet mux tables, not a generic algorithm.
+**Scope bounded: resolve only the logical pin names actually referenced in the four fixtures' nets, not full per-part datasheets.** Full BGA/MCU pinouts are unbounded scope and violate the project's own MVP principle (section 15 — constrained set first, expand later). Enumerate the exact required pins per part from the fixture nets before starting each part, and stop there.
 
-First concrete item: verified pin names for the curated `sot23_6` entry (and any other curated-table entries with the same positional-only gap) — small, well-scoped, a good first slice of this phase rather than a standalone patch. Don't borrow names from a different footprint than the one actually compiled (D-023's rule stands) — the fix is adding real data to the curated entry, not bypassing the rule.
-**Definition of done:** at least the `sot23_6`-based fixtures show real (not positional-fallback) pin names where a verified datasheet mapping exists; approach documented for extending to the BGA/MCU cases.
+`curatedPinouts.js` is the mechanism (proven in the `sot23_6`/`HY2111-GB` slice — keyed by part number, not package, with empirical pad-correspondence verification). Remaining known needs from the four fixtures: `MIMXRT1172CVM8A` (SDA/SCL/VDD/GND), `FS32K116LFT0MLFT` (SDA/RX/AUDIO + the SPI pin once the SCK/MOSI bug is resolved, VDD/GND), `MC9S08DZ32ACLC` (SCL/ANT/GPIO1/AUDIO/VDD/GND) — confirm this list against the actual fixture nets before starting, don't assume it's complete.
+
+**Not required for checkpoint success:** resolving every part. `PIN_NOT_FOUND` on an unresolved part is the correct, honest failure mode this system is designed to produce — it's not a gap to panic-close before calling the POC done.
+
+**Definition of done:** documented approach for extending `curatedPinouts.js`, plus verified entries added incrementally as time allows — not a hard requirement to resolve every remaining pin before moving on.
 
 ---
 
@@ -185,6 +188,6 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [ ] Phase 3 — ValidatedDesign schema
 - [ ] Phase 4 — Architecture doc
 - [x] Phase 5 — Minimal POC (real-first resolution: rc_car.json + smart_dustbin.json end-to-end, 18/19 parts resolved for real; validator proven against noise_pollution_monitor.json, all 4 known bugs + 5th I2C SCL↔SDA bug caught)
-- [x] Phase 5.5 — DRC wired in *(DRC_FAILURE proven to fire on overlapping components)*
-- [x] Phase 5.6 — Resolution-integrity fixes *(3D now 9/10 verified from compiled output; offline run = 0 network calls)*
-- [~] Phase 6 — Pin-name resolution *(first slice done: HY2111-GB 0/2 → 2/2 real. BGA/MCU mux tables remain)*
+- [ ] Phase 5.5 — DRC wired in
+- [ ] Phase 5.6 — Resolution-integrity fixes (false real:true bug, false determinism/no-cache bug)
+- [ ] Phase 6 — Pin-name resolution via datasheet mux tables (starting with curated sot23_6 entry)
