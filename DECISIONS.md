@@ -313,3 +313,46 @@ premise first — that tscircuit reports zero errors and zero warnings for
 `DFN-8-EP(2x3)` — before asserting our check catches it. A hand-written mock could
 drift from tscircuit's real behaviour and turn the most important test in the
 suite into a tautology. Regenerate from the Phase 2 spike if tscircuit is upgraded.
+
+---
+
+## D-020 — Real AWS S3 round-trip verified; credentials now use the default chain
+
+**Phase:** 1 (retro-verified) / prep for Phase 5
+**Status:** Accepted — supersedes part of D-002
+
+The real AWS S3 path is now **confirmed working**, not just the MinIO stand-in:
+
+```
+bucket pcb-circuit-agent-dev-storage (eu-north-1)
+PUT -> GET -> byte-compare -> DELETE   61 bytes, OK
+```
+
+Two corrections to what was originally specified:
+
+- The bucket given as `your-project-pcb-artifacts-dev` **does not exist** (404) —
+  it appears to be an unsubstituted placeholder. The real bucket matching this
+  project is `pcb-circuit-agent-dev-storage`.
+- It is in **eu-north-1**, not `ap-south-1`. The only ap-south-1 buckets on this
+  account are `pcb-agent-tfstate-{arnav,vrusha}-2026`, which hold **Terraform
+  state for the prior project** and were deliberately not touched.
+
+**Code change:** `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` are no longer required.
+When unset, the AWS SDK's default provider chain is used (shared config file, SSO,
+or — importantly for production — a container/instance IAM role). Explicit keys
+are still honoured, which is what MinIO needs. Passing a half-filled credentials
+object hard-fails, so it is only set when both values are present.
+
+This also reopens the section 2 note that D-002 had parked: the **6-month free
+tier expiry is a live risk again** now that a real AWS dependency exists. It needs
+a date attached before Phase 5 stores artifacts for real.
+
+Dev default remains MinIO — both paths verified working after the change. To run
+against real AWS:
+
+```bash
+S3_ENDPOINT="" S3_FORCE_PATH_STYLE=false \
+S3_REGION=eu-north-1 S3_BUCKET=pcb-circuit-agent-dev-storage \
+S3_ACCESS_KEY_ID="" S3_SECRET_ACCESS_KEY="" \
+npm run storage:healthcheck
+```

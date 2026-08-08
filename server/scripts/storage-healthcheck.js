@@ -9,6 +9,14 @@ try {
   console.log(
     `[storage] round-trip against bucket "${STORAGE_BUCKET}" via ${config.storage.endpoint ?? "AWS S3"}`
   );
+  console.log(
+    `[storage] region=${config.storage.region} ` +
+      `credentials=${
+        config.storage.accessKeyId && config.storage.secretAccessKey
+          ? "explicit (from env)"
+          : "AWS default provider chain"
+      }`
+  );
   const result = await roundTripCheck();
   console.log(
     `[storage] OK — wrote/read/deleted ${result.bytes} bytes at ${result.key}`

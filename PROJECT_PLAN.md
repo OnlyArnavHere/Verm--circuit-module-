@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phases 1–3 complete. Phase 4 (architecture doc) is next.
+**Status:** Clean slate, Phase 1 not yet started.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -122,11 +122,19 @@ Then: design the `ValidatedDesign` schema that sits between the agent and the co
 Document concretely: what the LLM agent layer owns (interpretation, component-resolution decisions, ambiguity handling, explaining errors, modification requests) vs. what the deterministic layer owns (schema validation, pin mapping, connectivity/protocol validation, footprint assignment, routing, DRC, artifact generation). Include the explicit error taxonomy: `COMPONENT_NOT_FOUND`, `PIN_NOT_FOUND`, `FOOTPRINT_NOT_FOUND`, `MODEL_3D_NOT_FOUND`, `INVALID_NET`, `ELECTRICAL_CONFLICT`, `UNSUPPORTED_COMPONENT`, `ROUTING_FAILURE`, `DRC_FAILURE`, `BOARD_CONSTRAINT_FAILURE` — what triggers each, what the response shape looks like.
 **Definition of done:** `docs/ARCHITECTURE.md`.
 
-### Phase 5 — Minimal end-to-end POC
-Push `rc_car.json` through: parse → resolve components (mock clearly where real footprint/3D data isn't available — label every mock explicitly) → validate → compile → tscircuit → **produce actual files on disk (and uploaded to S3) for all 4 outputs — circuit diagram, schematic, PCB layout, 3D view.** If Phase 2 found a given output needs a conversion step to become a real file, that conversion step must actually run here, not be deferred. Partial/stubbed content inside a file is acceptable (e.g. a minimal placeholder PCB layout) as long as it's honestly labeled — an output that only exists as a live render and never became a file is not acceptable and counts as phase-incomplete. Separately, run the validator against `noise_pollution_monitor.json` and confirm it actually catches all four known bugs from section 1's table.
-**Definition of done:** working code in the repo, all 4 output files present on disk/S3 with a manifest listing each file's path and format, plus `docs/POC_RESULTS.md` stating exactly what worked, what was mocked, what failed and why, and confirmation the 4 known bugs were caught.
+### Phase 5 — Minimal end-to-end POC, real-component-first
+**Revised requirement: mocks are a fallback for what genuinely can't be resolved, not a default.** For every component in the fixture(s) used, actually attempt resolution — pinout, symbol, footprint, pad geometry, 3D model where available — using what's already built: the footprint mapper (Phase 3) and the cached `jlcpcb:` parts engine (D-011). Only fall back to a mock for a specific field that resolution genuinely can't produce, and that field must be tagged `source: "mock"` and surfaced explicitly in the output — never silently substituted, never rolled up into a single opaque "mocked" flag that hides which fields actually succeeded.
 
-**Stop after Phase 5** for a review checkpoint before touching full component-database integration, full routing/DRC, or production hardening.
+**Track resolution per field, not per component.** A component with a verified real footprint but an unresolved pinout is not the same state as one that's entirely mock — record `source: "real"` / `source: "mock"` independently for `symbol`, `footprint`, `pads`, `model_3d`, and `pins`, so the honest partial-progress state is visible rather than collapsed into a binary.
+
+**Use two fixtures, not one.** `rc_car.json`'s three components (`SOP-16`, `MAPBGA-289`, `QFN-16-EP(4x4)`) are all in the 9-of-10 that failed footprint resolution in Phase 3 — running Phase 5 on `rc_car.json` alone would never actually exercise the real-resolution path, only the fallback. Also run whichever fixture contains a `SOT-23-6` part (the one package that *does* resolve per Phase 3) — `smart_dustbin.json`, `gas_leakage_detector.json`, or `noise_pollution_monitor.json` all have one — specifically to prove the real-resolution path executes and produces a genuinely real footprint, not just to prove the mock fallback works.
+
+Push both through: parse → resolve (real-first, mock-fallback-per-field) → validate → compile → tscircuit → **produce actual files on disk (and uploaded to S3) for all 4 outputs.** Separately, confirm the validator still catches all four known bugs from section 1's table against `noise_pollution_monitor.json`.
+
+**Definition of done:** working code in the repo; all 4 output files present for both fixtures with a manifest; the manifest/design record shows per-field resolution source for every component (not a single mock/real flag); the `SOT-23-6`-containing fixture demonstrates at least one component with a genuinely real (not mocked) footprint end-to-end; `docs/POC_RESULTS.md` stating exactly what resolved for real, what fell back to mock and why, and confirmation the 4 known bugs were caught. **Do not report Phase 5 as successful on the basis of a fully-mocked design when real resolution was available and unused.**
+
+### Phase 6 — Broader parts coverage (post-checkpoint, deferred)
+Beyond what the cached `jlcpcb:` engine already resolves: additional datasheet verification for parts the engine can't confidently match, broader catalogue sources if needed, and hardening the resolution pipeline for parts outside the current fixture set. Decision on scope/approach at checkpoint review.
 
 ---
 
@@ -155,8 +163,9 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
-- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless+offline; risks R1/R2 raised)*
-- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion; `npm test` → 34/34)*
+- [ ] Phase 1 — Repo & job skeleton
+- [ ] Phase 2 — tscircuit feasibility report
+- [ ] Phase 3 — ValidatedDesign schema
 - [ ] Phase 4 — Architecture doc
 - [ ] Phase 5 — Minimal POC (rc_car.json end-to-end + validator proven against noise_pollution_monitor.json)
+- [ ] Phase 6 — Parts resolution (deferred, post-checkpoint)

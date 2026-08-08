@@ -11,14 +11,20 @@ import { config } from "../config.js";
 
 const { bucket } = config.storage;
 
+const { accessKeyId, secretAccessKey } = config.storage;
+
+/**
+ * Omitting `credentials` entirely makes the SDK use its default provider chain
+ * (shared config file, SSO, container/instance IAM role). Passing a half-filled
+ * credentials object instead would hard-fail, so only set it when both are present.
+ */
 export const s3 = new S3Client({
   region: config.storage.region,
   endpoint: config.storage.endpoint,
   forcePathStyle: config.storage.forcePathStyle,
-  credentials: {
-    accessKeyId: config.storage.accessKeyId,
-    secretAccessKey: config.storage.secretAccessKey,
-  },
+  ...(accessKeyId && secretAccessKey
+    ? { credentials: { accessKeyId, secretAccessKey } }
+    : {}),
 });
 
 export const STORAGE_BUCKET = bucket;

@@ -29,8 +29,11 @@ export const config = {
     endpoint: process.env.S3_ENDPOINT || undefined,
     region: process.env.S3_REGION ?? "us-east-1",
     bucket: required("S3_BUCKET"),
-    accessKeyId: required("S3_ACCESS_KEY_ID"),
-    secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
+    // Optional on purpose. When unset, the AWS SDK falls back to its default
+    // credential chain (~/.aws/credentials, SSO, or an IAM role in production).
+    // MinIO needs explicit keys; real AWS usually should not have them baked in.
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || undefined,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || undefined,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
   },
 };
