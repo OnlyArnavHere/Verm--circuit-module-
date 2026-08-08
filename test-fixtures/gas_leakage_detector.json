@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "design_name": "dunkai_design",
+  "components": [
+    {"ref_id": "U1", "part_class": "processing", "part_number": "MC9S08DZ32ACLC", "package": "LQFP-32(7x7)", "quantity": 1},
+    {"ref_id": "U2", "part_class": "sensor", "part_number": "MCP9808T-E/MC", "package": "DFN-8-EP(2x3)", "quantity": 1},
+    {"ref_id": "U3", "part_class": "communication", "part_number": "ESPC2-12-N4", "package": "SMD,24x16mm", "quantity": 1},
+    {"ref_id": "U4", "part_class": "power", "part_number": "HY2111-GB", "package": "SOT-23-6", "quantity": 1},
+    {"ref_id": "U5", "part_class": "power", "part_number": "TP4110", "package": "SOP-16", "quantity": 1},
+    {"ref_id": "U6", "part_class": "input", "part_number": "PS-5850SVB-6PNW", "package": "SMD,5.8x5.8mm", "quantity": 1},
+    {"ref_id": "U7", "part_class": "output", "part_number": "MBI5124GP-B", "package": "SSOP-24", "quantity": 1},
+    {"ref_id": "U8", "part_class": "output", "part_number": "CD4543BM96", "package": "SOIC-16", "quantity": 1}
+  ],
+  "nets": [
+    {"name": "GND", "connections": ["U1.GND", "U2.GND", "U3.GND", "U4.GND", "U5.GND", "U6.GND", "U7.GND", "U8.GND"], "net_class": "ground"},
+    {"name": "POWER_RAIL_3V3", "connections": ["U1.VDD", "U2.VDD", "U3.VDD", "U4.VDD", "U5.VDD", "U6.VDD", "U7.VDD", "U8.VDD"], "net_class": "power"},
+    {"name": "POWER_1", "connections": ["U4.VDD", "U5.VDD"], "net_class": "power"},
+    {"name": "POWER_2", "connections": ["U5.VDD", "U1.VDD"], "net_class": "power"},
+    {"name": "I2C_3", "connections": ["U1.SCL", "U2.SDA"], "net_class": "signal"},
+    {"name": "WIFI_4", "connections": ["U1.ANT", "U3.ANT"], "net_class": "signal"},
+    {"name": "GPIO_5", "connections": ["U1.GPIO1", "U6.GPIO1"], "net_class": "signal"},
+    {"name": "GPIO_6", "connections": ["U1.GPIO1", "U7.GPIO1"], "net_class": "signal"},
+    {"name": "AUDIO_7", "connections": ["U1.AUDIO", "U8.AUDIO"], "net_class": "signal"}
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {"shape": "rectangle", "width_mm": 100, "height_mm": 60}
+  }
+}

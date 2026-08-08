@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "design_name": "dunkai_design",
+  "components": [
+    {"ref_id": "U1", "part_class": "power", "part_number": "TP4110", "package": "SOP-16", "quantity": 1},
+    {"ref_id": "U2", "part_class": "processing", "part_number": "MIMXRT1172CVM8A", "package": "MAPBGA-289", "quantity": 1},
+    {"ref_id": "U3", "part_class": "sensor", "part_number": "LDC1314RGHR", "package": "QFN-16-EP(4x4)", "quantity": 1}
+  ],
+  "nets": [
+    {"name": "GND", "connections": ["U1.GND", "U2.GND", "U3.GND"], "net_class": "ground"},
+    {"name": "POWER_RAIL_3V3", "connections": ["U1.VDD", "U2.VDD", "U3.VDD"], "net_class": "power"},
+    {"name": "POWER_1", "connections": ["U1.VDD", "U2.VDD"], "net_class": "power"},
+    {"name": "POWER_2", "connections": ["U1.VDD", "U3.VDD"], "net_class": "power"},
+    {"name": "I2C_3", "connections": ["U3.SCL", "U2.SDA"], "net_class": "signal"}
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {"shape": "rectangle", "width_mm": 100, "height_mm": 60}
+  }
+}

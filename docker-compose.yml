@@ -1,0 +1,62 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: pcb-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Local S3-compatible object storage. Phase 1 uses this instead of real AWS S3
+  # so the storage plumbing can be proven end-to-end without cloud credentials.
+  # See DECISIONS.md (D-002).
+  minio:
+    image: minio/minio:latest
+    container_name: pcb-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-pcbagent}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-pcbagent_dev_secret}
+    # Host ports 9100/9101, not the MinIO defaults: a separate pre-existing
+    # project already holds 9000/9001 on this machine. This stack is deliberately
+    # independent of it (DECISIONS.md D-002).
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot: creates the artifact bucket, then exits.
+  minio-init:
+    image: minio/mc:latest
+    container_name: pcb-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-pcb-artifacts}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-pcbagent}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-pcbagent_dev_secret}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$S3_ACCESS_KEY_ID $$S3_SECRET_ACCESS_KEY &&
+      mc mb --ignore-existing local/$$S3_BUCKET &&
+      mc version enable local/$$S3_BUCKET &&
+      echo 'bucket ready: '$$S3_BUCKET
+      "
+
+volumes:
+  mongo-data:
+  minio-data:
