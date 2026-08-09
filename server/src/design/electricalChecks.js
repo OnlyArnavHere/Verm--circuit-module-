@@ -138,7 +138,61 @@ export function runElectricalChecks(upstream) {
     });
   }
 
-  // --- 3. degenerate nets ---------------------------------------------------
+  // --- 3. one pin appearing in multiple named nets --------------------------
+  // `gas_leakage_detector.json` wires U1.GPIO1 into both GPIO_5 and GPIO_6.
+  // A driver fanning out to several loads is legal — but expressing it as two
+  // separately-named nets is not how a fan-out is modelled, and it is the same
+  // shape as the split-bus bug. Reported distinctly from the bus case, because
+  // the correct resolution differs: a bus should be merged, a fan-out should be
+  // one net with three endpoints.
+  for (const [terminal, sharing] of byTerminal) {
+    if (sharing.length < 2) continue;
+
+    const { pin } = parsePin(terminal);
+    const role = roleOf(pin);
+    // Bus roles are already covered by the split-bus check above.
+    if (role === "bidir_data" || role === "clock") continue;
+
+    const netNames = sharing.map((net) => net.name).sort();
+    const allEndpoints = [
+      ...new Set(sharing.flatMap((net) => net.connections ?? [])),
+    ].sort();
+
+    errors.push({
+      code: "INVALID_NET",
+      message:
+        `Pin ${terminal} appears in ${sharing.length} separate nets ` +
+        `(${netNames.join(", ")}). One pin cannot belong to two distinct nets — ` +
+        `if it genuinely drives multiple loads, that is a single net with ` +
+        `${allEndpoints.length} endpoints, not ${sharing.length} nets.`,
+      target: terminal,
+      detail: {
+        terminal,
+        nets: netNames,
+        endpointsIfMerged: allEndpoints,
+        connections: sharing.map((net) => ({
+          name: net.name,
+          connections: net.connections,
+        })),
+      },
+    });
+
+    modifications.push({
+      target: `nets.${netNames.join("+")}`,
+      field: "connections",
+      originalValue: sharing.map((net) => net.connections),
+      correctedValue: null,
+      reason:
+        `${netNames.join(" and ")} both include ${terminal}. If this is an ` +
+        `intentional fan-out they should be one net with endpoints ` +
+        `${allEndpoints.join(", ")}. Merge NOT auto-applied — whether these are ` +
+        `one signal or two distinct signals sharing a pin by mistake is a design ` +
+        `question the upstream data does not answer.`,
+      detectedBy: "PIN_IN_MULTIPLE_NETS",
+    });
+  }
+
+  // --- 4. degenerate nets ---------------------------------------------------
   for (const net of nets) {
     const count = (net.connections ?? []).length;
     if (count < 2) {

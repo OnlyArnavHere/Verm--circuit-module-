@@ -76,7 +76,7 @@ Treat the Hardware Agent's nets as **claims to verify**, not ground truth. If yo
 - **Other agents in the platform need visibility** into job status/output → use **Socket.IO** for live progress events, and persist job/design state to **MongoDB** so it's readable by other agents asynchronously too, not just live.
 - **AWS S3** (already set up, 6-month free tier — flag the expiry date as a risk in the feasibility report, don't hard-block on it) for storing generated artifacts once they exist.
 - **Docker**: get **headless tscircuit execution** working reliably in a container — this is the first real unknown, since tscircuit assumes a browser UI. Solving this is priority one of Phase 2.
-- **Gemini API**: optional, narrow use only — sanity-checking incoming JSON structure before it enters the pipeline. Never in the deterministic compiler path, never generating circuit/schematic/PCB content.
+- **Gemini API**: sanity-checking incoming JSON structure (original scope), plus — as of Phase 6 — datasheet-grounded pin-mapping research under strict conditions: only called with a real fetched datasheet in hand, output gated by a structural check (claimed pin exists in the compiled footprint) and an anti-hallucination check (evidence excerpt must substring-match the real source document), and human-confirmed before being trusted. Never used to generate circuit/schematic/PCB content directly, and never treated as authoritative on its own — see Phase 6 for the full boundary.
 
 ---
 
@@ -150,11 +150,40 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 ### Phase 6 — Pin-name resolution via datasheet mux tables (post-checkpoint)
 **Scope bounded: resolve only the logical pin names actually referenced in the four fixtures' nets, not full per-part datasheets.** Full BGA/MCU pinouts are unbounded scope and violate the project's own MVP principle (section 15 — constrained set first, expand later). Enumerate the exact required pins per part from the fixture nets before starting each part, and stop there.
 
-`curatedPinouts.js` is the mechanism (proven in the `sot23_6`/`HY2111-GB` slice — keyed by part number, not package, with empirical pad-correspondence verification). Remaining known needs from the four fixtures: `MIMXRT1172CVM8A` (SDA/SCL/VDD/GND), `FS32K116LFT0MLFT` (SDA/RX/AUDIO + the SPI pin once the SCK/MOSI bug is resolved, VDD/GND), `MC9S08DZ32ACLC` (SCL/ANT/GPIO1/AUDIO/VDD/GND) — confirm this list against the actual fixture nets before starting, don't assume it's complete.
+`curatedPinouts.js` is the mechanism (proven in the `sot23_6`/`HY2111-GB` slice — keyed by part number, not package, with empirical pad-correspondence verification).
 
-**Not required for checkpoint success:** resolving every part. `PIN_NOT_FOUND` on an unresolved part is the correct, honest failure mode this system is designed to produce — it's not a gap to panic-close before calling the POC done.
+**Groups, by resolution difficulty (confirmed against real fixture nets, not the plan's original guess):**
+- **Group A** (trivial — part already exposes matching named pads): `MBI5124GP-B`, `RF-BM-2340A2I`. 4 pins total.
+- **Group B** (part exposes named pins, but no direct counterpart — needs a datasheet decision on which physical pin a function maps to): `FS32K116LFT0MLFT`, `MIMXRT1172CVM8A`. 8 pins total, both parts are the MCUs at the center of the two showcased fixtures.
+- **Group C** (footprint exposes zero named pins, full datasheet lookup required): 11 parts, 37 pins. Genuinely open-ended — do not chase all of it now.
 
-**Definition of done:** documented approach for extending `curatedPinouts.js`, plus verified entries added incrementally as time allows — not a hard requirement to resolve every remaining pin before moving on.
+**Approved sub-approach for Group C (and any Group B gaps): Gemini-assisted datasheet extraction, human-confirmed.** Gemini acts as researcher, never as authority — same Agent/Deterministic split as the rest of this system, applied to pin research specifically:
+1. Only call Gemini with a real, already-fetched datasheet (via the JLCPCB part-detail page pattern found for `LP103SB6F` — reuse it, don't have Gemini search for its own source). If the datasheet can't be fetched, go straight to `PIN_NOT_FOUND`, no Gemini call.
+2. Prompt: extract only the specific logical pins the fixture actually needs (not a full pinout), return strict structured JSON with `logical_pin`, `physical_pin`, and a near-verbatim `evidence` excerpt.
+3. **Deterministic gate 1 (structural):** claimed physical pin/ball must actually exist in the compiled footprint's real pad list.
+4. **Deterministic gate 2 (anti-hallucination):** the `evidence` excerpt must fuzzy-match a substring of the actual extracted datasheet text — checked in code, not by asking Gemini to self-grade. Reject automatically if it doesn't match. Gemini's own `confidence` field is informational only, not a gate.
+5. **Human-confirm gate**, at least for now: nothing enters `curatedPinouts.js` as trusted without a human flipping it from "proposed" to "verified," even after passing both deterministic gates. Revisit relaxing this once there's a track record.
+6. Cache with full provenance: datasheet URL, evidence excerpt, both gate results, and who/when confirmed — not just the final pin number.
+
+**Pilot first, generalize later:** prove this end-to-end on `LP103SB6F` alone (real datasheet link already found) before deciding whether to apply it across the rest of Group C. Not yet implemented — evaluated and approved in shape, pending the pilot.
+
+**Not required for checkpoint success:** resolving every part. `PIN_NOT_FOUND` on an unresolved part is the correct, honest failure mode this system is designed to produce.
+
+**Definition of done:** Groups A and B resolved and verified; the Gemini-assisted pilot proven end-to-end on `LP103SB6F` with both deterministic gates demonstrably catching a deliberately-bad extraction (same rigor as the pinLabels/traceCount bug proofs); documented decision on whether to generalize to the rest of Group C.
+
+### Phase 6c — LLM-assisted datasheet pin extraction (evaluated, approved design, not yet started)
+For parts that don't resolve via the parts engine or curated table (Group C): fetch the manufacturer datasheet (via the JLCPCB part-detail page's Documents link, proven reachable off the same LCSC code the parts engine already returns), send Gemini the datasheet plus only the specific logical pins the fixture actually needs, require strict structured JSON output (`logical_pin`, `physical_pin`, `source: "manufacturer_datasheet"`, `evidence`), and run the result through deterministic validation before it's trusted.
+
+**Non-negotiable boundaries:**
+- Gemini runs only at cache-population time, never in the compile path — preserves section 9's determinism guarantee. The compiler only ever reads cached, already-verified entries.
+- Validation gates on structural fact (does the claimed physical pin exist on the footprint actually compiled — same discipline as D-023/`assertPadIntegrity`), never on the model's self-reported confidence.
+- New source tier: `llm_extracted`, distinct from `curated` (human-verified) and `mock`. Don't collapse it into either.
+- Evidence field must be a real datasheet excerpt, not a paraphrase — audit trail, not proof.
+- Unclear/unsupported datasheet → `PIN_NOT_FOUND`, same as any other unresolvable case. No forcing an answer.
+- First several extractions get explicit human sign-off against the real datasheet before the pattern is trusted for the rest of Group C.
+- Cache verified mappings permanently (same as curated table) so Gemini is called once per part, not repeatedly.
+
+**Status:** approved in principle, implementation not started. This is real engineering scope (prompt design, schema enforcement, the structural validator, caching) — worth doing as an accelerant for the remaining Group C bulk once Group A/B and the LP103SB6F datasheet-link proof-of-concept are done, not before.
 
 ---
 

@@ -582,3 +582,113 @@ The POC runner reported "All required outputs produced" on a run where
 flag only tracked missing files. Four well-formed files describing a broken board
 is exactly the "looks fine, is wrong" outcome the assertions exist to catch. The
 exit status now requires assertions to pass as well.
+
+---
+
+## D-032 — Rail matching: numbered variants in, separate rails out
+
+**Phase:** 6 (Group A)
+**Status:** Accepted — corrects a previously-wrong mapping
+
+Two changes to `matchLogicalPin`:
+
+**Added — numbered rail variants.** Parts split rails across numbered pins
+(`GND1..GND5`, `VDD1`/`VDD2`, `VSS1`/`VSS2`); those are the same net, so logical
+`GND` legitimately matches `GND1`. Restricted to power/ground rails: a numbered
+suffix on a *signal* pin (`DIO11`, `OUT3`, `TX1`) is a different signal, never an
+alias, and a test asserts that.
+
+**Removed — false aliases.** `VDDA`, `AGND`, `DGND`, `GNDA`, and `VIN` were
+treated as generic supply/ground synonyms. They are not:
+
+- `VDDA` is the *analog* supply, filtered separately from digital. This had
+  mapped `FS32K116LFT0MLFT`'s VDD to `VDDA` (pin 6) while `VDD1` (pin 5) existed
+  — an electrical error that renders perfectly.
+- `VIN` on a charger/converter is the input supply, not the device's own rail.
+
+Net effect: `FS32K116LFT0MLFT` VDD **corrected** pin6→pin5 and GND newly resolved
+to `VSS1`; `RF-BM-2340A2I` GND newly resolved to `GND1`. `TP4110` VDD becomes
+**unresolved** — it exposes only `VIN`, and `PIN_NOT_FOUND` is the honest answer
+rather than a plausible wrong pin. 14 → 15 real pins, with one correction and one
+deliberate honest regression.
+
+---
+
+## D-033 — A pin appearing in multiple named nets is reported
+
+**Phase:** 6
+**Status:** Accepted
+
+`gas_leakage_detector.json` wires `U1.GPIO1` into both `GPIO_5` and `GPIO_6`. The
+split-bus check deliberately skips non-bus roles because a driver fanning out to
+several loads is legal, so this shape went unreported.
+
+Added `PIN_IN_MULTIPLE_NETS` as a **distinct** check rather than widening the bus
+rule, because the correct fix differs: a split bus should be merged into one bus;
+a fan-out should be one net with N endpoints. The finding reports
+`endpointsIfMerged` so the correction is actionable. Ground and power nets are
+exempt — sharing those pins is normal and de-duplication already handles them.
+
+It also caught a second instance not previously known: `U1.MOSI` in
+`noise_pollution_monitor` (`SPI_8` and `SPI_10` both land on it).
+
+---
+
+## D-034 — Datasheet-extraction pilot: gates proven, live legs blocked
+
+**Phase:** 6 (Group C pilot)
+**Status:** Mechanism complete and proven; **no real extraction performed**
+
+Built `datasheetExtraction.js` with the approved shape: datasheet-first, two
+deterministic gates, human-confirm, full provenance. Both gates are proven
+against deliberately-bad extractions:
+
+| Bad claim | Caught by |
+|---|---|
+| `pin12` on a 6-pad SOT-23-6 | Gate 1 (structural) |
+| real `pin6`, invented evidence about an I2C bus | Gate 2 (evidence) |
+| `confidence: 1.0` on a claim failing both gates | neither gate consulted it |
+
+**Two live legs could not run, and neither was faked:**
+
+1. **No `GEMINI_API_KEY`** in this environment, so no real model call happened.
+   The API key is now injectable so the gates are testable without one.
+2. **The datasheet could not be fetched.** The JLCPCB part-detail page is
+   reachable and yields 5 candidate PDF links, but every signed OSS URL returns
+   `403 SignatureDoesNotMatch` (session-bound token), and the LCSC/EasyEDA APIs
+   return 404/403 to a scripted client.
+
+The real pilot run therefore produced exactly the designed outcome:
+
+```
+ok: false | code: PIN_NOT_FOUND | geminiCalled: false
+reason: all 5 datasheet link(s) failed to download as a readable PDF
+```
+
+That is the rule working — no datasheet in hand means no model call — but it also
+means **the pilot has not been validated against a real datasheet or a real model
+response.** The gates are proven; the pipeline they gate is not yet exercised
+end-to-end. Do not generalize to the rest of Group C on this evidence.
+
+---
+
+## D-035 — Group A was not the "4 easy pins" it was scoped as
+
+**Phase:** 6
+**Status:** Accepted — scoping correction
+
+Group A was characterised (originally by me, then carried into the plan) as two
+parts needing 4 pins that the catalogue already exposes. Verified against the
+real pin lists, only **1 of the 4** is resolvable:
+
+| Part | Needed | Reality |
+|---|---|---|
+| `RF-BM-2340A2I` | GND | ✅ `GND1` via the rail rule |
+| `RF-BM-2340A2I` | TX | ❌ no TX pin; UART is firmware-mapped to a `DIOxx` |
+| `MBI5124GP-B` | AUDIO | ❌ constant-current LED driver — has no audio function |
+| `MBI5124GP-B` | GPIO1 | ❌ no GPIO either; its inputs are SDI/CLK/LE/OE |
+
+The `MBI5124GP-B` pins are **upstream data errors**, not resolution gaps — the
+Hardware Agent asked for functions the part does not have. `PIN_NOT_FOUND` is
+correct and no datasheet will change it. Worth surfacing to whoever owns the
+Hardware Agent rather than absorbing silently.

@@ -361,3 +361,101 @@ That exclusion is right in general — one GPIO driving several loads is legal �
 but two *named* nets on one pin is more likely upstream modelling error than
 intent. Worth a distinct check that reports the shape without asserting it is a
 fault. Not urgent; recorded here so it is not lost.
+
+---
+
+# Phase 6 — bounded pin resolution (Groups A/B + Group C pilot)
+
+## Pin totals, verified against the real fixture nets
+
+**19 distinct parts · 63 logical pins referenced · 15 real · 48 unresolved.**
+
+The plan's original per-part list was checked and found wrong in two places and
+incomplete in a third: `MIMXRT1172CVM8A` needs GND/SDA/VDD (not SCL — that net
+terminates on U3); `FS32K116LFT0MLFT`'s "SPI pin" is concretely `MOSI`; and the
+list named 3 parts when **15** have unresolved pins.
+
+## Group A — 1 of 4 pins, not 4
+
+Scoped as "part already exposes matching named pads". Verified against the actual
+pin lists, that holds for one pin:
+
+| Part | Pin | Outcome |
+|---|---|---|
+| `RF-BM-2340A2I` | GND | ✅ `GND1` (pin1) via the new rail rule |
+| `RF-BM-2340A2I` | TX | ❌ no TX pin — UART is firmware-mapped to a `DIOxx` |
+| `MBI5124GP-B` | AUDIO | ❌ it is an LED driver with no audio function |
+| `MBI5124GP-B` | GPIO1 | ❌ no GPIO; inputs are SDI/CLK/LE/OE |
+
+The two `MBI5124GP-B` entries are **upstream data errors** — the Hardware Agent
+requested functions the part does not physically have. No datasheet will resolve
+them; `PIN_NOT_FOUND` is the correct permanent answer.
+
+## The rail-matching rule (and a bug it fixed)
+
+`GND` now matches `GND1`, and `VSS1` through the rail equivalence — numbered pins
+of one rail are one net. Restricted to rails: `DIO11` is not `DIO`.
+
+More importantly, **`VDDA`/`AGND`/`DGND`/`VIN` were removed as aliases.** They are
+separate rails, not synonyms. This had been mapping `FS32K116LFT0MLFT`'s digital
+`VDD` to `VDDA` (pin 6) while `VDD1` (pin 5) existed — an electrical error that
+renders perfectly and fails in hardware.
+
+| Change | Effect |
+|---|---|
+| `FS32K116LFT0MLFT` VDD | **corrected** pin6 (VDDA) → pin5 (VDD1) |
+| `FS32K116LFT0MLFT` GND | newly resolved → pin7 (VSS1) |
+| `RF-BM-2340A2I` GND | newly resolved → pin1 (GND1) |
+| `TP4110` VDD | **now unresolved** — exposes only `VIN`; honest `PIN_NOT_FOUND` |
+
+## Group B — blocked on the same mechanism the pilot builds
+
+`FS32K116LFT0MLFT` and `MIMXRT1172CVM8A` were scoped as "needs a datasheet
+decision". After the rail rule, what remains is exactly that:
+
+- `FS32K116LFT0MLFT`: VDD/GND now real; **AUDIO, MOSI, RX, SDA** need a mux table
+  (real pin names are `PTA0`-style ports).
+- `MIMXRT1172CVM8A`: nothing resolves — a 289-ball BGA whose pins are named by
+  ball coordinate (`A1`, `B3`). GND/SDA/VDD all need the datasheet.
+
+**These cannot be completed without the datasheet path**, which is what the Group
+C pilot builds — so Group B is gated on the pilot's live legs working, not on
+additional design.
+
+## Group C pilot on `LP103SB6F` — gates proven, live legs blocked
+
+Mechanism built per the approved design ([`datasheetExtraction.js`](../server/src/design/datasheetExtraction.js)):
+datasheet-first → Gemini proposes → two deterministic gates → `proposed` →
+human confirms → only then eligible for `curatedPinouts.js`.
+
+**Both gates proven against deliberately-bad extractions:**
+
+| Deliberately-bad claim | Result |
+|---|---|
+| `pin12` on a 6-pad SOT-23-6 | rejected by **Gate 1** (structural) |
+| real `pin6`, evidence invented ("I2C ground return for SDA/SCL") | rejected by **Gate 2** (evidence) |
+| `confidence: 1.0` on a claim failing both | confidence never consulted |
+| factually-true paraphrase, not an excerpt | rejected by Gate 2 — it demands source text |
+| near-verbatim with whitespace/case noise | **accepted** — PDF artefacts don't cause false rejection |
+| a good claim passing both gates | reaches `proposed`, **never** `verified` |
+
+**What did NOT happen, and was not faked:**
+
+1. **No Gemini call.** No `GEMINI_API_KEY` in this environment.
+2. **No datasheet fetched.** The part-detail page is reachable and yields 5
+   candidate PDF links, but every signed OSS URL returns
+   `403 SignatureDoesNotMatch` (session-bound token) and the LCSC/EasyEDA APIs
+   return 404/403 to a scripted client.
+
+The real pilot run produced the designed outcome:
+
+```
+ok: false | code: PIN_NOT_FOUND | geminiCalled: false
+reason: all 5 datasheet link(s) failed to download as a readable PDF
+```
+
+That is the "no datasheet ⇒ no model call" rule working correctly. But it also
+means **the pipeline the gates protect has never run end-to-end.** The gates are
+proven; the extraction is not. **Recommendation: do not generalize to the rest of
+Group C on this evidence** — the pilot needs a working datasheet source and an
+API key before its real-world performance is known.
