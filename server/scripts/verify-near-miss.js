@@ -21,7 +21,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import "../src/config.js";
 import { fetchDatasheet, callGemini } from "../src/design/datasheetExtraction.js";
-import { extractWithVerification, callGrok, OUTCOME } from "../src/design/dualExtraction.js";
+import {
+  extractWithVerification,
+  callExtractorB,
+  extractorBKey,
+  detectProvider,
+  OUTCOME,
+} from "../src/design/dualExtraction.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CACHE = path.resolve(here, "../data/near-miss-datasheet.txt");
@@ -67,7 +73,8 @@ console.log(
 // back to a second Gemini call on the FULL text — which still exercises the
 // comparator, but does NOT demonstrate cross-model independence. The banner
 // below says which mode actually ran, so the result is never overstated.
-const grokProbe = await callGrok("Reply with the single word OK");
+const providerB = detectProvider(extractorBKey());
+const grokProbe = await callExtractorB("Reply with the single word OK");
 const grokAvailable = grokProbe.ok;
 
 const extractors = [
@@ -79,14 +86,14 @@ const extractors = [
     datasheetText: diagramOnly, // restricted on purpose
   },
   grokAvailable
-    ? { id: "B", name: "grok(full)", model: "grok-3", call: callGrok }
+    ? { id: "B", name: `${providerB.name}(full)`, model: providerB.defaultModel, call: callExtractorB }
     : { id: "B", name: "gemini(full)", model: "gemini-flash-latest", call: callGemini },
 ];
 
 console.log(
   grokAvailable
-    ? "\nmode: CROSS-MODEL (Gemini restricted vs Grok full) — full design under test"
-    : `\nmode: SINGLE-MODEL (Gemini restricted vs Gemini full) — Grok unavailable: ${grokProbe.reason}\n` +
+    ? `\nmode: CROSS-MODEL (Gemini restricted vs ${providerB?.name} full) — full design under test`
+    : `\nmode: SINGLE-MODEL (Gemini restricted vs Gemini full) — Extractor B unavailable: ${grokProbe.reason}\n` +
         "      This tests the COMPARATOR only. Cross-model independence is NOT demonstrated."
 );
 
@@ -152,6 +159,6 @@ if (a?.passed && b?.passed && a.physical_pin !== b.physical_pin) {
 
 console.log(`\n${allPassed ? "NEAR-MISS RECONSTRUCTION: PASSED" : "NEAR-MISS RECONSTRUCTION: FAILED"}`);
 if (!grokAvailable) {
-  console.log("SCOPE: comparator proven; cross-model independence NOT proven (Grok has no credits).");
+  console.log("SCOPE: comparator proven; cross-model independence NOT proven (Extractor B unavailable).");
 }
 process.exit(allPassed ? 0 : 1);

@@ -947,3 +947,41 @@ fail-safe so an unavailable B can never silently become auto-accept.
 Until Grok has credits, the batch would resolve nothing automatically — every part
 would land in human review, which is the pre-existing workflow with extra API
 cost. Holding the batch rather than burning calls on a run that must be redone.
+
+---
+
+## D-047 — Extractor B selects its provider by key prefix, not variable name
+
+**Phase:** 6
+**Status:** Accepted
+
+"Grok" (x.ai) and "Groq" (api.groq.com) are different vendors with near-identical
+names, and this project's `.env` has held the variable `Grok_API_KEY` while the
+intended value changed between them. Keying off the variable *name* would send an
+x.ai key to Groq or vice versa and report a misleading `401 Invalid API Key`.
+
+`detectProvider()` therefore dispatches on the **key prefix**, which is
+unambiguous:
+
+| Prefix | Provider | Endpoint | Default model |
+|---|---|---|---|
+| `gsk_…` | Groq | `api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| `xai-…` | x.ai | `api.x.ai/v1` | `grok-3` |
+
+Both are OpenAI-compatible, so only the base URL and default model differ. An
+unrecognised prefix reports that explicitly rather than guessing an endpoint.
+
+Either provider satisfies the design requirement — Llama-on-Groq is as genuinely
+distinct a model family from Gemini as Grok is. The requirement is *independence*,
+not a specific vendor.
+
+**Current state (measured, both endpoints tried with the key actually present):**
+
+```
+key prefix: xai-  -> x.ai
+  x.ai : HTTP 403 — "Your newly created team doesn't have any credits or licenses yet."
+  Groq : HTTP 401 — "Invalid API Key"   (as expected: it is not a Groq key)
+```
+
+So Extractor B remains unavailable and auto-accept stays blocked by construction.
+The code now needs no change when a working key lands — only the `.env` value.

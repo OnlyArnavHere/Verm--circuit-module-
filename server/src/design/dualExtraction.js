@@ -27,29 +27,71 @@
  */
 import { gateStructural, gateEvidence, buildPrompt, callGemini } from "./datasheetExtraction.js";
 
-/** x.ai / Grok — Extractor B. A different model family from Gemini, by design. */
-export async function callGrok(
+/**
+ * Extractor B's key, whatever it is called in `.env`. Env vars are
+ * case-sensitive, and this key has been spelled `Grok_API_KEY` while holding
+ * both x.ai and (intended) Groq values — so accept the spellings and let the
+ * *prefix* decide the provider rather than the variable name.
+ */
+export const extractorBKey = () =>
+  process.env.GROQ_API_KEY ||
+  process.env.Groq_API_KEY ||
+  process.env.Grok_API_KEY ||
+  process.env.GROK_API_KEY ||
+  process.env.XAI_API_KEY ||
+  null;
+
+/**
+ * Two different vendors with confusingly similar names, and the key prefix is
+ * the only reliable discriminator:
+ *   `gsk_…` -> Groq   (api.groq.com, serves Llama/Mixtral/Gemma)
+ *   `xai-…` -> x.ai   (api.x.ai, serves Grok)
+ * Both are OpenAI-compatible, so only the base URL and default model differ.
+ */
+export function detectProvider(apiKey) {
+  const key = String(apiKey ?? "");
+  if (key.startsWith("gsk_")) {
+    return {
+      name: "groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      defaultModel: "llama-3.3-70b-versatile",
+    };
+  }
+  if (key.startsWith("xai-")) {
+    return {
+      name: "xai-grok",
+      url: "https://api.x.ai/v1/chat/completions",
+      defaultModel: "grok-3",
+    };
+  }
+  return null;
+}
+
+/** Extractor B — a genuinely different model family from Gemini, by design. */
+export async function callExtractorB(
   prompt,
-  {
-    fetchImpl = fetch,
-    model = "grok-3",
-    // The key is spelled `Grok_API_KEY` in .env; env vars are case-sensitive, so
-    // accept the common spellings rather than silently reporting "unavailable".
-    apiKey = process.env.Grok_API_KEY ||
-      process.env.GROK_API_KEY ||
-      process.env.XAI_API_KEY,
-  } = {}
+  { fetchImpl = fetch, model, apiKey = extractorBKey() } = {}
 ) {
   if (!apiKey) {
-    return { ok: false, reason: "no Grok API key set; no model call was made" };
+    return { ok: false, reason: "no Extractor B API key set; no model call was made" };
+  }
+
+  const provider = detectProvider(apiKey);
+  if (!provider) {
+    return {
+      ok: false,
+      reason:
+        "Extractor B key matches no known provider (expected a Groq key starting " +
+        '"gsk_" or an x.ai key starting "xai-")',
+    };
   }
 
   try {
-    const response = await fetchImpl("https://api.x.ai/v1/chat/completions", {
+    const response = await fetchImpl(provider.url, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
-        model,
+        model: model ?? provider.defaultModel,
         messages: [{ role: "user", content: prompt }],
         temperature: 0,
         response_format: { type: "json_object" },
@@ -65,14 +107,14 @@ export async function callGrok(
       } catch {
         /* keep raw */
       }
-      return { ok: false, reason: `Grok returned HTTP ${response.status}: ${detail}` };
+      return { ok: false, reason: `${provider.name} returned HTTP ${response.status}: ${detail}` };
     }
 
     const payload = await response.json();
     const text = payload?.choices?.[0]?.message?.content ?? "";
     return { ok: true, raw: text, parsed: JSON.parse(text) };
   } catch (error) {
-    return { ok: false, reason: `Grok call failed: ${error.message}` };
+    return { ok: false, reason: `${provider.name} call failed: ${error.message}` };
   }
 }
 
@@ -83,10 +125,18 @@ export const OUTCOME = Object.freeze({
 });
 
 /** Default extractor pair. `datasheetText` is filled in per call. */
-export const defaultExtractors = () => [
-  { id: "A", name: "gemini", model: "gemini-flash-latest", call: callGemini },
-  { id: "B", name: "grok", model: "grok-3", call: callGrok },
-];
+export const defaultExtractors = () => {
+  const provider = detectProvider(extractorBKey());
+  return [
+    { id: "A", name: "gemini", model: "gemini-flash-latest", call: callGemini },
+    {
+      id: "B",
+      name: provider?.name ?? "extractor-b(unconfigured)",
+      model: provider?.defaultModel,
+      call: callExtractorB,
+    },
+  ];
+};
 
 /**
  * Run one extractor and gate its claims.
@@ -232,3 +282,6 @@ export async function extractWithVerification({
     notFound: comparisons.filter((c) => c.outcome === OUTCOME.NOT_FOUND),
   };
 }
+
+/** Back-compat alias: Extractor B used to be x.ai-specific. */
+export const callGrok = callExtractorB;
