@@ -1,0 +1,36 @@
+{
+  "LP103SB6F::SOT-23-6": {
+    "partNumber": "LP103SB6F",
+    "lcsc": "C387729",
+    "package": "SOT-23-6",
+    "neededPins": [
+      "VDD",
+      "GND"
+    ],
+    "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/acd7b00210fb12d837893c5a82865a55.pdf?productCode=C387729",
+    "datasheetBytes": 408164,
+    "extractedAt": "2026-08-09T06:10:44.531Z",
+    "results": [
+      {
+        "logical_pin": "GND",
+        "physical_pin": "pin2",
+        "evidence": "GND   3   2   Ground.",
+        "reportedConfidence": 0.95,
+        "gates": {
+          "structural": {
+            "pass": true,
+            "reason": "\"pin2\" exists on the compiled footprint"
+          },
+          "evidence": {
+            "pass": true,
+            "score": 1,
+            "reason": "evidence appears verbatim in the datasheet text"
+          }
+        },
+        "status": "proposed"
+      }
+    ],
+    "confirmedBy": null,
+    "confirmedAt": null
+  }
+}

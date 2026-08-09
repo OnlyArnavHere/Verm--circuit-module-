@@ -351,6 +351,23 @@ data per part.
 
 # Known open items (tracked, not yet actioned)
 
+## UPSTREAM DATA ERRORS — not resolution gaps
+
+These are distinct from unresolved pins. A resolution gap means *we* lack the
+data; these mean the **Hardware Agent asked for pins the part does not have**. No
+datasheet, parts engine, or LLM extraction will ever resolve them, and
+`PIN_NOT_FOUND` is the correct permanent answer. They belong upstream.
+
+| Fixture | Net / pin | Problem |
+|---|---|---|
+| `smart_dustbin`, `gas_leakage_detector` | `U4/U7.AUDIO` (`MBI5124GP-B`) | `MBI5124GP-B` is a constant-current **LED driver**. It has no audio function at all. Its pins are `SDI`, `CLK`, `LE`, `OE`, `OUT0..OUT15`, `R-EXT`, `VDD`, `GND`. |
+| `gas_leakage_detector` | `U7.GPIO1` (`MBI5124GP-B`) | Same part has no GPIO either — its control inputs are `SDI`/`CLK`/`LE`/`OE`. |
+
+Worth raising with whoever owns the Hardware Agent: an `AUDIO` net onto an LED
+driver suggests the upstream part-selection step matched on `part_class: output`
+without checking the function actually required.
+
+
 **`gas_leakage_detector.json` — `U1.GPIO1` appears in two different nets.**
 `GPIO_5` (`U1.GPIO1` ↔ `U6.GPIO1`) and `GPIO_6` (`U1.GPIO1` ↔ `U7.GPIO1`) both
 terminate on the same logical pin. Same shape as the split-bus bug already caught
@@ -459,3 +476,86 @@ means **the pipeline the gates protect has never run end-to-end.** The gates are
 proven; the extraction is not. **Recommendation: do not generalize to the rest of
 Group C on this evidence** — the pilot needs a working datasheet source and an
 API key before its real-world performance is known.
+
+---
+
+# Phase 6 update — datasheet pilot ran end-to-end for real
+
+The two blocked legs from the previous report are now **both unblocked**, and the
+pilot has completed a genuine live run.
+
+## Fetch attempt (a) — session/referer on JLCPCB: **failed, genuinely**
+
+Hypothesis: the `403 SignatureDoesNotMatch` was session-bound. Tested properly —
+loaded the part-detail page first with a cookie jar (4 cookies set), a real
+browser UA, then requested the signed OSS URL immediately in the same session
+with the page as `Referer`. **All 5 candidate links still returned 403
+`SignatureDoesNotMatch`.** The signature is bound to something not reproducible
+from a scripted client, not merely to a session.
+
+## Fetch attempt (b) — LCSC product-detail: **works**
+
+`https://www.lcsc.com/product-detail/C387729.html` exposes an **unsigned, stable**
+datasheet URL:
+
+```
+https://datasheet.lcsc.com/datasheet/pdf/<hash>.pdf?productCode=C387729
+→ 408,164 bytes, %PDF, 14,148 chars of extracted text
+```
+
+Note `www.lcsc.com/datasheet/<code>.pdf` looks like the obvious shortcut but
+serves an HTML interstitial — not used. `fetchDatasheet` now tries **LCSC first**
+(stable) and falls back to JLCPCB.
+
+## The real pilot run — `LP103SB6F`
+
+```
+ok: true | geminiCalled: true
+datasheet: datasheet.lcsc.com/.../acd7b00210fb12d837893c5a82865a55.pdf (408 KB)
+
+  GND -> pin2   [proposed]
+     gate1 structural: PASS  — "pin2" exists on the compiled footprint
+     gate2 evidence:   PASS  (score 1.0, verbatim)
+     evidence: "GND   3   2   Ground."
+     model-reported confidence (NOT a gate): 0.95
+
+  VDD: not returned by the model
+```
+
+**Both results are correct, and the second is the more interesting one.**
+
+`LP103SB6F` genuinely has **no VDD pin** — its supply is `PS` ("Power Source.
+Connection point for an external bypass capacitor for the internally generated
+supply voltage"). The model omitted it rather than inventing one, and `VDD`
+correctly stays `PIN_NOT_FOUND`.
+
+### Verifying the evidence independently
+
+The evidence `"GND   3   2   Ground."` is a row of the pin-description table,
+whose columns are `name | SOP8 pin | SOT23-6 pin`. So GND is pin 3 on SOP-8 and
+**pin 2 on SOT23-6**, which is our package.
+
+This was worth double-checking, because the datasheet's package diagram extracts
+as `1 2 3 4 5 6 D+ D- PS QC_EN GND FBO`, which naively reads as GND = pin 5. The
+table wins: it is explicit, per-package, and **self-consistent** — `D+`=1,
+`GND`=2, `FBO`=3, `QC_EN`=4, `PS`=5, `D-`=6 uses each pin exactly once. The
+diagram text is column-scrambled by PDF extraction.
+
+That near-miss is itself a finding: **a plausible reading of the same datasheet
+gives the wrong pin.** It is exactly why the human-confirm gate exists, and why
+gate 2 demands a verbatim excerpt that a person can check.
+
+## Status: awaiting human confirmation
+
+The claim is `proposed`, **not** trusted, and nothing has entered
+`curatedPinouts.js`. Confirmation is an explicit, attributable command:
+
+```bash
+node scripts/confirm-extraction.js --list
+node scripts/confirm-extraction.js --part LP103SB6F --package SOT-23-6 --show
+node scripts/confirm-extraction.js --part LP103SB6F --package SOT-23-6 \
+     --confirm GND --by "<name>"
+```
+
+A gate-rejected claim can never be confirmed — the script refuses it, so the
+deterministic gates are not advisory.

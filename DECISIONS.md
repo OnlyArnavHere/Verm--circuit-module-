@@ -692,3 +692,82 @@ The `MBI5124GP-B` pins are **upstream data errors**, not resolution gaps — the
 Hardware Agent asked for functions the part does not have. `PIN_NOT_FOUND` is
 correct and no datasheet will change it. Worth surfacing to whoever owns the
 Hardware Agent rather than absorbing silently.
+
+---
+
+## D-036 — Datasheet source: LCSC, not JLCPCB
+
+**Phase:** 6 (Group C pilot)
+**Status:** Accepted — supersedes the fetch half of D-034
+
+Both routes were tried properly before concluding.
+
+**JLCPCB (failed).** The hypothesis that `403 SignatureDoesNotMatch` was
+session-bound was tested: part-detail page loaded first with a cookie jar (4
+cookies), real browser UA, then the signed OSS URL requested immediately in the
+same session with the page as `Referer`. All 5 candidate links still 403'd. The
+signature is bound to something a scripted client cannot reproduce.
+
+**LCSC (works).** `www.lcsc.com/product-detail/<lcsc>.html` exposes an
+**unsigned, stable** link at `datasheet.lcsc.com/datasheet/pdf/<hash>.pdf`.
+Fetched 408 KB, 14,148 chars extracted.
+
+`fetchDatasheet` now tries LCSC first and falls back to JLCPCB. Note
+`www.lcsc.com/datasheet/<code>.pdf` looks like the obvious shortcut but serves an
+HTML interstitial — deliberately not used.
+
+---
+
+## D-037 — Gemini model: `gemini-flash-latest`
+
+**Phase:** 6
+**Status:** Accepted
+
+Measured on this key, 2026-08-09: `gemini-2.0-flash` returns **429 quota
+exceeded**, `gemini-2.5-flash` returns **404 — retired for new users**,
+`gemini-flash-latest` works. Using the floating alias rather than a pinned
+version, since pinning is what produced both failures.
+
+This is safe for determinism: Gemini runs only at cache-population time, never in
+the compile path, and every proposal passes deterministic gates plus human
+confirmation before it can affect a build.
+
+---
+
+## D-038 — The pilot's near-miss justifies the human gate
+
+**Phase:** 6
+**Status:** Accepted — evidence for keeping the human-confirm gate
+
+The live run proposed `GND -> pin2` with verbatim evidence `"GND   3   2
+Ground."` (table columns: name | SOP8 pin | SOT23-6 pin). Correct.
+
+But the same datasheet's package diagram extracts as
+`1 2 3 4 5 6 D+ D- PS QC_EN GND FBO`, which naively reads as **GND = pin 5**. Both
+readings come from the same PDF; only one is right. The table wins because it is
+explicit per-package and self-consistent (`D+`=1, `GND`=2, `FBO`=3, `QC_EN`=4,
+`PS`=5, `D-`=6 — each pin used exactly once).
+
+Two conclusions:
+1. **Keep the human gate.** A plausible reading of the same source gives a wrong
+   pin that both deterministic gates would pass — gate 1 (pin5 exists) and gate 2
+   (the diagram text is really in the datasheet). Only a human comparing readings
+   catches it.
+2. **Gate 2's verbatim requirement earns its keep** — it gives the human a
+   specific excerpt to check rather than a claim to trust.
+
+The model also correctly **omitted VDD**: `LP103SB6F` has no VDD pin (its supply
+is `PS`, an internally generated rail). It declined to invent one, which is the
+behaviour the whole design depends on.
+
+---
+
+## D-039 — Confirmation is a command, not a file edit
+
+**Phase:** 6
+**Status:** Accepted
+
+`scripts/confirm-extraction.js` makes the human gate an explicit, attributable
+act (`--confirm <PIN> --by <name>`, recording who and when) rather than someone
+editing a JSON cache. It **refuses to confirm a gate-rejected claim**, so the
+deterministic gates are hard constraints rather than advisory.

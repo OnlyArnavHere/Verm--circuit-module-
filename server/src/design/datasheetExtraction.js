@@ -48,14 +48,43 @@ export const EXTRACTION_STATUS = Object.freeze({
 export const partDetailUrl = (partNumber, lcsc) =>
   `https://jlcpcb.com/partdetail/${String(lcsc).replace(/^C/, "")}-${partNumber}/${lcsc}`;
 
-/** Pull candidate datasheet PDF links out of a part-detail page. */
+/** A real browser UA — both sources reject obviously-scripted clients. */
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+
+/** LCSC product-detail page for an LCSC code. */
+export const lcscProductUrl = (lcsc) => `https://www.lcsc.com/product-detail/${lcsc}.html`;
+
+/**
+ * Pull candidate datasheet PDF links out of a part-detail page.
+ *
+ * Handles both sources:
+ * - **LCSC** (`datasheet.lcsc.com/datasheet/pdf/<hash>.pdf`) — unsigned and
+ *   stable, so it is preferred.
+ * - **JLCPCB** (`…/smtDataManualFile/…`) — signed OSS URLs carrying a
+ *   session-bound token. Measured: these return `403 SignatureDoesNotMatch` to a
+ *   scripted client even with cookies and a matching Referer, so they are a
+ *   fallback only.
+ *
+ * `www.lcsc.com/datasheet/<code>.pdf` looks like the obvious shortcut but serves
+ * an HTML interstitial, not a PDF — deliberately not used.
+ */
 export function extractDatasheetUrls(html) {
   const normalized = String(html ?? "").replace(/\\u0026/g, "&").replace(/\\\//g, "/");
-  const matches = normalized.match(/https:\/\/[^"'\\ ,]*smtDataManualFile[^"'\\ ,]*/g) ?? [];
-  // Prefer signed PDF links; they are the ones the page actually uses.
-  return [...new Set(matches)]
-    .filter((url) => /\.pdf/i.test(url))
-    .sort((a, b) => Number(/x-oss-signature=/.test(b)) - Number(/x-oss-signature=/.test(a)));
+
+  const lcsc = normalized.match(/https:\/\/datasheet\.lcsc\.com\/[^"'\\ ,]*\.pdf[^"'\\ ,]*/g) ?? [];
+  const jlc = (normalized.match(/https:\/\/[^"'\\ ,]*smtDataManualFile[^"'\\ ,]*/g) ?? []).filter(
+    (url) => /\.pdf/i.test(url)
+  );
+
+  // LCSC first (stable), then signed JLCPCB links, then unsigned ones.
+  const ordered = [
+    ...lcsc,
+    ...jlc.filter((url) => /x-oss-signature=/.test(url)),
+    ...jlc.filter((url) => !/x-oss-signature=/.test(url)),
+  ];
+  return [...new Set(ordered)];
 }
 
 /** Extract plain text from a PDF buffer. */
@@ -85,45 +114,47 @@ export async function fetchDatasheet(
   lcsc,
   { fetchImpl = fetch, pdfToTextImpl = pdfToText } = {}
 ) {
-  const pageUrl = partDetailUrl(partNumber, lcsc);
+  // Two independent sources. LCSC first: its links are unsigned and stable,
+  // whereas JLCPCB's are session-bound signed OSS URLs that 403 for a scripted
+  // client. Both are tried before giving up.
+  const sources = [
+    { name: "lcsc", url: lcscProductUrl(lcsc), referer: "https://www.lcsc.com/" },
+    { name: "jlcpcb", url: partDetailUrl(partNumber, lcsc), referer: "https://jlcpcb.com/" },
+  ];
 
-  let html;
-  try {
-    const response = await fetchImpl(pageUrl, {
-      headers: { "user-agent": "Mozilla/5.0", referer: "https://jlcpcb.com/" },
-    });
-    if (!response.ok) {
-      return {
-        ok: false,
-        code: "PIN_NOT_FOUND",
-        stage: "part_detail_page",
-        reason: `part-detail page returned HTTP ${response.status}`,
-      };
+  const attempts = [];
+  const candidates = [];
+
+  for (const source of sources) {
+    try {
+      const response = await fetchImpl(source.url, {
+        headers: { "user-agent": BROWSER_UA, referer: source.referer },
+      });
+      if (!response.ok) {
+        attempts.push(`${source.name}: page HTTP ${response.status}`);
+        continue;
+      }
+      const found = extractDatasheetUrls(await response.text());
+      attempts.push(`${source.name}: ${found.length} link(s)`);
+      candidates.push(...found.map((url) => ({ url, referer: source.referer })));
+    } catch (error) {
+      attempts.push(`${source.name}: ${error.message}`);
     }
-    html = await response.text();
-  } catch (error) {
-    return {
-      ok: false,
-      code: "PIN_NOT_FOUND",
-      stage: "part_detail_page",
-      reason: `part-detail page unreachable: ${error.message}`,
-    };
   }
 
-  const candidates = extractDatasheetUrls(html);
   if (candidates.length === 0) {
     return {
       ok: false,
       code: "PIN_NOT_FOUND",
       stage: "datasheet_link",
-      reason: "no datasheet link found on the part-detail page",
+      reason: `no datasheet link found (${attempts.join("; ")})`,
     };
   }
 
-  for (const url of candidates) {
+  for (const { url, referer } of candidates) {
     try {
       const response = await fetchImpl(url, {
-        headers: { "user-agent": "Mozilla/5.0", referer: "https://jlcpcb.com/" },
+        headers: { "user-agent": BROWSER_UA, referer },
       });
       if (!response.ok) continue;
       const buffer = Buffer.from(await response.arrayBuffer());
@@ -142,7 +173,9 @@ export async function fetchDatasheet(
     ok: false,
     code: "PIN_NOT_FOUND",
     stage: "datasheet_download",
-    reason: `all ${candidates.length} datasheet link(s) failed to download as a readable PDF`,
+    reason:
+      `all ${candidates.length} datasheet link(s) failed to download as a readable PDF ` +
+      `(${attempts.join("; ")})`,
   };
 }
 
@@ -269,7 +302,10 @@ export async function callGemini(
   prompt,
   {
     fetchImpl = fetch,
-    model = "gemini-2.0-flash",
+    // `gemini-flash-latest` rather than a pinned version: measured 2026-08-09,
+    // gemini-2.0-flash returns 429 (quota) on this key and gemini-2.5-flash is
+    // retired for new users.
+    model = "gemini-flash-latest",
     // Injectable so the gates can be exercised without a live key. Production
     // always falls through to the environment.
     apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,

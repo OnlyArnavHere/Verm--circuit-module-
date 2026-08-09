@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Clean slate, Phase 1 not yet started.
+**Status:** Phases 1-5.6 complete and verified. Phase 6 in progress (Group A done, Group C pilot proven end-to-end on LP103SB6F).
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -212,11 +212,11 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [ ] Phase 1 — Repo & job skeleton
-- [ ] Phase 2 — tscircuit feasibility report
-- [ ] Phase 3 — ValidatedDesign schema
-- [ ] Phase 4 — Architecture doc
+- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
+- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless + offline)*
+- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion)*
+- [x] Phase 4 — Architecture doc *(`docs/ARCHITECTURE.md`)*
 - [x] Phase 5 — Minimal POC (real-first resolution: rc_car.json + smart_dustbin.json end-to-end, 18/19 parts resolved for real; validator proven against noise_pollution_monitor.json, all 4 known bugs + 5th I2C SCL↔SDA bug caught)
-- [ ] Phase 5.5 — DRC wired in
-- [ ] Phase 5.6 — Resolution-integrity fixes (false real:true bug, false determinism/no-cache bug)
-- [ ] Phase 6 — Pin-name resolution via datasheet mux tables (starting with curated sot23_6 entry)
+- [x] Phase 5.5 — DRC wired in *(DRC_FAILURE proven to fire on overlapping components)*
+- [x] Phase 5.6 — Resolution-integrity fixes *(3D now verified from compiled output; offline run = 0 network calls)*
+- [~] Phase 6 — Pin-name resolution *(Group A done; rail rule; fan-out check; Group C pilot ran end-to-end for real on LP103SB6F — awaiting human confirmation. Group B + rest of Group C not started.)*
