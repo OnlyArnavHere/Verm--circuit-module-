@@ -215,6 +215,17 @@ For each gap found: fix it (populate the missing data), then verify the fix agai
 
 **Definition of done:** every cache/lookup dependency in the pipeline explicitly checked (documented, even the ones that turn out fine — this makes the audit itself reusable/re-runnable later, not just a one-time fix), any gaps found fixed and verified, updated real-pin-count reported (currently 32/63) with honest attribution of any change.
 
+**Status: done.** Pin count unchanged (32/63) — the one real gap found (package-generic footprint entries shadowing part-specific catalogue entries, discarding a real resolvable 3D model — the inverse of the false `real:true` bug) affected 3D coverage, not pins. Correctly not oversold as a second D-054. Notable: `LP103SB6F.GND → pin2` independently corroborated from the catalogue's own metadata — the one confirmed extraction-pipeline result now has external validation, not just internal self-consistency. Parts engine, pinout cache, and pin-name matching all verified complete/correct as-is (`BLE-SER-A-ANT` genuinely absent, `FS32K116LFT0MLFT` genuinely only exposes 5 names — both confirmed as real limitations, not bugs).
+
+**Unplanned finding, more valuable than the audit's original goal:** unresolved pins split into two real categories — ~18 genuine mux-table gaps (per D-059, expected), and ~10 pins where **the selected part physically lacks the requested function entirely** (`HDSP-521G` asked for `GND`/`SCK`/`VDD` — it's a 7-segment display; `CD4543BM96` asked for `AUDIO` — it's a BCD-to-7-segment decoder; `LMA2718T421-OA5-2` asked for `SCL` — single-output analog part; `ESPC2-12-N4` asked for `ANT` — integrated-antenna module; plus the known `MBI5124GP-B`). Five instances, consistent pattern: **the Hardware Agent appears to attach a class-typical net without verifying the specific selected part actually supports it.** This is a systemic upstream selection bug, not five coincidences.
+
+### Phase 6.6 — Capability-mismatch validation (new, bounded — uses data already resolved)
+Build a distinct check, separate from generic `PIN_NOT_FOUND`, for the specific pattern just found: a net requests a function a part's *already-confirmed real capability set* proves it doesn't have (as opposed to "not yet resolved, might exist"). New error code (e.g. `PART_CAPABILITY_MISMATCH`) — don't lump this into `PIN_NOT_FOUND`, which conflates "haven't found it yet" with "this part fundamentally doesn't do this."
+
+This only applies where we already have positively-resolved real capability data for the part (any resolution path — catalogue, curated, or LLM-extracted with human confirmation) — not a new research effort, a new check on data already in hand. Retroactively reclassify the 5 known instances into this category. Make the check general (part's real exposed names vs. requested net function) so it fires automatically on any future Hardware Agent JSON, not hardcoded to these 4 fixtures — this is what makes it worth building rather than just documenting: it protects real future designs, not just these test cases.
+
+**Definition of done:** new error code implemented and distinct from `PIN_NOT_FOUND` in the taxonomy (update `docs/ARCHITECTURE.md`); the 5 known instances reclassified; a test proving the check fires generally (not just on the 4 known fixtures) — e.g. construct a synthetic case with a different part/net combination and confirm it's caught.
+
 **Provider failover / degraded mode.** If one provider (Gemini or Groq) becomes unavailable mid-batch (quota exhaustion, outage) despite billing, don't stop the batch and don't report it as `PIN_NOT_FOUND` — continue with the remaining provider, but change what "passing" means:
 
 - Deterministic gates (1-3) still run on the single available extractor's proposal, same as always.
@@ -279,4 +290,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 5.6 — Resolution-integrity fixes (false real:true bug, false determinism/no-cache bug)
 - [ ] Phase 6 — Pin-name resolution (Group A done; pilot proven twice — LP103SB6F.GND and HY2111-GB both confirmed in curatedPinouts.js; Group B/rest of Group C on hold pending scope-expansion decision)
 - [x] Phase 7 — Stylized icon-based circuit diagram (done, verified — connectivity algorithm unchanged, geometry constants updated for icon fit)
-- [ ] Phase 6.5 — Catalogue/cache-completeness audit (new — pivoted to here after Phase 6's extraction pipeline hit its practical ceiling)
+- [x] Phase 6.5 — Catalogue/cache-completeness audit (done — 3D-model discard bug found/fixed, LP103SB6F cross-validated, systemic upstream capability-mismatch pattern discovered across 5 parts)
+- [ ] Phase 6.6 — Capability-mismatch validation (new — PART_CAPABILITY_MISMATCH error code, uses already-resolved data)

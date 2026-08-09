@@ -43,6 +43,7 @@ run it, stop — route it through `ValidatedDesign` instead.
 | Parts-engine resolution + caching | `design/partsEngine.js` |
 | Per-field real/mock resolution | `design/resolver.js` |
 | Electrical / protocol validation | `design/electricalChecks.js` |
+| Part-capability validation | `design/capabilityCheck.js` |
 | tscircuit error ingestion | `design/tscircuitErrors.js` |
 | Independent post-compile assertions | `design/assertions.js` |
 | Compilation + artifact generation | `compile/` |
@@ -103,7 +104,8 @@ validity it hasn't established.
 | Code | Triggered when | Raised by | Recoverable by agent? |
 |---|---|---|---|
 | `COMPONENT_NOT_FOUND` | A net references a `ref_id` not in `components`; or no catalogue entry for a part number | `validatedDesign`, `resolver` | Yes — propose a substitute for human approval |
-| `PIN_NOT_FOUND` | A logical pin (`U1.SDA`) has no verified mapping to a physical pad | `validatedDesign`, `resolver` | Yes — propose a pinout from a datasheet |
+| `PIN_NOT_FOUND` | A logical pin (`U1.SDA`) has no verified mapping to a physical pad, and the part's capability set is **not** confirmed complete — it may still exist | `validatedDesign`, `resolver` | Yes — propose a pinout from a datasheet |
+| `PART_CAPABILITY_MISMATCH` | The part's real pin set is **confirmed complete and functionally named**, and the requested function is not in it. The part does not do this | `capabilityCheck`, via `resolver` | **No** — this is an upstream net-assignment error; no datasheet work can close it |
 | `FOOTPRINT_NOT_FOUND` | No verified footprint; **or** a resolved footprint produced zero pads; **or** pad count ≠ expected | `footprintMap`, `assertions` | Yes — propose a candidate with evidence |
 | `MODEL_3D_NOT_FOUND` | No 3D model available for a resolved part | `resolver` | Non-blocking — 3D output is marked degraded |
 | `INVALID_NET` | A net is malformed, empty, or has a single endpoint | `validatedDesign` | Yes |
@@ -115,6 +117,33 @@ validity it hasn't established.
 
 Plus two intake-level codes outside the design taxonomy (D-006):
 `MALFORMED_UPLOAD`, `UNSUPPORTED_SCHEMA_VERSION`.
+
+### `PIN_NOT_FOUND` vs `PART_CAPABILITY_MISMATCH`
+
+These look similar and mean opposite things, so the split is worth stating
+plainly:
+
+```
+PIN_NOT_FOUND            "we have not resolved this — keep looking"
+PART_CAPABILITY_MISMATCH "we have looked, and this part does not do it — stop"
+```
+
+Sending someone to hunt a datasheet for an audio pin on an LED driver wastes
+their time and never terminates. A mismatch escalates upstream instead.
+
+A mismatch is only claimed when **all three** hold, because a negative claim
+needs stronger evidence than a positive one:
+
+1. **Complete pad coverage** — every pad has a name. `HDSP-521G` names 16 of 18,
+   and the two unnamed pads are where a DIP-18 display's commons sit, so it stays
+   `PIN_NOT_FOUND`.
+2. **Functional naming** — at least one supply rail is named. `MIMXRT1172CVM8A`
+   names all 289 pads by *ball coordinate*; complete naming is not functional
+   naming, and it says nothing about capability.
+3. **Not mux-assignable onto existing generic I/O** — `RF-BM-2340A2I` has no `TX`
+   pin but exposes `DIO3..DIO24`, and its UART is firmware-mapped, so `TX` is a
+   mux-table gap rather than a missing capability. An antenna feed is not
+   mux-assignable, so `ANT` on the same class of part *is* a mismatch.
 
 ### Response shape
 

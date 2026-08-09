@@ -12,6 +12,7 @@ import { resolveFootprint } from "./footprintMap.js";
 import { resolvePart } from "./partsEngine.js";
 import { extractPinout, matchLogicalPin } from "./pinout.js";
 import { curatedPinout } from "./curatedPinouts.js";
+import { classifyUnresolvedPin, CAPABILITY_VERDICT } from "./capabilityCheck.js";
 
 /**
  * Provenance values, most trusted first. `source` records *how* a value was
@@ -164,21 +165,32 @@ export async function resolveComponent(component, options = {}) {
         };
         realPins += 1;
       } else {
+        // Not merely "unresolved": if the part's full pin set is confirmed and
+        // this function is not in it, that is a capability mismatch — an
+        // upstream error rather than something more research would fix.
+        const verdict = classifyUnresolvedPin(logical, pinout);
+        const isMismatch = verdict.code === CAPABILITY_VERDICT.MISMATCH;
+
         pinDetail[logical] = {
           pad: null,
           source: SOURCE.MOCK,
           real: false,
-          reason:
-            `part exposes no pin named "${logical}"` +
-            (pinout.ok ? ` (has: ${(match.availablePins ?? []).slice(0, 10).join(", ")})` : ""),
+          code: verdict.code,
+          capabilityConfirmed: verdict.capabilityConfirmed,
+          reason: verdict.reason,
         };
         errors.push({
-          code: "PIN_NOT_FOUND",
-          message:
-            `"${component.part_number}" (${component.ref_id}) has no pin named "${logical}". ` +
-            `Assigned positionally as a labelled mock.`,
+          code: verdict.code,
+          message: isMismatch
+            ? `"${component.part_number}" (${component.ref_id}) does not provide "${logical}". ` +
+              `${verdict.reason}`
+            : `"${component.part_number}" (${component.ref_id}) has no resolved pin "${logical}". ` +
+              `${verdict.reason}`,
           target: `${component.ref_id}.${logical}`,
-          detail: { availablePins: match.availablePins ?? [] },
+          detail: {
+            availablePins: verdict.availablePins ?? match.availablePins ?? [],
+            capabilityConfirmed: verdict.capabilityConfirmed,
+          },
         });
       }
     }

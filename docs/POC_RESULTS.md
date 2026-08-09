@@ -351,6 +351,38 @@ data per part.
 
 # Known open items (tracked, not yet actioned)
 
+## SYSTEMIC FINDING — one upstream bug, many symptoms
+
+**The Hardware Agent assigns class-typical nets without verifying the selected
+part provides that function.**
+
+This is a single upstream defect, not a list of unrelated part-level mistakes,
+and it is worth fixing at the source rather than case by case. The pattern: a
+part is chosen by `part_class`, then a net typical of that class is attached —
+`AUDIO` to an `output` part, `SCL` to a `sensor`, `ANT` to a `communication`
+part — without checking the specific part actually has that pin.
+
+Now detected automatically and continuously by `PART_CAPABILITY_MISMATCH`
+(Phase 6.6), so future Hardware Agent output is checked on arrival rather than
+discovered by hand. Confirmed instances in the current fixtures:
+
+| Part | Net asks for | What the part actually is |
+|---|---|---|
+| `MBI5124GP-B` | `AUDIO`, `GPIO1` | constant-current LED driver — `SDI/CLK/LE/OE/OUT0-15` |
+| `LMA2718T421-OA5-2` | `SCL` | analog part with a single `OUT` |
+| `ESPC2-12-N4` | `ANT` | module with an **integrated** antenna |
+| `TP4110` | `VDD` → `POWER_RAIL_3V3` | battery charger — only supply pin is `VIN`, the raw ~4.5–6.5 V charge input |
+
+Two further suspected instances (`HDSP-521G` asked for `GND`/`SCK`/`VDD`;
+`CD4543BM96` asked for `AUDIO`) are **deliberately not** asserted as mismatches —
+our pin-name coverage for those parts is incomplete, so the check stays
+conservative and reports `PIN_NOT_FOUND`. They are listed here as human
+observations, not machine claims.
+
+**Recommended upstream fix:** validate a net's required function against the
+selected part's real pin set at selection time. One check upstream removes an
+entire class of defect that currently surfaces only downstream.
+
 ## UPSTREAM DATA ERRORS — not resolution gaps
 
 These are distinct from unresolved pins. A resolution gap means *we* lack the

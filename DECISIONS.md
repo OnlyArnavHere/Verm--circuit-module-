@@ -1427,3 +1427,93 @@ consistent: the Hardware Agent appears to select parts by `part_class` and then
 attach a class-typical net (`AUDIO` to an `output` part, `SCL` to a `sensor`)
 without checking the chosen part actually has that function. Worth raising
 upstream — it is a systematic selection issue, not four coincidences.
+
+---
+
+## D-064 — `PART_CAPABILITY_MISMATCH`: a negative claim needs stronger evidence
+
+**Phase:** 6.6
+**Status:** Accepted
+
+New error code, deliberately distinct from `PIN_NOT_FOUND`:
+
+```
+PIN_NOT_FOUND            "we have not resolved this — keep looking"
+PART_CAPABILITY_MISMATCH "we have looked, and this part does not do it — stop"
+```
+
+Conflating them sends someone hunting a datasheet for an audio pin on an LED
+driver — a search that cannot terminate. A mismatch escalates upstream instead.
+
+The check is **general** (a part's real exposed names vs the requested function),
+not a list of known cases. Proven by a synthetic test: `MCP7940NT-I/SN`, an I2C
+RTC, asked for `MOSI` — a part/net combination that appears in no fixture — is
+caught, using the part's real cached pin data rather than a stub.
+
+**Three guards, because asserting absence is a stronger claim than asserting
+presence.** Each exists because a real fixture part would otherwise have been
+misreported:
+
+1. **Complete pad coverage.** `HDSP-521G` names 16 of 18 pads, and the two
+   unnamed ones (`pin13`/`pin14`) are exactly where a DIP-18 display's common
+   pins sit. Claiming "no GND" would be a false positive, so partial coverage
+   stays `PIN_NOT_FOUND`.
+2. **Functional naming.** `MIMXRT1172CVM8A` names all 289 pads — by *ball
+   coordinate*. This one was caught only by running the check against real data:
+   it initially fired `MISMATCH` on `GND`/`VDD` for a BGA that obviously has
+   both. Complete naming is not functional naming. Detected by requiring at least
+   one recognised supply-rail name.
+3. **Mux-assignability.** `RF-BM-2340A2I` exposes `DIO3..DIO24` and no `TX`, but
+   its UART is firmware-mapped onto a DIO — a mux-table gap, not a missing
+   capability. The exemption applies only to functions a GPIO could carry: an
+   antenna feed cannot, so `ANT` on a comparable module *is* a mismatch.
+
+---
+
+## D-065 — Reclassification: 5 pins across 4 parts, not all 5 originally listed
+
+**Phase:** 6.6
+**Status:** Accepted — reports what the evidence supports
+
+`PART_CAPABILITY_MISMATCH` now fires on:
+
+| Part | Pin | Why it is confirmed |
+|---|---|---|
+| `MBI5124GP-B` | `AUDIO`, `GPIO1` | 24/24 named, functional, no generic I/O — an LED driver |
+| `LMA2718T421-OA5-2` | `SCL` | 4/4 named (`OUT, GND1, GND2, VDD`) |
+| `ESPC2-12-N4` | `ANT` | 16/16 named; integrated antenna, and `ANT` is not mux-assignable |
+| `TP4110` | `VDD` | 16/16 named; only supply is `VIN` |
+
+Two departures from the five originally identified by hand, both deliberate:
+
+- **`HDSP-521G` and `CD4543BM96` were NOT reclassified.** Their name coverage is
+  incomplete (16/18 and 11/16), so the check refuses to assert absence. They
+  remain `PIN_NOT_FOUND` and are documented as *human observations* rather than
+  machine claims. Forcing them through would have meant loosening the guard to
+  reach a predetermined answer.
+- **`TP4110.VDD` was added**, arriving independently at D-060's conclusion. That
+  conclusion came from web research into the TP4056 family; the check reached the
+  same place from the part's own confirmed pin set. Useful corroboration of both.
+
+---
+
+## D-066 — The systemic upstream finding, stated as one bug
+
+**Phase:** 6.6
+**Status:** For upstream handoff
+
+The individual findings share one cause, and it is worth handing over as a single
+item rather than a list of part-level complaints:
+
+> **The Hardware Agent assigns class-typical nets without verifying the selected
+> part provides that function.** A part is chosen by `part_class`, then a net
+> typical of that class is attached — `AUDIO` to an `output` part, `SCL` to a
+> `sensor`, `ANT` to a `communication` part — with no check that the specific
+> part has that pin.
+
+One defect, at least six symptoms across four fixtures. The recommended fix is
+upstream and small: validate a net's required function against the selected
+part's real pin set at selection time.
+
+Downstream, this is now detected automatically and continuously rather than by
+inspection, so future Hardware Agent output is checked on arrival.

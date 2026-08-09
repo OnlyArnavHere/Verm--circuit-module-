@@ -42,6 +42,10 @@ export const ERROR_CODES = Object.freeze([
   "INVALID_NET",
   "ELECTRICAL_CONFLICT",
   "UNSUPPORTED_COMPONENT",
+  // Distinct from PIN_NOT_FOUND: the part's real pin set is CONFIRMED complete
+  // and does not contain the requested function. An upstream design error, not
+  // a resolution gap — no datasheet work can close it. (Phase 6.6)
+  "PART_CAPABILITY_MISMATCH",
   "ROUTING_FAILURE",
   "DRC_FAILURE",
   "BOARD_CONSTRAINT_FAILURE",
