@@ -188,14 +188,44 @@ export async function fetchDatasheet(
  * compiled. Same discipline as assertPadIntegrity: a claim is checked against
  * real geometry, not accepted on assertion.
  */
-export function gateStructural(claim, footprintPads) {
-  const pads = (footprintPads ?? []).map((pad) => String(pad).toUpperCase());
-  const claimed = String(claim?.physical_pin ?? "").toUpperCase();
+/**
+ * Normalize a claimed pin reference to the footprint's own pad vocabulary.
+ *
+ * Models write the same pin as `"pin2"`, `"2"`, `"Pin 2"`, or `"PIN2"`. Matching
+ * the raw string rejected correct answers on formatting alone — a false negative
+ * that makes the gate look strict while actually being wrong. Normalization is
+ * purely syntactic: a bare number N resolves to `pinN` **only if that pad
+ * exists**. Nothing is invented, and BGA-style ball ids (`A1`, `B14`) are left
+ * untouched because they are already literal pad names. (D-045)
+ */
+export function normalizePinRef(claimed, footprintPads) {
+  const pads = footprintPads ?? [];
+  const byUpper = new Map(pads.map((pad) => [String(pad).toUpperCase(), String(pad)]));
+  const raw = String(claimed ?? "").trim();
+  if (!raw) return null;
 
-  if (!claimed) {
+  const direct = byUpper.get(raw.toUpperCase());
+  if (direct) return direct;
+
+  // "Pin 2" / "PIN2" / "pin_2" -> "2"; a bare "2" stays "2".
+  const numeric = raw.replace(/^pin[\s_-]*/i, "").trim();
+  if (/^\d+$/.test(numeric)) {
+    const candidate = byUpper.get(`PIN${numeric}`);
+    if (candidate) return candidate;
+  }
+  return null;
+}
+
+export function gateStructural(claim, footprintPads) {
+  const pads = footprintPads ?? [];
+  const raw = String(claim?.physical_pin ?? "").trim();
+
+  if (!raw) {
     return { pass: false, reason: "no physical_pin in the extraction" };
   }
-  if (!pads.includes(claimed)) {
+
+  const normalized = normalizePinRef(raw, pads);
+  if (!normalized) {
     return {
       pass: false,
       reason:
@@ -203,7 +233,15 @@ export function gateStructural(claim, footprintPads) {
         `footprint (${pads.length} pads available)`,
     };
   }
-  return { pass: true, reason: `"${claim.physical_pin}" exists on the compiled footprint` };
+
+  return {
+    pass: true,
+    normalizedPin: normalized,
+    reason:
+      normalized === raw
+        ? `"${raw}" exists on the compiled footprint`
+        : `"${raw}" normalized to "${normalized}", which exists on the compiled footprint`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,9 +314,17 @@ export function gateEvidence(claim, datasheetText, { threshold = 0.8 } = {}) {
 // Gemini
 // ---------------------------------------------------------------------------
 
-export function buildPrompt({ partNumber, package: pkg, neededPins, datasheetText }) {
+export function buildPrompt({ partNumber, package: pkg, neededPins, datasheetText, footprintPads }) {
+  // Stating the pad vocabulary removes a pure formatting failure ("5" vs "pin5")
+  // without hinting at the answer — it says how to spell a pin, not which one.
+  const padHint =
+    footprintPads && footprintPads.length > 0 && footprintPads.length <= 64
+      ? `Valid physical pin identifiers for this footprint are exactly: ${footprintPads.join(", ")}. Use one of these verbatim.`
+      : `Identify the physical pin using the datasheet's own pin/ball identifier (e.g. "pin7" or "A1").`;
+
   return [
     `You are reading the datasheet for ${partNumber} (package ${pkg}).`,
+    padHint,
     ``,
     `Identify the physical pin for ONLY these logical functions: ${neededPins.join(", ")}.`,
     `Do not return a full pinout. If a function is not present on this part, omit it.`,

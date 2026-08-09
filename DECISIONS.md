@@ -881,3 +881,69 @@ the table. A test asserts the two SOT-23-6 parts keep genuinely different pinout
 was widened from 3 buckets to 4, which fixed `smart_dustbin`; this case remains.
 Reviewed and accepted as cosmetic polish — legibility is unaffected. Logged so it
 is a known state rather than an unnoticed defect.
+
+---
+
+## D-045 — Gate 1 normalizes pin spelling; the near-miss test found the bug
+
+**Phase:** 6
+**Status:** Accepted
+
+The required near-miss reconstruction **failed on its first run**, and the cause
+was a real defect in gate 1, not in the test.
+
+Gate 1 compared the model's `physical_pin` to the footprint's pad names as raw
+strings. Models emit the same pin as `"pin2"`, `"2"`, `"Pin 2"`, or `"PIN2"`. The
+restricted extractor answered `"5"` and gate 1 rejected it as "does not exist on
+the footprint" — a **false negative**. A *correct* answer written as `"2"` would
+have been rejected the same way, making the gate look strict while actually being
+wrong. The earlier LP103SB6F success had simply happened to come back as `"pin2"`.
+
+Fixed with `normalizePinRef`: purely syntactic, and it never invents a pad — a
+bare `N` resolves to `pinN` only if that pad exists, and BGA ball ids (`A1`) pass
+through untouched. Gate 1 now reports `normalizedPin`, and the comparator compares
+normalized values so `"5"` vs `"pin5"` is not mistaken for a disagreement.
+
+The prompt now also states the footprint's pad vocabulary, which removes the
+formatting mismatch at source. That tells the model how to *spell* a pin, not
+which one to pick.
+
+**This is the value of the required validation** — the mechanism looked correct
+and was not. A gate that silently rejects valid answers would have shown up as an
+unexplained low hit rate across the batch, and been easy to misread as "hard
+parts" rather than a bug.
+
+---
+
+## D-046 — Near-miss reconstruction passes; cross-model independence unproven
+
+**Phase:** 6
+**Status:** Comparator proven; Extractor B blocked
+
+After D-045, the controlled reconstruction passes:
+
+```
+A (restricted to package diagram): pin5   gates: structural PASS, evidence PASS (1.0)
+B (full datasheet):                pin2   gates: structural PASS, evidence PASS (1.0)
+comparator: NEEDS_REVIEW — "independent extractions DISAGREE"
+```
+
+**Both readings passed both deterministic gates and still disagreed.** That is the
+whole point: the gates alone are provably insufficient on this case, because both
+excerpts really are in the datasheet. Only independent re-extraction separates
+them.
+
+**Scope limit, stated plainly:** Grok returned `403 — "Your newly created team
+doesn't have any credits or licenses yet."` The key authenticates; the team has no
+credits. So the reconstruction ran Gemini-restricted vs Gemini-full. That proves
+the **comparator**; it does **not** prove cross-model independence, which is the
+property the design actually relies on.
+
+**Auto-accept is therefore blocked**, and blocked *by construction* rather than by
+policy: with Extractor B unavailable, only one extractor returns a claim, and
+`comparePin` routes single-extractor results to human review. A test pins this
+fail-safe so an unavailable B can never silently become auto-accept.
+
+Until Grok has credits, the batch would resolve nothing automatically — every part
+would land in human review, which is the pre-existing workflow with extra API
+cost. Holding the batch rather than burning calls on a run that must be redone.
