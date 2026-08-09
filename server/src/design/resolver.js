@@ -49,21 +49,26 @@ export async function resolveComponent(component, options = {}) {
   const errors = [];
 
   // --- footprint + pads ----------------------------------------------------
-  // 1. curated table (highest trust — human-verified with evidence)
+  //
+  // ORDER: part-specific first, package-generic second. (D-061)
+  //
+  // The parts engine matches this exact PART NUMBER with an exact package check,
+  // so it yields the manufacturer's own footprint for this part. The curated
+  // table is keyed by PACKAGE, so it is generic to every part sharing that body.
+  // More specific evidence wins, and both are equally verified — this does NOT
+  // loosen D-010, which still requires the package to match exactly.
+  //
+  // Measured cost of the old order: `sot23_6` (curated, generic) shadowed
+  // `jlcpcb:C82747` / `jlcpcb:C387729` for the two SOT-23-6 parts. Same 6 pads,
+  // identical pad numbering — but the catalogue footprints also carry real pin
+  // names AND real 3D models, which were being discarded.
   let footprint;
   let pads;
 
   const curated = resolveFootprint(component.package);
-  if (curated.ok) {
-    footprint = field(SOURCE.CURATED, curated.footprint, {
-      evidence: curated.evidence,
-    });
-    pads = field(SOURCE.CURATED, null, { expectedCount: curated.expectedPadCount });
-  } else {
-    // 2. parts engine (cached; accepted only on an exact package match)
-    const part = await resolvePart(component, options);
+  const part = await resolvePart(component, options);
 
-    if (part.ok) {
+  if (part.ok) {
       footprint = field(SOURCE.PARTS_ENGINE, part.footprint, {
         lcsc: part.lcsc,
         matchedPackage: part.package,
@@ -73,8 +78,13 @@ export async function resolveComponent(component, options = {}) {
       // Pad count comes from the catalogue footprint itself; it is verified
       // after compile by assertPadIntegrity rather than predicted here.
       pads = field(SOURCE.PARTS_ENGINE, null, { expectedCount: null, lcsc: part.lcsc });
-    } else {
-      // 3. mock — explicit, with the reason resolution failed
+  } else if (curated.ok) {
+    // Package-generic fallback: used when the catalogue has no entry for this
+    // exact part, which is precisely what the curated table is for.
+    footprint = field(SOURCE.CURATED, curated.footprint, { evidence: curated.evidence });
+    pads = field(SOURCE.CURATED, null, { expectedCount: curated.expectedPadCount });
+  } else {
+      // mock — explicit, with the reason resolution failed
       const reason =
         `${curated.message} Parts engine: ${part.message}`;
       footprint = field(SOURCE.MOCK, null, { reason });
@@ -91,7 +101,6 @@ export async function resolveComponent(component, options = {}) {
           partsEngineDetail: part.detail ?? {},
         },
       });
-    }
   }
 
   // --- 3D model ------------------------------------------------------------

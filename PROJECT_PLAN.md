@@ -198,6 +198,23 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 
 **Yield reality check, logged plainly:** across all of Phase 6's dual-extraction infrastructure (pilot, gates, cross-model comparison, failover, degraded mode), one real pin has been confirmed end-to-end (`LP103SB6F.GND`). A single catalogue-completeness bug fix (D-054) resolved seventeen. The mechanism remains proven only by the controlled near-miss test, not by production yield — worth remembering before investing further engineering time in this specific system versus auditing for more bugs of D-054's shape.
 
+**Phase 6 extraction pipeline declared at practical ceiling — pivoting to catalogue/cache-completeness audit (Phase 6.5).** The remaining unresolved pins are source-document-limited, not pipeline-limited; more extraction infrastructure won't move them. D-054's actual lesson wasn't "fix that one cache," it's that **a rejection caused by our own incomplete cache data looks identical to a genuine resolution failure unless someone checks** — and this has now happened four times in different forms (false `real:true`, false determinism/no-cache, empty pad list, and the general transport-vs-domain-answer pattern). Worth a deliberate sweep rather than waiting to trip over the next instance.
+
+### Phase 6.5 — Catalogue/cache-completeness audit (new, highest proven yield per engineering-hour so far)
+**Scope: pure deterministic pipeline work, no LLM calls involved** — cheaper and faster to check than the extraction path, which is exactly why it's next.
+
+For every deterministic gate/check/resolution step in the pipeline that depends on a cache or lookup table, verify it's actually complete for what the 19 real fixture parts need — don't assume, check empirically the same way D-054 was found (that bug was invisible until someone actually inspected why a genuine, correctly-quoted pin-table row was being rejected). Candidates to check, not necessarily exhaustive:
+- **Footprint mapper** (Phase 3): are there fixture packages currently reported as unresolved where the actual gap is a missing/incomplete lookup entry rather than a genuine geometry mismatch? (Careful: D-010's exact-match rule rejecting a *different* package geometry, like the `QFN-16-EP(4x4)` vs. plain `qfn16` case, was proven *correct*, not a bug — the audit target is specifically "we have the right footprint identified but a downstream table needed to complete the claim is simply missing an entry," not "we're being appropriately conservative about uncertain matches." Don't loosen D-010's rule while doing this.)
+- **Pinout cache** (`pinout-cache.json`): any parts beyond the 11 already fixed with the same gap?
+- **3D model resolution**: given the false `real:true` bug was about wrongly *claiming* a model existed, check the inverse — any case where a real, resolvable 3D model is being marked unavailable due to a similar cache gap rather than genuine unavailability?
+- **Parts engine matching**: any fixture parts currently unresolved via `jlcsearch` where the actual LCSC entry exists but a fixable matching/lookup gap (not a legitimate uncertainty) is blocking it?
+
+For each gap found: fix it (populate the missing data), then verify the fix against real fixture data the same way D-054's fix was verified (not just "looks right" — re-run the deterministic resolution and confirm the specific parts/pins now resolve).
+
+**Set expectations honestly going in:** D-054 was a genuinely large, possibly one-off find (17 pins from one fix). This audit might find another one that size, several small ones, or none at all — report whatever's actually found, don't manufacture significance if the sweep comes up empty.
+
+**Definition of done:** every cache/lookup dependency in the pipeline explicitly checked (documented, even the ones that turn out fine — this makes the audit itself reusable/re-runnable later, not just a one-time fix), any gaps found fixed and verified, updated real-pin-count reported (currently 32/63) with honest attribution of any change.
+
 **Provider failover / degraded mode.** If one provider (Gemini or Groq) becomes unavailable mid-batch (quota exhaustion, outage) despite billing, don't stop the batch and don't report it as `PIN_NOT_FOUND` — continue with the remaining provider, but change what "passing" means:
 
 - Deterministic gates (1-3) still run on the single available extractor's proposal, same as always.
@@ -262,3 +279,4 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 5.6 — Resolution-integrity fixes (false real:true bug, false determinism/no-cache bug)
 - [ ] Phase 6 — Pin-name resolution (Group A done; pilot proven twice — LP103SB6F.GND and HY2111-GB both confirmed in curatedPinouts.js; Group B/rest of Group C on hold pending scope-expansion decision)
 - [x] Phase 7 — Stylized icon-based circuit diagram (done, verified — connectivity algorithm unchanged, geometry constants updated for icon fit)
+- [ ] Phase 6.5 — Catalogue/cache-completeness audit (new — pivoted to here after Phase 6's extraction pipeline hit its practical ceiling)

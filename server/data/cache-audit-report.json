@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-08-09T16:11:53.235Z",
+  "realPins": 32,
+  "totalPins": 63,
+  "findings": [
+    {
+      "area": "parts_engine",
+      "part": "BLE-SER-A-ANT",
+      "detail": "No catalogue entry for part number \"BLE-SER-A-ANT\"."
+    },
+    {
+      "area": "footprint",
+      "part": "BLE-SER-A-ANT",
+      "detail": "unresolved; curated table says: No verified footprint for package \"SMD,10.6x10.2mm\". No candidate footprint is k"
+    },
+    {
+      "area": "pinout_cache_sparse",
+      "part": "FS32K116LFT0MLFT",
+      "detail": "5/48 pads carry names",
+      "footprint": "jlcpcb:C1137392"
+    },
+    {
+      "area": "pinout_cache_sparse",
+      "part": "MC9RS08KA1CSCR",
+      "detail": "2/8 pads carry names",
+      "footprint": "jlcpcb:C2053131"
+    },
+    {
+      "area": "pinout_cache_sparse",
+      "part": "MC9S08DZ32ACLC",
+      "detail": "3/32 pads carry names",
+      "footprint": "jlcpcb:C1337499"
+    },
+    {
+      "area": "pinout_cache_sparse",
+      "part": "PS-5850SVB-6PNW",
+      "detail": "0/6 pads carry names",
+      "footprint": "jlcpcb:C5155573"
+    }
+  ]
+}

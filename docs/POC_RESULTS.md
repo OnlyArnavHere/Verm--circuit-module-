@@ -567,3 +567,83 @@ node scripts/confirm-extraction.js --part LP103SB6F --package SOT-23-6 \
 
 A gate-rejected claim can never be confirmed — the script refuses it, so the
 deterministic gates are not advisory.
+
+---
+
+# Phase 6.5 — catalogue/cache-completeness audit
+
+Re-runnable: `cd server && node scripts/audit-caches.js [--probe3d]`.
+Machine-readable output at `server/data/cache-audit-report.json`.
+
+Every deterministic lookup was checked against all 19 fixture parts, including
+the ones that turned out fine — the point is a reusable sweep, not a one-off.
+
+| Dependency | Complete for the 19 parts? | Verdict |
+|---|---|---|
+| Parts engine (`parts-cache.json`) | 18/19 | **Not a gap** — `BLE-SER-A-ANT` is genuinely absent from LCSC |
+| Footprint mapper | 19/19 determined | **GAP FOUND AND FIXED** (below) |
+| Pinout cache (`pinout-cache.json`) | every resolved footprint present | **Not a gap** — extraction captures exactly what footprints expose |
+| 3D model resolution | 8/10 → **10/10** | **GAP FOUND AND FIXED** (same root cause) |
+| Pin-name matching | 6 well-named parts spot-checked | **Not a gap** — no missed matches |
+
+## The one real gap: package-generic footprint shadowing part-specific
+
+`footprintMap` is keyed by **package**; the parts engine matches by **part
+number** with an exact package check. Resolution tried curated first, so the
+generic `sot23_6` entry shadowed the catalogue's own footprint for the two
+SOT-23-6 parts. Measured cost:
+
+| | `sot23_6` (curated, generic) | `jlcpcb:C82747` (catalogue, part-specific) |
+|---|---|---|
+| pads | 6 | 6 — identical |
+| pad numbering | pin1–6 | **identical** (verified against the curated pinout) |
+| pin names | none | `OC, CS, OD, VSS, VDD, NC` |
+| 3D model | **none** | **yes** |
+
+So a real, resolvable 3D model was being discarded — exactly the inverse of the
+false `real: true` bug: not claiming something we lacked, but discarding
+something we had.
+
+**Fix:** part-specific evidence outranks package-generic evidence (D-061). This
+does **not** loosen D-010 — the exact package match is still required, and the
+curated table remains the fallback for parts the catalogue lacks.
+
+A pleasing side-effect: `jlcpcb:C387729` independently maps `GND -> pin2` for
+`LP103SB6F`, corroborating the LLM-extracted, human-confirmed value from a
+completely separate source.
+
+## Result, attributed honestly
+
+| Metric | Before | After |
+|---|---|---|
+| Real logical pins | 32/63 | **32/63 — unchanged** |
+| 3D models (POC fixtures) | 9/10 | **10/10** |
+| `smart_dustbin` 3D | 6/7 | **7/7** |
+
+**The pin count did not move.** The two affected parts already had curated
+pinouts covering their pins, so the fix changed 3D coverage, not pin resolution.
+This audit was not a second D-054 — it found one real gap of moderate value, and
+that is the honest result.
+
+## What the 31 unresolved pins actually are
+
+The audit now prints each unresolved pin against the pins the part actually has,
+which turns an opaque number into two different problems with different owners:
+
+**Part physically lacks the function — UPSTREAM data errors, unresolvable by any
+datasheet work (~10 pins).** Newly identified here, beyond the known
+`MBI5124GP-B` case:
+
+| Part | Asked for | What it actually is |
+|---|---|---|
+| `HDSP-521G` | `GND`, `SCK`, `VDD` | a 7-segment display: pins are `A1,B1,C1,D1,E1,F1,G1,DP1…` segment anodes/cathodes |
+| `CD4543BM96` | `AUDIO` | a BCD-to-7-segment decoder: `A,B,C,D,PHASE,BLANKING,F,G,E` |
+| `LMA2718T421-OA5-2` | `SCL` | an analog part with a single `OUT` |
+| `ESPC2-12-N4` | `ANT` | module with an integrated antenna; exposes `IO0–IO18`, `RXD0`, `TXD0` |
+
+**Needs a datasheet mux table (~18 pins)** — MCU function names (`SDA`, `MOSI`,
+`RX`) that map to port pins (`PTA0`) or BGA balls. Genuine source-document
+limitation, per D-059.
+
+**No catalogue entry (3 pins)** — `BLE-SER-A-ANT`, verified absent across four
+search variants.

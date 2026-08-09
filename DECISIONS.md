@@ -1335,3 +1335,95 @@ ERRORS, and `TP4110.VDD` correctly remains `PIN_NOT_FOUND`.
 This also settles D-032's open question in the same direction it guessed:
 declining to map `VDD -> VIN` was right, and for a stronger reason than
 "unverified" — the two are genuinely different nets.
+
+---
+
+## D-061 — Part-specific footprint outranks package-generic
+
+**Phase:** 6.5
+**Status:** Accepted — the one real gap the audit found
+
+`footprintMap` is keyed by **package** (generic to every part with that body);
+the parts engine matches by **part number** with an exact package check
+(specific to this part). Resolution consulted curated first, so the generic
+entry shadowed the more specific one.
+
+Measured for the two SOT-23-6 parts: identical pad count *and* identical pad
+numbering, but the catalogue footprints additionally carry real pin names and
+**real 3D models**. Those were being discarded — the inverse of the false
+`real: true` bug (D-027): not claiming what we lacked, but throwing away what we
+had.
+
+Order is now parts-engine first, curated as fallback. This does **not** loosen
+D-010: the exact package match is still required, and curated remains the path
+for parts the catalogue does not carry. The rule is simply that more specific
+evidence wins when both are verified.
+
+Verified against real data, not by inspection: `smart_dustbin` 3D models went
+6/7 → 7/7, U6 switching from `sot23_6` to `jlcpcb:C82747`, with `padAssert` and
+`netAssert` still passing and 4/4 outputs.
+
+Side-benefit worth recording: `jlcpcb:C387729` independently maps `GND -> pin2`
+for `LP103SB6F` — corroborating, from a completely separate source, the value
+that went through LLM extraction and human confirmation.
+
+---
+
+## D-062 — Audit result: one moderate gap, pin count unchanged
+
+**Phase:** 6.5
+**Status:** Accepted — outcome record, stated without inflation
+
+Expectations were set that this might find another D-054 (17 pins), several
+small gaps, or nothing. What it actually found:
+
+| Dependency | Verdict |
+|---|---|
+| Parts engine | complete except `BLE-SER-A-ANT`, verified genuinely absent |
+| Footprint mapper | **one gap** (D-061) |
+| Pinout cache | complete — extraction captures exactly what footprints expose |
+| 3D models | **same gap**, 9/10 → 10/10 |
+| Pin-name matching | no missed matches on six spot-checked parts |
+
+**Real pins: 32/63, unchanged.** The fix moved 3D coverage, not pin resolution,
+because the affected parts already had curated pinouts. **This was not a second
+D-054**, and it would be easy to present it as one by leading with "found and
+fixed a gap" — the honest framing is one moderate-value fix.
+
+Two things worth keeping from the sweep:
+
+1. **`BLE-SER-A-ANT`'s absence is correct behaviour.** Four search variants
+   returned only unrelated fuzzy matches (74HC595 and similar); the exact-MPN
+   filter rejected them. That is D-010's conservatism working, not a gap.
+2. **Sparse pin naming is a catalogue limitation, not ours.** Compared raw
+   `port_hints` against the cache for three parts: identical. `FS32K116LFT0MLFT`
+   really does expose only 5 names of 48 pads.
+
+---
+
+## D-063 — Roughly a third of unresolved pins are upstream errors, not gaps
+
+**Phase:** 6.5
+**Status:** Accepted — reframes the unresolved count
+
+The audit now prints each unresolved pin against the pins the part actually has.
+That splits an opaque "31 unresolved" into two problems with different owners:
+
+**~10 pins: the part physically lacks the function.** No datasheet work can ever
+resolve these. Newly identified beyond the known `MBI5124GP-B` case:
+
+| Part | Asked for | Reality |
+|---|---|---|
+| `HDSP-521G` | GND, SCK, VDD | 7-segment display — pins are segment anodes/cathodes (`A1,B1,C1,DP1`…) |
+| `CD4543BM96` | AUDIO | BCD-to-7-segment decoder (`A,B,C,D,PHASE,BLANKING`) |
+| `LMA2718T421-OA5-2` | SCL | analog part with a single `OUT` |
+| `ESPC2-12-N4` | ANT | integrated-antenna module (`IO0–IO18`, `RXD0`, `TXD0`) |
+
+**~18 pins: genuine mux-table gaps** — MCU function names mapping to port pins or
+BGA balls, per D-059.
+
+The pattern across `HDSP-521G`, `CD4543BM96`, `LMA2718T421` and `MBI5124GP-B` is
+consistent: the Hardware Agent appears to select parts by `part_class` and then
+attach a class-typical net (`AUDIO` to an `output` part, `SCL` to a `sensor`)
+without checking the chosen part actually has that function. Worth raising
+upstream — it is a systematic selection issue, not four coincidences.
