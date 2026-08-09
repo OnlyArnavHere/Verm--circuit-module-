@@ -226,6 +226,10 @@ This only applies where we already have positively-resolved real capability data
 
 **Definition of done:** new error code implemented and distinct from `PIN_NOT_FOUND` in the taxonomy (update `docs/ARCHITECTURE.md`); the 5 known instances reclassified; a test proving the check fires generally (not just on the 4 known fixtures) — e.g. construct a synthetic case with a different part/net combination and confirm it's caught.
 
+**Status: done.** Two synthetic tests (outside any fixture) prove generality. Three guards earned their place from real parts that would otherwise be misreported: complete pad coverage (refuses to assert absence when naming is incomplete — `HDSP-521G`/`CD4543BM96` correctly stayed `PIN_NOT_FOUND`, not forced into the new code despite being on the original suspect list), functional-vs-complete naming (`MIMXRT1172CVM8A`'s 289 ball-coordinate names are complete but not functional — same "field present ≠ field meaningful" lesson as D-054/false-real/false-determinism/3D-shadowing, now appearing a fifth time in a new form), and mux-assignability (a firmware-mappable pin, like `RF-BM-2340A2I`'s `TX`, is a mux gap not a capability mismatch; an antenna feed, like `ESPC2-12-N4`'s `ANT`, genuinely can't be mux-assigned). Final reclassification: 5 pins across 4 parts (`MBI5124GP-B`: `AUDIO`/`GPIO1`; `LMA2718T421-OA5-2`: `SCL`; `ESPC2-12-N4`: `ANT`; `TP4110`: `VDD`) — `TP4110.VDD` converged independently from two unrelated methods (web research on the chip family; this check's own capability data), a second cross-validation moment after `LP103SB6F`'s `GND`.
+
+**Upstream finding, reframed as one root cause:** the Hardware Agent assigns class-typical nets without verifying the selected part actually provides that function (`AUDIO` to an output part, `SCL` to a sensor, `ANT` to a communication part) — one defect at the selection step, not several unrelated part-level bugs. Documented as the lead item in `docs/POC_RESULTS.md`'s upstream section, above the individual instances, with the recommended fix (validate a net's required function against the selected part's real pin set at selection time) — framed this way so it gets fixed once at the root rather than patched repeatedly per symptom. Now detected automatically on any future Hardware Agent output, not just by inspection.
+
 **Provider failover / degraded mode.** If one provider (Gemini or Groq) becomes unavailable mid-batch (quota exhaustion, outage) despite billing, don't stop the batch and don't report it as `PIN_NOT_FOUND` — continue with the remaining provider, but change what "passing" means:
 
 - Deterministic gates (1-3) still run on the single available extractor's proposal, same as always.
@@ -256,7 +260,25 @@ This only applies where we already have positively-resolved real capability data
 
 ---
 
-## 4. Failure handling (non-negotiable)
+### Phase 8 — Conversational modification workflow (section 12 of the original spec, untouched until now)
+**Scope bounded to one modification type: component repositioning** (matches the spec's own example — "move the BLE module closer to the edge"). Explicitly defer component swaps, net/connectivity changes, and board-constraint changes — these cascade through footprint/electrical-validation/compilation in ways that are much riskier, same reasoning as deferring Group C earlier. If a request falls outside repositioning, reject it explicitly as unsupported for now rather than guessing at a broader interpretation.
+
+**First step: propose the structured-instruction and version-storage schemas before implementing** — same "propose the intermediate schema, then build" discipline as `ValidatedDesign` in Phase 3. Don't jump straight to a full implementation.
+
+**Architecture — reuses the LLM-proposes/deterministic-validates pattern already proven in Phase 6, applied to modification requests instead of pin extraction:**
+1. User submits a natural-language request against an existing `design_id`/version.
+2. Agent (LLM) interprets the request into a small, bounded structured instruction (e.g. target component + a concrete candidate placement or placement strategy) — never free-form tscircuit code, never directly emitting final geometry (section 1's core rule applies here too). Anything that doesn't map cleanly onto the bounded instruction schema is rejected as unsupported, not guessed at.
+3. Deterministic validation: does the referenced component exist in the current `ValidatedDesign`? Is the proposed placement well-formed (within board outline, doesn't trivially collide)?
+4. A deterministic (not LLM-generated) transform applies the instruction to produce a new `ValidatedDesign` version.
+5. Re-run the existing deterministic compiler → tscircuit → regenerate all 4 outputs. **Re-run DRC (already wired in from Phase 5.5)** on the new placement — if the move introduces a DRC violation, fail explicitly and don't commit the new version, rather than silently shipping a worse board than v1.
+6. Store as a new version — never overwrite prior versions (`design_001/v1`, `v2`, `v3`...). Persist the natural-language request and the interpreted structured instruction alongside the version, same provenance discipline as everything else in this project.
+7. Emit the socket/DB update so other agents can see the new version, per the original visibility requirement.
+
+**Much of the hard infrastructure already exists** — the deterministic compiler, tscircuit pipeline, DRC, and all 4 output generators are reused as-is. What's actually new: the NL→structured-instruction step, the deterministic apply-and-recompile transform, and version storage.
+
+**Definition of done:** structured-instruction and version schemas proposed and reviewed; one real fixture taken through a real natural-language repositioning request end-to-end, producing a genuine v2 with regenerated outputs; v1 confirmed unchanged and still accessible; DRC re-run proven to actually catch a deliberately-bad repositioning (same rigor as the pinLabels/traceCount proofs — not just claimed).
+
+
 
 The system fails **explicitly**, never silently and never by guessing:
 
@@ -291,4 +313,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [ ] Phase 6 — Pin-name resolution (Group A done; pilot proven twice — LP103SB6F.GND and HY2111-GB both confirmed in curatedPinouts.js; Group B/rest of Group C on hold pending scope-expansion decision)
 - [x] Phase 7 — Stylized icon-based circuit diagram (done, verified — connectivity algorithm unchanged, geometry constants updated for icon fit)
 - [x] Phase 6.5 — Catalogue/cache-completeness audit (done — 3D-model discard bug found/fixed, LP103SB6F cross-validated, systemic upstream capability-mismatch pattern discovered across 5 parts)
-- [ ] Phase 6.6 — Capability-mismatch validation (new — PART_CAPABILITY_MISMATCH error code, uses already-resolved data)
+- [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
+- [ ] Phase 8 — Conversational modification workflow (new — scoped to component repositioning only; schema proposal first, then one real end-to-end request)
