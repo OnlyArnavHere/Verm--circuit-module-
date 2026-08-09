@@ -1,6 +1,6 @@
 # Conversational modification — schema proposal (Phase 8)
 
-**Status: PROPOSAL. Nothing here is implemented yet.**
+**Status: IMPLEMENTED** (Phase 8). All five open questions were confirmed and built.
 **Date:** 2026-08-09
 
 Two schemas for review before any code is written, per Phase 8's "propose the
@@ -235,7 +235,32 @@ plus the placement-state prerequisite in §0.
 
 ---
 
-## 4. Open questions for review
+## 4. Semantic target check (added after review)
+
+DRC validates *geometry*. It cannot detect that the **wrong component** was
+moved: a misidentified-but-valid `ref_id` lands somewhere legal and every
+geometric check passes. Proven live — a request saying "the BLE module" resolved
+onto the power IC compiled with **0 DRC failures**.
+
+`targetCheck.js` compares the user's own wording against the resolved
+component's real `part_class`/`part_number` — data already in hand, no extra
+model call. Five verdicts:
+
+| Verdict | Meaning |
+|---|---|
+| `explicit` | the user named the ref_id or part number — never second-guessed |
+| `consistent` | wording matches the target's class |
+| `ambiguous` | wording fits the target *and* others equally (e.g. two power parts) |
+| `unverifiable` | no recognisable description; no claim made |
+| `mismatch` | wording clearly describes a different class |
+
+**Visibility, not a hard block.** It is a heuristic over English and will
+sometimes be wrong, so it warns loudly and proceeds — the user can simply ask
+again, the same recoverability as everything else in Phase 8. The warning prints
+before the move *and* is repeated after the commit summary, because a warning
+200 lines up a compile log has effectively been buried.
+
+## 5. Open questions (all resolved at review)
 
 1. **The §0 prerequisite** — promoting placement into `ValidatedDesign` touches
    Phase 3's schema and Phase 5's compiler. Confirm that's acceptable; there is

@@ -20,6 +20,7 @@ import { interpretRequest } from "../src/design/interpretRequest.js";
 import { applyModification, INSTRUCTION_TYPE } from "../src/design/modification.js";
 import { installHttpCache } from "../src/services/httpCache.js";
 import { componentSizesFrom } from "../src/design/placement.js";
+import { verifyTarget, TARGET_VERDICT } from "../src/design/targetCheck.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.resolve(here, "../../test-fixtures");
@@ -100,6 +101,29 @@ if (instruction.type === INSTRUCTION_TYPE.UNSUPPORTED) {
   console.log(`\nUNSUPPORTED (${instruction.requested_change_class}): ${instruction.reason}`);
   console.log("v1 untouched, no version created.");
   process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
+// Semantic target check
+//
+// DRC validates geometry; it cannot tell that the WRONG component was moved to
+// a perfectly legal place. This compares the user's own words against the
+// resolved part's real class — printed up front, because a warning nobody sees
+// is not a warning.
+// ---------------------------------------------------------------------------
+const targetCheck = verifyTarget(request, instruction.target.ref_id, upstream.components);
+
+if (targetCheck.verdict === TARGET_VERDICT.MISMATCH) {
+  console.log(`\n${"*".repeat(74)}`);
+  console.log(`TARGET MISMATCH — the moved component may not be the one you meant`);
+  console.log(`  ${targetCheck.message}`);
+  if (targetCheck.candidates?.length) console.log(`  candidates: ${targetCheck.candidates.join("; ")}`);
+  console.log(`  Proceeding — geometry is still fully validated — but review this.`);
+  console.log(`${"*".repeat(74)}`);
+} else if (targetCheck.verdict === TARGET_VERDICT.AMBIGUOUS) {
+  console.log(`\n>> TARGET AMBIGUOUS: ${targetCheck.message}`);
+} else {
+  console.log(`\ntarget check: ${targetCheck.verdict} — ${targetCheck.message}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +208,14 @@ const v1After = Object.fromEntries(
   })
 );
 const v1Intact = Object.entries(v1Hashes).every(([k, h]) => v1After[k] === h);
+// Repeated at the end so it survives a long compile log — the requirement is
+// visibility, and a warning 200 lines up has effectively been buried.
+if (targetCheck.verdict === TARGET_VERDICT.MISMATCH) {
+  console.log(`\n${"*".repeat(74)}`);
+  console.log(`REMINDER — TARGET MISMATCH on this version: ${targetCheck.message}`);
+  console.log(`${"*".repeat(74)}`);
+}
+
 console.log(`\nv1 artifacts still on disk and unchanged: ${v1Intact ? "CONFIRMED" : "CHANGED — BUG"}`);
 console.log(`v1 dir: ${v1Dir}`);
 console.log(`v2 dir: ${v2Dir}`);

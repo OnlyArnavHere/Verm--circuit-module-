@@ -1613,3 +1613,61 @@ rejected modification with a visible reason.
 Extractor B is used only as a fallback when the primary interpreter is
 unavailable — the same failover shape as D-055, without the dual-agreement
 requirement.
+
+---
+
+## D-071 — Semantic target check: the one failure geometry cannot see
+
+**Phase:** 8
+**Status:** Accepted — proven live
+
+Every existing check validates *geometry*. None can detect that the **wrong
+component** was moved: a misidentified-but-valid `ref_id` lands somewhere legal
+and passes DRC, assertions, containment, everything. The board is valid and
+wrong.
+
+Demonstrated rather than argued. A request saying "move the **BLE module**" was
+resolved onto `U6` (HY2111-GB, a power protection IC) and recompiled:
+
+```
+DRC: 0 failures, 21 warnings          <- geometry is perfectly clean
+assertions: padIntegrity PASS  netsRealized PASS
+v2 COMMITTED
+```
+
+Nothing in the pipeline objected. Only `targetCheck.js` did:
+
+```
+TARGET MISMATCH — the moved component may not be the one you meant
+  The request says "ble", which describes a communication component — but the
+  interpreter targeted U6, which is power (HY2111-GB). Did you mean U3?
+  candidates: U3 (communication, RF-BM-2340A2I)
+```
+
+It compares the user's own words to the resolved part's real
+`part_class`/`part_number` — data already in hand, no extra model call.
+
+**Deliberately not a hard block.** It is a heuristic over English, so it will
+occasionally be wrong, and being wrong-and-blocking is worse than
+wrong-and-loud. The user can request a different target; same recoverability as
+the rest of Phase 8.
+
+**But loudness is the actual requirement**, so the warning prints before the move
+*and* is repeated after the commit summary. A warning 200 lines up a compile log
+has been buried, which is the failure mode the review specifically called out.
+
+Five verdicts rather than a boolean, because "I cannot tell" and "this is wrong"
+must not collapse together — the same distinction as `PIN_NOT_FOUND` vs
+`PART_CAPABILITY_MISMATCH`:
+
+| Verdict | Meaning |
+|---|---|
+| `explicit` | user named the ref_id/part number — never second-guessed |
+| `consistent` | wording matches the target's class |
+| `ambiguous` | wording fits the target *and* others equally |
+| `unverifiable` | no recognisable description; no claim made |
+| `mismatch` | wording clearly describes a different class |
+
+Guards against crying wolf: an explicitly named `U3` is never overridden even if
+other class words appear; whole-word matching stops "led" firing inside
+"handled"; and two power-class parts yield `ambiguous`, not `mismatch`.
