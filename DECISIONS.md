@@ -985,3 +985,104 @@ key prefix: xai-  -> x.ai
 
 So Extractor B remains unavailable and auto-accept stays blocked by construction.
 The code now needs no change when a working key lands — only the `.env` value.
+
+---
+
+## D-048 — Gate 3: the evidence must mention the pin it claims
+
+**Phase:** 6
+**Status:** Accepted — found by the batch, not by design
+
+The first batch auto-accepted `TP4110 VDD -> pin16` on independent agreement.
+Reading the two excerpts showed the agreement was hollow:
+
+| Extractor | Evidence | What it establishes |
+|---|---|---|
+| A (Gemini) | `"16   VIN   外部电源输入端"` | a pin-table row — pin 16 is VIN |
+| B (Groq) | `"VDD 充电输入电压 4.5~5.5 V"` | an electrical-characteristics row. `VDD` here is a **parameter symbol**, not a pin. Establishes no pin at all. |
+
+Both excerpts are genuinely in the datasheet, so gate 2 passed both; pin16 exists,
+so gate 1 passed both; and the comparator saw matching answers. **Agreement on a
+conclusion is not agreement on a fact** — and the dual-extraction design cannot
+tell the difference on its own, because it compares answers, not reasoning.
+
+Gate 3 requires the excerpt to contain the claimed pin identifier. B's evidence
+mentions no pin number, so it is now rejected and the pair routes to review.
+
+Boundary handling matters here: a bare `5` must not be satisfied by the decimals
+in `4.5~5.5 V`, so token boundaries exclude `.` as well as digits. Six cases are
+asserted, including `pin16` not matching `160`.
+
+`TP4110 VDD` is therefore **not** resolved. That also preserves D-032's caution:
+`VIN` on a charger is the 4.5–5.5 V charge input, and this design wires `U1.VDD`
+to a 3V3 rail — so mapping `VDD -> VIN` may be electrically wrong regardless of
+what the datasheet says the pin is called.
+
+---
+
+## D-049 — Datasheets: follow manufacturer-hosted links from LCSC
+
+**Phase:** 6
+**Status:** Accepted
+
+The two priority parts reported "no datasheet" because the extractor only looked
+for LCSC- or JLCPCB-hosted PDFs. LCSC hosts no copy for either; it links straight
+to the manufacturer:
+
+```
+MIMXRT1172CVM8A -> nxp.com/docs/en/data-sheet/IMXRT1170IEC.pdf   233,905 chars
+FS32K116LFT0MLFT -> nxp.com.cn/docs/en/data-sheet/S32K1xx.pdf    221,264 chars
+```
+
+External PDFs are now followed, with site boilerplate (ISO certificates, quality
+policies, brochures) filtered out so it can never be mistaken for a datasheet.
+Without this the two hardest and highest-value parts were silently unreachable.
+
+---
+
+## D-050 — Send pin-relevant sections, not whole datasheets
+
+**Phase:** 6
+**Status:** Accepted
+
+Groq's free tier caps at **12,000 tokens/minute**; a full MCU datasheet prompt is
+~27,000 tokens. Extractor B returned HTTP 413 on every part above ~40K chars, so
+it never ran — and every result read as "extractor B did not return this pin",
+which looks like a disagreement pattern rather than a transport failure. That is a
+misleading failure mode and worth naming.
+
+`selectPinSections` reduces the text to windows around pin-table anchors ("pin
+description/configuration/function", "terminal/signal/ball map", "pinout") plus
+the needed pin names, capped at 24K chars. **Both extractors receive the identical
+reduced text**, so independence is unaffected, and gate 2 checks evidence against
+that same text so an excerpt from a discarded section cannot pass.
+
+This is better engineering regardless of the rate limit: a 234K-character
+datasheet is mostly electrical characteristics and package drawings.
+
+---
+
+## D-051 — Batch incomplete: Gemini daily free-tier quota exhausted
+
+**Phase:** 6
+**Status:** Blocked — resumable
+
+Extractor A is out of quota:
+
+```
+HTTP 429  quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier
+```
+
+Per **day**, not per minute (the accompanying `retryDelay: 37s` is misleading).
+The first batch spent it across 16 parts.
+
+Consequences, stated plainly:
+- The cross-model near-miss reconstruction **did pass** with Groq as Extractor B
+  before the quota ran out — the required validation is satisfied.
+- The batch itself produced **0 auto-accepted pins**, and that number is not
+  meaningful: Extractor B was hitting 413 for the whole run (D-050), so the
+  design was never actually exercised at scale.
+- Nothing was written to `curatedPinouts.js`. `auto-verified-pinouts.json` is `{}`.
+
+The batch must be re-run once quota resets (or billing is enabled) before any
+statement about hit rate is worth making.

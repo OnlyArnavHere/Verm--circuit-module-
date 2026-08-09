@@ -1,0 +1,609 @@
+{
+  "generatedAt": "2026-08-09T11:58:05.170Z",
+  "extractorB": "groq",
+  "parts": [
+    {
+      "partNumber": "BLE-SER-A-ANT",
+      "package": "SMD,10.6x10.2mm",
+      "lcsc": null,
+      "requestedPins": [
+        "ANT",
+        "GND",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "no LCSC code — part not in the catalogue"
+        },
+        {
+          "logical_pin": "GND",
+          "reason": "no LCSC code — part not in the catalogue"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "no LCSC code — part not in the catalogue"
+        }
+      ]
+    },
+    {
+      "partNumber": "CD4543BM96",
+      "package": "SOIC-16",
+      "lcsc": "C28326",
+      "requestedPins": [
+        "AUDIO",
+        "GND",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/07804e20067b42dd98c1d2d22242ef49.pdf?productCode=C28326",
+      "datasheetChars": 13109
+    },
+    {
+      "partNumber": "ESPC2-12-N4",
+      "package": "SMD,24x16mm",
+      "lcsc": "C19949080",
+      "requestedPins": [
+        "ANT",
+        "GND",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/873200e4c15a9adc4c1b92dfb353a611.pdf?productCode=C19949080",
+      "datasheetChars": 19368
+    },
+    {
+      "partNumber": "FS32K116LFT0MLFT",
+      "package": "LQFP-48(7x7)",
+      "lcsc": "C1137392",
+      "requestedPins": [
+        "AUDIO",
+        "MOSI",
+        "RX",
+        "SDA"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "MOSI",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "RX",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://www.nxp.com.cn/docs/en/data-sheet/S32K1xx.pdf",
+      "datasheetChars": 221264
+    },
+    {
+      "partNumber": "HDSP-521G",
+      "package": "DIP-18",
+      "lcsc": "C5650089",
+      "requestedPins": [
+        "GND",
+        "SCK",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SCK",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/81a9547d1881bf350ffd8a4d6c3ff078.pdf?productCode=C5650089",
+      "datasheetChars": 10247
+    },
+    {
+      "partNumber": "LMA2718T421-OA5-2",
+      "package": "SMD-4P,2.8x1.9mm",
+      "lcsc": "C7587901",
+      "requestedPins": [
+        "GND",
+        "SCL",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SCL",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2309010927_LinkMems-LMA2718T421-OA5-2_C7587901.pdf",
+      "datasheetChars": 8804
+    },
+    {
+      "partNumber": "LP103SB6F",
+      "package": "SOT-23-6",
+      "lcsc": "C387729",
+      "requestedPins": [
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/acd7b00210fb12d837893c5a82865a55.pdf?productCode=C387729",
+      "datasheetChars": 14148
+    },
+    {
+      "partNumber": "MBI5124GP-B",
+      "package": "SSOP-24",
+      "lcsc": "C256866",
+      "requestedPins": [
+        "AUDIO",
+        "GPIO1"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/591643fac52eb8395b25d9697ee01cc4.pdf?productCode=C256866",
+      "datasheetChars": 23914
+    },
+    {
+      "partNumber": "MC9RS08KA1CSCR",
+      "package": "SOIC-8",
+      "lcsc": "C2053131",
+      "requestedPins": [
+        "ANT",
+        "GND",
+        "MOSI",
+        "SDA",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [
+        {
+          "logical_pin": "GND",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin4",
+            "evidence": "VSS — — Ground",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin4\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin4\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin3",
+            "evidence": "VDD — — Power",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin3\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin3\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        }
+      ],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "MOSI",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/078f1c1eaeeb9bc75066b5d64b3d72cc.pdf?productCode=C2053131",
+      "datasheetChars": 233181
+    },
+    {
+      "partNumber": "MC9S08DZ32ACLC",
+      "package": "LQFP-32(7x7)",
+      "lcsc": "C1337499",
+      "requestedPins": [
+        "ANT",
+        "AUDIO",
+        "GND",
+        "GPIO1",
+        "SCL",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [
+        {
+          "logical_pin": "GND",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin3",
+            "evidence": "8   5   3   VSS",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin3\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin3\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        },
+        {
+          "logical_pin": "SCL",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin11",
+            "evidence": "19   15   11   PTE4   SCL 3   MOSI",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin11\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin11\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin2",
+            "evidence": "7   4   2   VDD",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin2\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin2\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        }
+      ],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/4afd3f39d5512f0ecec79b7f2070ffaf.pdf?productCode=C1344763",
+      "datasheetChars": 829505
+    },
+    {
+      "partNumber": "MCP7940NT-I/SN",
+      "package": "SOIC-8",
+      "lcsc": "C148052",
+      "requestedPins": [
+        "GND",
+        "SCL",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SCL",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/5093447976d64b9ab2cb1808413f6a3f.pdf?productCode=C148052",
+      "datasheetChars": 92911
+    },
+    {
+      "partNumber": "MCP9808T-E/MC",
+      "package": "DFN-8-EP(2x3)",
+      "lcsc": "C194710",
+      "requestedPins": [
+        "GND",
+        "SDA",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [
+        {
+          "logical_pin": "GND",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin4",
+            "evidence": "4 4 GND Ground",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin4\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin4\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin1",
+            "evidence": "1 1 SDA Serial Data Line",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin1\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin1\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "only one extractor returned this pin (extractor B did not)",
+          "a": {
+            "pin": "pin8",
+            "evidence": "8 8 V DD Power Pin",
+            "gates": {
+              "structural": {
+                "pass": false,
+                "reason": "claimed physical pin \"pin8\" does not exist on the compiled footprint (0 pads available)"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"pin8\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          },
+          "b": null
+        }
+      ],
+      "notFound": [],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/ff0a66b73128a3d087de8cc819fab56a.pdf?productCode=C194710",
+      "datasheetChars": 77689
+    },
+    {
+      "partNumber": "MIMXRT1172CVM8A",
+      "package": "MAPBGA-289",
+      "lcsc": "C3220126",
+      "requestedPins": [
+        "GND",
+        "SDA",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://www.nxp.com/docs/en/data-sheet/IMXRT1170IEC.pdf",
+      "datasheetChars": 233905
+    },
+    {
+      "partNumber": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "lcsc": "C5155573",
+      "requestedPins": [
+        "GND",
+        "GPIO1",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/96076ace19001334ce977605150e94df.pdf?productCode=C5155577",
+      "datasheetChars": 1421
+    },
+    {
+      "partNumber": "RF-BM-2340A2I",
+      "package": "SMD,15.2x11.2mm",
+      "lcsc": "C20624106",
+      "requestedPins": [
+        "TX"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "TX",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "https://datasheet.lcsc.com/datasheet/pdf/6fcd6687e05d7e9c0f569a9ef62ece0a.pdf?productCode=C20624106",
+      "datasheetChars": 10051
+    },
+    {
+      "partNumber": "TP4110",
+      "package": "SOP-16",
+      "lcsc": "C382136",
+      "requestedPins": [
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "datasheetUrl": "cached:C382136",
+      "datasheetChars": 5237
+    }
+  ]
+}

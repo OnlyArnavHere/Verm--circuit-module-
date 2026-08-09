@@ -74,7 +74,7 @@ console.log(
 // comparator, but does NOT demonstrate cross-model independence. The banner
 // below says which mode actually ran, so the result is never overstated.
 const providerB = detectProvider(extractorBKey());
-const grokProbe = await callExtractorB("Reply with the single word OK");
+const grokProbe = await callExtractorB('Return a json object like {"ok":true}');
 const grokAvailable = grokProbe.ok;
 
 const extractors = [

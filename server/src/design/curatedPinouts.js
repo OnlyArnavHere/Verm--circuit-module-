@@ -1,3 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 /**
  * Verified, part-specific pinouts.
  *
@@ -17,6 +21,24 @@
  *
  * An entry without that verification does not belong here.
  */
+
+/**
+ * Machine-verified entries from the dual-extraction batch. Kept in a separate
+ * data file, not merged into the hand-written table above, so provenance is
+ * never lost: these were accepted because two INDEPENDENT extractors agreed and
+ * both passed both deterministic gates — not because a human read the datasheet.
+ * See docs/POC_RESULTS.md and data/pin-batch-report.json.
+ */
+function autoVerified() {
+  try {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    return JSON.parse(
+      fs.readFileSync(path.resolve(here, "../../data/auto-verified-pinouts.json"), "utf8")
+    );
+  } catch {
+    return {};
+  }
+}
 
 /**
  * part_number -> { package, pins: {FUNCTION: "pinN"}, evidence }
@@ -85,8 +107,25 @@ const CURATED_PINOUTS = Object.freeze({
  *          |{ok: false, reason: string}}
  */
 export function curatedPinout(partNumber, pkg) {
-  const entry = CURATED_PINOUTS[String(partNumber ?? "").trim()];
-  if (!entry) return { ok: false, reason: "no curated pinout for this part number" };
+  const name = String(partNumber ?? "").trim();
+  const entry = CURATED_PINOUTS[name];
+
+  if (!entry) {
+    // Fall back to a dual-extraction-verified entry, if one exists for this
+    // exact part AND package.
+    const auto = autoVerified()[`${name}::${String(pkg ?? "").trim()}`];
+    if (auto) {
+      return {
+        ok: true,
+        pins: Object.fromEntries(Object.entries(auto.pins).map(([fn, d]) => [fn, d.pad])),
+        evidence:
+          `Verified by ${auto.verifiedBy} on ${auto.verifiedAt} against ${auto.datasheetUrl}. ` +
+          `Two independent extractions agreed and both passed both deterministic gates.`,
+        source: "dual_extraction",
+      };
+    }
+    return { ok: false, reason: "no curated pinout for this part number" };
+  }
 
   const normalize = (value) => String(value ?? "").trim().replace(/\s+/g, "").toUpperCase();
   if (normalize(entry.package) !== normalize(pkg)) {

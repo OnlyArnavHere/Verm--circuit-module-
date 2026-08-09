@@ -78,11 +78,27 @@ export function extractDatasheetUrls(html) {
     (url) => /\.pdf/i.test(url)
   );
 
-  // LCSC first (stable), then signed JLCPCB links, then unsigned ones.
+  // Manufacturer-hosted PDFs linked from the LCSC page. Larger parts (the NXP
+  // i.MX RT1170 BGA, the FS32K MCU) have no LCSC-hosted copy at all — LCSC links
+  // straight to nxp.com. Without this the two hardest parts silently reported
+  // "no datasheet". Site boilerplate (ISO certificates and the like) is excluded
+  // so it can never be mistaken for a datasheet.
+  const BOILERPLATE = /(iso[-_ ]?9001|iso-iec|certificat|quality|policy|brochure|catalog)/i;
+  const external = (normalized.match(/https?:\/\/[^"'\\ ,)]+\.pdf[^"'\\ ,)]*/gi) ?? []).filter(
+    (url) =>
+      !BOILERPLATE.test(url) &&
+      !/datasheet\.lcsc\.com/.test(url) &&
+      !/smtDataManualFile/.test(url) &&
+      !/assets\.lcsc\.com|static\.lcsc\.com/.test(url)
+  );
+
+  // LCSC first (stable), then signed JLCPCB links, then unsigned, then the
+  // manufacturer's own copy.
   const ordered = [
     ...lcsc,
     ...jlc.filter((url) => /x-oss-signature=/.test(url)),
     ...jlc.filter((url) => !/x-oss-signature=/.test(url)),
+    ...external,
   ];
   return [...new Set(ordered)];
 }
@@ -198,7 +214,7 @@ export async function fetchDatasheet(
  * exists**. Nothing is invented, and BGA-style ball ids (`A1`, `B14`) are left
  * untouched because they are already literal pad names. (D-045)
  */
-export function normalizePinRef(claimed, footprintPads) {
+export function normalizePinRef(claimed, footprintPads, padAliases = null) {
   const pads = footprintPads ?? [];
   const byUpper = new Map(pads.map((pad) => [String(pad).toUpperCase(), String(pad)]));
   const raw = String(claimed ?? "").trim();
@@ -213,10 +229,24 @@ export function normalizePinRef(claimed, footprintPads) {
     const candidate = byUpper.get(`PIN${numeric}`);
     if (candidate) return candidate;
   }
+
+  // Datasheets name BGA balls ("J14") and often functional pins ("VSS1") where
+  // the footprint's pads are "pinN". `padAliases` maps the part's real pin names
+  // to pads, so a legitimate ball reference resolves instead of being rejected
+  // as nonexistent. Still never invents: the alias must exist on this part.
+  if (padAliases) {
+    const aliasUpper = new Map(
+      Object.entries(padAliases).map(([name, pad]) => [String(name).toUpperCase(), pad])
+    );
+    const viaAlias = aliasUpper.get(raw.toUpperCase());
+    if (viaAlias && byUpper.has(String(viaAlias).toUpperCase())) {
+      return byUpper.get(String(viaAlias).toUpperCase());
+    }
+  }
   return null;
 }
 
-export function gateStructural(claim, footprintPads) {
+export function gateStructural(claim, footprintPads, padAliases = null) {
   const pads = footprintPads ?? [];
   const raw = String(claim?.physical_pin ?? "").trim();
 
@@ -224,7 +254,7 @@ export function gateStructural(claim, footprintPads) {
     return { pass: false, reason: "no physical_pin in the extraction" };
   }
 
-  const normalized = normalizePinRef(raw, pads);
+  const normalized = normalizePinRef(raw, pads, padAliases);
   if (!normalized) {
     return {
       pass: false,
@@ -311,8 +341,133 @@ export function gateEvidence(claim, datasheetText, { threshold = 0.8 } = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Gate 3 — evidence relevance
+// ---------------------------------------------------------------------------
+
+/**
+ * The evidence must actually mention the pin it claims.
+ *
+ * ── Why this exists (found by the batch, not by design) ─────────────────────
+ * On TP4110, both extractors independently answered `VDD -> pin16` and both
+ * passed gates 1 and 2 — but their reasons differed in kind:
+ *   A: "16   VIN   外部电源输入端"        <- a pin-table row. Establishes pin 16.
+ *   B: "VDD 充电输入电压 4.5~5.5 V"       <- an electrical-characteristics row.
+ *                                           `VDD` here is a PARAMETER SYMBOL,
+ *                                           not a pin. Establishes no pin.
+ * Both excerpts are genuinely in the datasheet, so gate 2 passed both. The
+ * comparator saw agreement on the answer and would have auto-accepted.
+ *
+ * Agreement on a conclusion is not agreement on a fact. This gate requires the
+ * excerpt to contain the claimed pin identifier, so an excerpt that cannot
+ * possibly support the claim is rejected regardless of how plausible it reads.
+ */
+export function gateEvidenceMentionsPin(claim, footprintPads, padAliases = null) {
+  const evidence = String(claim?.evidence ?? "");
+  const raw = String(claim?.physical_pin ?? "").trim();
+  if (!evidence || !raw) {
+    return { pass: false, reason: "no evidence or no claimed pin" };
+  }
+
+  const normalized = normalizePinRef(raw, footprintPads, padAliases);
+  const candidates = new Set([raw.toUpperCase()]);
+  if (normalized) {
+    candidates.add(String(normalized).toUpperCase());
+    const bare = String(normalized).replace(/^pin/i, "");
+    if (bare) candidates.add(bare.toUpperCase());
+  }
+  // The alias the pad is known by on this part (a BGA ball id, or a pin name).
+  if (padAliases) {
+    for (const [name, pad] of Object.entries(padAliases)) {
+      if (String(pad).toUpperCase() === String(normalized).toUpperCase()) {
+        candidates.add(String(name).toUpperCase());
+      }
+    }
+  }
+
+  const haystack = evidence.toUpperCase();
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    // Whole-token match. Boundaries exclude "." as well as digits, so a bare
+    // "5" is NOT satisfied by the decimals in "4.5~5.5 V" — a voltage range must
+    // never be read as a pin number.
+    const pattern = new RegExp(
+      `(^|[^0-9A-Z.])${candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9A-Z.]|$)`
+    );
+    if (pattern.test(haystack)) {
+      return { pass: true, reason: `evidence mentions "${candidate}"` };
+    }
+  }
+
+  return {
+    pass: false,
+    reason:
+      `evidence does not mention pin "${raw}" — the excerpt cannot support the claim ` +
+      `(it may be a parameter symbol or unrelated text that merely contains the pin name)`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Gemini
 // ---------------------------------------------------------------------------
+
+/**
+ * Reduce a datasheet to the sections that could plausibly define a pin.
+ *
+ * Two reasons, and the second is the binding one:
+ *  1. A 234,000-character MCU datasheet is mostly electrical characteristics,
+ *     package drawings and ordering info — noise for this task.
+ *  2. Extractor B (Groq free tier) caps at 12,000 tokens/minute. Full-text
+ *     prompts returned HTTP 413 on every part above ~40K chars, so B silently
+ *     never ran and every result looked like "B did not return this pin".
+ *
+ * Both extractors receive the IDENTICAL reduced text, so independence is
+ * unaffected — they read the same source, just without the irrelevant bulk.
+ * Gate 2 then checks evidence against this same text, so an excerpt from a
+ * discarded section cannot pass.
+ */
+export function selectPinSections(datasheetText, neededPins = [], { maxChars = 24000, window = 2600 } = {}) {
+  const text = String(datasheetText ?? "");
+  if (text.length <= maxChars) return text;
+
+  const anchors = [
+    /pin\s*(description|configuration|function|assignment|definition)/gi,
+    /(terminal|signal|ball)\s*(description|function|assignment|map)/gi,
+    /pinout/gi,
+    /package\s*(top\s*view|outline)/gi,
+  ];
+  // Also anchor on the pin names actually being looked for.
+  for (const pin of neededPins) {
+    if (/^[A-Za-z0-9_+-]{2,12}$/.test(pin)) {
+      anchors.push(new RegExp(`\\b${pin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"));
+    }
+  }
+
+  const ranges = [];
+  for (const pattern of anchors) {
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(text)) !== null) {
+      ranges.push([Math.max(0, match.index - window / 3), Math.min(text.length, match.index + window)]);
+      if (ranges.length > 400) break;
+    }
+  }
+  if (ranges.length === 0) return text.slice(0, maxChars);
+
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [ranges[0]];
+  for (const [start, end] of ranges.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
+  }
+
+  let out = "";
+  for (const [start, end] of merged) {
+    if (out.length >= maxChars) break;
+    out += `${text.slice(start, Math.min(end, start + (maxChars - out.length)))}\n...\n`;
+  }
+  return out;
+}
 
 export function buildPrompt({ partNumber, package: pkg, neededPins, datasheetText, footprintPads }) {
   // Stating the pad vocabulary removes a pure formatting failure ("5" vs "pin5")
@@ -336,7 +491,7 @@ export function buildPrompt({ partNumber, package: pkg, neededPins, datasheetTex
     `It is checked automatically against the source; paraphrase will be rejected.`,
     ``,
     `--- DATASHEET TEXT ---`,
-    datasheetText.slice(0, 120000),
+    datasheetText,
   ].join("\n");
 }
 

@@ -25,7 +25,14 @@
  * as GND=pin5. Both are genuinely verbatim; both pass both deterministic gates.
  * Only disagreement between independent readings catches it.
  */
-import { gateStructural, gateEvidence, buildPrompt, callGemini } from "./datasheetExtraction.js";
+import {
+  gateStructural,
+  gateEvidence,
+  gateEvidenceMentionsPin,
+  buildPrompt,
+  callGemini,
+  selectPinSections,
+} from "./datasheetExtraction.js";
 
 /**
  * Extractor B's key, whatever it is called in `.env`. Env vars are
@@ -92,7 +99,14 @@ export async function callExtractorB(
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
         model: model ?? provider.defaultModel,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          // Groq rejects `response_format: json_object` unless the word "json"
+          // appears in the messages. This is provider plumbing, not content:
+          // the *user* prompt stays byte-identical to Extractor A's, so the
+          // blindness property is unaffected.
+          { role: "system", content: "Respond with a single JSON object and nothing else." },
+          { role: "user", content: prompt },
+        ],
         temperature: 0,
         response_format: { type: "json_object" },
       }),
@@ -145,8 +159,14 @@ export const defaultExtractors = () => {
  * test can restrict one extractor's view of the source. In production both
  * receive the identical full text.
  */
-async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetText, footprintPads, fetchImpl }) {
-  const prompt = buildPrompt({ partNumber, package: pkg, neededPins, datasheetText, footprintPads });
+async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetText, footprintPads, padAliases, padVocabulary, fetchImpl }) {
+  const prompt = buildPrompt({
+    partNumber,
+    package: pkg,
+    neededPins,
+    datasheetText,
+    footprintPads: padVocabulary ?? footprintPads,
+  });
 
   const response = await extractor.call(prompt, { fetchImpl, model: extractor.model });
   if (!response.ok) {
@@ -154,10 +174,12 @@ async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetT
   }
 
   const claims = (response.parsed?.pins ?? []).map((claim) => {
-    const structural = gateStructural(claim, footprintPads);
+    const structural = gateStructural(claim, footprintPads, padAliases);
     // Evidence is checked against the text THIS extractor was given, so a
     // restricted view cannot be rescued by text it never saw.
     const evidence = gateEvidence(claim, datasheetText);
+    // Gate 3: the excerpt must actually mention the claimed pin (D-048).
+    const relevance = gateEvidenceMentionsPin(claim, footprintPads, padAliases);
     return {
       logical_pin: claim.logical_pin,
       // Compare on the NORMALIZED pin so "5" and "pin5" are not mistaken for a
@@ -166,8 +188,8 @@ async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetT
       rawPhysicalPin: claim.physical_pin,
       evidence: claim.evidence,
       reportedConfidence: claim.confidence ?? null,
-      gates: { structural, evidence },
-      passed: structural.pass && evidence.pass,
+      gates: { structural, evidence, relevance },
+      passed: structural.pass && evidence.pass && relevance.pass,
     };
   });
 
@@ -241,17 +263,25 @@ export async function extractWithVerification({
   neededPins,
   datasheetText,
   footprintPads,
+  padAliases,
+  padVocabulary,
   extractors = defaultExtractors(),
   fetchImpl = fetch,
 }) {
   const [extractorA, extractorB] = extractors;
 
+  // Both extractors read the same reduced text (see selectPinSections). A
+  // restricted-view test extractor supplies its own and is left untouched.
+  const shared = selectPinSections(datasheetText, neededPins);
+
   const resultA = await runExtractor(extractorA, {
     partNumber,
     pkg,
     neededPins,
-    datasheetText: extractorA.datasheetText ?? datasheetText,
+    datasheetText: extractorA.datasheetText ?? shared,
     footprintPads,
+    padAliases,
+    padVocabulary,
     fetchImpl,
   });
 
@@ -263,8 +293,10 @@ export async function extractWithVerification({
         partNumber,
         pkg,
         neededPins,
-        datasheetText: extractorB.datasheetText ?? datasheetText,
+        datasheetText: extractorB.datasheetText ?? shared,
         footprintPads,
+        padAliases,
+        padVocabulary,
         fetchImpl,
       })
     : { id: extractorB.id, name: extractorB.name, ok: false, reason: "not run — extractor A produced no gate-passing claim", claims: [] };
