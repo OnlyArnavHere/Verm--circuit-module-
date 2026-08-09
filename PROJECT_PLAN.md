@@ -293,6 +293,18 @@ This only applies where we already have positively-resolved real capability data
 
 **One gap closed in the single-extractor design:** DRC and geometric validation catch wrong *coordinates*, not a wrong *target component* — a misidentified-but-structurally-valid ref_id (e.g. "the BLE module" resolved to the wrong part) would pass DRC cleanly, since geometry validation has no way to know the wrong component was moved. Added a cheap semantic sanity check: compare the natural-language component reference against the resolved component's actual `part_class`/`part_number` (data already available, no new extraction needed) — on a clear mismatch, surface it prominently in the response rather than silently committing (doesn't hard-block, but must not be buried in provenance only a person who goes looking would find).
 
+### Phase 9 — Consolidation for handoff/demo (new — final phase, bounded, no new engineering)
+This is wrap-up, not further building. The system is feature-complete against the original spec (sections 1–20) as of Phase 8 — this phase makes it legible and safe to hand off, nothing more.
+
+1. **One final clean-state verification run** before anything else: full test suite, one full pipeline run against all four fixtures from a cold state (matching the discipline used throughout — a claim of "it works" needs a fresh proof at the end, not just an assumption built from the cumulative history of individual fixes).
+2. **A single top-level entry point doc** (README or SUMMARY) that ties together the now-many scattered docs (`FEASIBILITY_REPORT.md`, `VALIDATED_DESIGN_SCHEMA.md`, `ARCHITECTURE.md`, `CIRCUIT_DIAGRAM_APPROACH.md`, `MODIFICATION_SCHEMA.md`, `POC_RESULTS.md`) — someone new shouldn't have to read 70+ chronological decisions to understand what the system does and where to look for detail. Link out, don't duplicate.
+3. **Updated `POC_RESULTS.md` as the definitive current-state summary**: what's proven (4/4 outputs, real formats, 32/63 real pins, DRC/validation coverage, versioning workflow), what's deferred by choice (remaining Group C mux-table pins, the upstream Hardware Agent selection bug — as the one-root-cause writeup, not six symptoms — cosmetic label collision, git cache history), and an explicit "don't claim more than this" boundary so a demo doesn't oversell POC-level work as production-ready.
+4. **Decision log**: keep the full raw D-001…D-071+ log for audit purposes, but the summary doc should group/organize the load-bearing decisions by theme or phase rather than presenting a flat chronological list — use judgment on what's worth surfacing vs. what's detail only worth finding on request.
+5. **`.env.example`** (no real values) so a handoff recipient knows what credentials are needed without reading source code to find every `process.env` reference.
+6. **Revisit the deferred git cache-history bloat** (noted earlier as "before this repo goes public or gets other collaborators" — that condition is now true) — a clean history rewrite, or a documented decision not to bother, either is fine, but make it a decision rather than something left over by default.
+
+**Definition of done:** fresh clean-state run passes; one clear entry-point doc exists; `POC_RESULTS.md` is current and honestly bounded; `.env.example` exists; the cache-history question is explicitly resolved one way or the other.
+
 
 
 The system fails **explicitly**, never silently and never by guessing:
@@ -329,4 +341,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 7 — Stylized icon-based circuit diagram (done, verified — connectivity algorithm unchanged, geometry constants updated for icon fit)
 - [x] Phase 6.5 — Catalogue/cache-completeness audit (done — 3D-model discard bug found/fixed, LP103SB6F cross-validated, systemic upstream capability-mismatch pattern discovered across 5 parts)
 - [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
-- [x] Phase 8 — Conversational modification workflow (done — real NL request -> v2 committed; DRC block proven on a case that passes the bbox pre-check; semantic target-check added and proven on a constructed mismatch that DRC passes cleanly)
+- [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
+- [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))

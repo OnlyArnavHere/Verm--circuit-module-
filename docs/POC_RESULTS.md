@@ -1,4 +1,160 @@
-# Phase 5 POC — results
+# POC results — current state
+
+**This document is the definitive summary of what the system does today.**
+Sections below the horizontal rule are the chronological record of how each
+result was reached; this top section supersedes them where they disagree.
+
+---
+
+# FINAL STATE (Phase 9)
+
+**Verified:** 2026-08-10, from a cold state — the ~18 MB component-data cache and
+all previous artifacts deleted first, so footprints and 3D models were re-fetched
+over the network exactly as a handoff recipient would.
+
+```bash
+npm test                                   # 176/176 pass
+node scripts/run-poc.js rc_car smart_dustbin gas_leakage_detector noise_pollution_monitor
+```
+
+## Results across all four fixtures
+
+| | rc_car | smart_dustbin | gas_leakage | noise_pollution |
+|---|---|---|---|---|
+| Components | 3 | 7 | 8 | 8 |
+| **Required outputs** | **4/4** | **4/4** | **4/4** | **4/4** |
+| Real footprints | 3/3 | 7/7 | 8/8 | **7/8** |
+| Real 3D models (post-compile) | 3/3 | 7/7 | 8/8 | **7/8** |
+| Pad-integrity assertion | PASS | PASS | PASS | PASS |
+| Nets-realized assertion | PASS | PASS | PASS | **FAIL** |
+| DRC failures | 0 | 0 | 0 | 0 |
+| DRC warnings | 9 | 21 | 24 | 21 |
+| Gerbers exported | yes | yes | yes | **no** |
+
+**Three of four fixtures pass cleanly. `noise_pollution_monitor` does not**, for
+two diagnosed causes described below. The runner prints `Incomplete.` rather than
+success, which is the correct report.
+
+**Real pin resolution: 32 of 63** distinct `(part_number, pin)` pairs (51%).
+Counting per-fixture instances instead — parts recur across fixtures — the same
+run gives 45/79. Both numbers describe the same result; the denominators differ.
+
+## What is genuinely proven
+
+- **All four required outputs are real files in real formats**, produced
+  headlessly and offline-capable: `circuit-diagram.svg`, `schematic.svg` +
+  `.kicad_sch`, `board.kicad_pcb` + gerbers + `.drl`, and `board.glb`
+  (verified by `glTF` magic bytes, not just by extension).
+- **Real component data, not mocks.** 25 of 26 component instances resolved a
+  real package-matched LCSC footprint and a real 3D model. The single exception
+  is a part with no catalogue entry, and it is labelled `source: "mock"`.
+- **All four planted upstream bugs are caught** — see
+  [The four known bugs](#the-four-known-bugs--all-caught).
+- **The assertions do real work.** They are what fails
+  `noise_pollution_monitor`; without them it would report four outputs and look
+  like a success.
+- **DRC runs and blocks.** A deliberately-bad repositioning was rejected by the
+  real DRC re-run with 3 failures, committing no version.
+- **The versioning workflow works end to end.** Verified in this same run:
+  `"move U6 2mm to the right"` → interpreted → target-checked → validated →
+  recompiled → **v2 committed**, with v1 confirmed byte-identical on disk.
+
+## The two open defects in `noise_pollution_monitor`
+
+Both were found by this final run — the two extra fixtures had never been taken
+through a full compile before, since the POC default is two fixtures.
+
+**1. Three connections unrouted (`netsRealized` FAIL, 16 of 19 routed).**
+Root cause is a single component: `U4` (`BLE-SER-A-ANT`) has no catalogue entry,
+so it falls back to a mock footprint with **zero pads**. Confirmed by direct
+inspection rather than inferred — `U4` appears in **zero** traces while every
+other component appears, and 19 − 3 = 16 accounts for the shortfall exactly. The
+three connections are `GND`, `POWER_RAIL_3V3`, and `BLE_9`. This is the
+assertion behaving correctly: it refuses to call a partially-routed board a
+success. It is a **catalogue gap, not a pipeline defect**.
+
+**2. Gerber export fails (`Inner layer inner1 only supports copper gerbers`).**
+`noise_pollution_monitor` is the only fixture containing a through-hole part —
+`U3`, `HDSP-521G`, `DIP-18`, giving 18 `pcb_plated_hole` elements. Plated holes
+span every copper layer including `inner1` on a 4-layer board, and
+`circuit-json-to-gerber`'s `getGerberLayerName` throws when asked for a
+non-copper gerber on an inner layer. **This is an upstream library limitation,
+not our code** — reproducible in three lines against the saved `circuit.json`.
+The PCB output still counts as produced because `.kicad_pcb` and `pcb.svg` are
+written; only the gerber set is missing.
+
+## Determinism — precisely bounded
+
+Re-verified this run, and **narrower than previously claimed**:
+
+- **Geometry is reproducible.** Two consecutive offline runs produce byte-identical
+  gerbers once creation timestamps are stripped, byte-identical `.kicad_sch` once
+  UUIDs are normalized, and byte-identical Circuit JSON once random element-ID
+  suffixes and the `#N` instance counter are normalized. `board.glb`,
+  `board.kicad_pcb`, `pcb.svg`, `schematic.svg` and `netlist.txt` are byte-identical
+  with no normalization at all.
+- **Raw bytes are not reproducible.** 44 of 72 files differ between two offline
+  runs, entirely from embedded generation metadata: gerber `%TF.CreationDate`,
+  fresh KiCad UUIDs, and tscircuit's random warning-element IDs.
+- **Online and offline runs differ more** (63 of 72 files), as recorded in D-029.
+
+D-029 previously said offline↔offline was byte-identical. That is an overclaim
+and is corrected in **D-074**. The defensible claim is *geometry-level*
+determinism, not byte-level.
+
+- **Offline completeness holds:** after one warming run, all four fixtures
+  compile with **0 network calls** and 65 cache hits.
+
+## What this does NOT claim
+
+Read this before demoing.
+
+- **Not manufacturable.** No board here should be sent to a fab. Placement is a
+  naive grid, routing is whatever tscircuit's autorouter produced, and no
+  impedance, thermal, EMC, or DFM analysis exists.
+- **0 DRC failures ≠ a good board.** It means no rule in
+  `@tscircuit/checks` fired. Every fixture also carries 9–24 DRC **warnings**
+  that were never triaged.
+- **51% of pins are still positional.** Where a pin name could not be matched to
+  a real named pad it is assigned positionally and labelled `mock`. Those
+  assignments are **not** trustworthy and must not be manufactured — which is
+  exactly why they are labelled rather than silently used.
+- **Symbols are generated, not real.** Every schematic symbol is
+  `source: "generated"`; none comes from a verified symbol library.
+- **One fixture in four does not fully route.** Any "it works on our fixtures"
+  claim must carry that qualifier.
+- **The semantic target check is a heuristic over English**, not a guarantee. It
+  warns, it does not block, and it returns `unverifiable` for wording outside its
+  fixed vocabulary.
+- **Scale is unproven.** Largest board tested is 8 components and 19 connections.
+  Nothing here has met a real design of hundreds of parts.
+- **Not hardened as a service.** No auth, no rate limiting, no multi-tenancy; the
+  web UI is a dev upload form.
+- **The parts data is a community index** (`jlcsearch.tscircuit.com` /
+  `easyeda.com`), not JLCPCB's official API. It can change or disappear.
+
+## Deferred by explicit choice
+
+Each of these was a decision, not an oversight.
+
+| Deferred | Why |
+|---|---|
+| Remaining Group C mux-table pins | The binding constraint is source-document access and model quota, not engineering. The extraction machinery is built and proven on `LP103SB6F`; running it wider needs datasheets the pipeline cannot fetch. |
+| The upstream Hardware Agent selection bug | **One root cause, not six symptoms** — see [SYSTEMIC FINDING](#systemic-finding--one-upstream-bug-many-symptoms). It belongs to whoever owns the Hardware Agent; fixing it downstream would mean silently rewriting upstream intent. |
+| Cosmetic schematic label collision | Visual overlap only. No effect on netlist, geometry, or any exported file. |
+| Git cache history rewrite | Explicitly decided **against** — see **D-075**. |
+| `BLE-SER-A-ANT` footprint | No catalogue entry exists. Inventing one would violate D-010. Correctly surfaced as a mock with zero pads. |
+| Gerbers for through-hole boards | Upstream `circuit-json-to-gerber` limitation, not ours to patch here. |
+
+---
+
+# Chronological record
+
+Everything below is the phase-by-phase record of how the results above were
+reached, kept for audit. Where an earlier number differs from the final-state
+table, the table is current.
+
+## Phase 5 POC
 
 **Date:** 2026-08-09
 **Command:** `cd server && node scripts/run-poc.js`

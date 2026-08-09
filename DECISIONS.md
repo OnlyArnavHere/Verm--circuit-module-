@@ -525,7 +525,13 @@ both fixtures with **0 network calls**.
 ## D-029 — Determinism is per-mode, and stated as such
 
 **Phase:** 5.6
-**Status:** Accepted
+**Status:** Accepted — **partially superseded by D-074**
+
+> **Correction (Phase 9):** the "offline↔offline is byte-identical" claim below
+> is an overclaim. Three verification runs showed 44 of 72 files differ between
+> consecutive offline runs, entirely from embedded timestamps, UUIDs, and random
+> element IDs. Geometry is identical; raw bytes are not. See **D-074**. The
+> cross-mode half of this decision still stands.
 
 Measured, not assumed:
 
@@ -1671,3 +1677,111 @@ must not collapse together — the same distinction as `PIN_NOT_FOUND` vs
 Guards against crying wolf: an explicitly named `U3` is never overridden even if
 other class words appear; whole-word matching stops "led" firing inside
 "handled"; and two power-class parts yield `ambiguous`, not `mismatch`.
+
+## D-072 — `noise_pollution_monitor` routing shortfall is a catalogue gap, not a pipeline defect
+
+**Phase:** 9
+**Status:** Accepted — diagnosed, deferred
+
+The Phase 9 cold run took all four fixtures through a full compile for the first
+time (the POC default is two). `noise_pollution_monitor` failed
+`assertNetsRealized`: **16 of 19 connections routed**.
+
+Diagnosed by inspection, not inference:
+
+- `U4` (`BLE-SER-A-ANT`) has no catalogue entry, so it falls back to a mock
+  footprint with **zero pads**.
+- `U4` appears in **zero** `source_trace` elements. Every other component
+  appears.
+- `U4` participates in exactly three connections — `GND`, `POWER_RAIL_3V3`,
+  `BLE_9` — and 19 − 3 = 16 accounts for the shortfall exactly.
+
+**This is the assertion working.** A board with three unrouted connections still
+produces four output files and reports zero DRC failures; without D-025's
+connection counting it would have looked like a clean success.
+
+Not fixed, because the only fixes available are worse: inventing a footprint
+violates D-010, and substituting a similar module violates it more. The correct
+outcome is a labelled mock plus a failed assertion, which is what happens.
+
+## D-073 — Gerber export fails for through-hole parts on multi-layer boards (upstream)
+
+**Phase:** 9
+**Status:** Accepted — upstream limitation, documented
+
+`circuit-json-to-gerber` throws `Inner layer inner1 only supports copper gerbers`
+for `noise_pollution_monitor`. Reproducible in isolation against the saved
+`circuit.json`, so it is deterministic and not a transient.
+
+Cause: that fixture is the only one containing a through-hole part — `U3`,
+`HDSP-521G`, `DIP-18` — producing 18 `pcb_plated_hole` elements. Plated holes
+span every copper layer, including `inner1` on these 4-layer boards, and
+`getGerberLayerName` throws rather than skipping when asked for a non-copper
+gerber on an inner layer.
+
+All four fixtures declare `layer_count: 4`, so the layer count is not the
+trigger; the presence of plated holes is. The other three fixtures are entirely
+surface-mount and export gerbers fine.
+
+Not worked around. A workaround means either dropping the plated holes from the
+gerber set (silently wrong output) or forcing 2-layer (silently changing the
+design). Both violate "fail explicitly, never silently." The export failure is
+recorded as a note on the run and the remaining PCB outputs still ship.
+
+## D-074 — Determinism is geometry-level, not byte-level (corrects D-029)
+
+**Phase:** 9
+**Status:** Accepted — **supersedes part of D-029**
+
+D-029 claimed offline↔offline runs are byte-identical. The Phase 9 verification
+ran three full passes and **that is false**: 44 of 72 files differ between two
+consecutive offline runs.
+
+Every difference is embedded generation metadata, none is geometry:
+
+| Artifact | What varies |
+|---|---|
+| `*.gbr`, `*.drl` | `%TF.CreationDate` and `G04 Created by tscircuit … date` wall-clock stamps |
+| `*.kicad_sch` | freshly generated random UUIDs per element, including `(path "/…")` |
+| `circuit.json` | random `…_warning_<8-12 chars>` element IDs, plus the `#N` instance counter |
+
+Proven by normalizing each class and re-diffing — all three then compare
+**identical**. `board.glb`, `board.kicad_pcb`, `pcb.svg`, `schematic.svg` and
+`netlist.txt` are byte-identical with no normalization at all.
+
+**The defensible claim is: same input + same mode → identical geometry.** Byte
+comparison is only a valid regression check after normalizing timestamps, UUIDs,
+and random element IDs. Anything stronger oversells it.
+
+D-029's other half stands: online and offline runs differ more broadly (63 of 72
+files), so cross-mode byte comparison remains meaningless.
+
+## D-075 — Do not rewrite git history for the cached component data
+
+**Phase:** 9
+**Status:** Accepted — decided, not deferred
+
+Deferred earlier until "before this repo goes public or gets other
+collaborators." That condition is now true, so it is decided: **no rewrite.**
+
+Measured rather than assumed:
+
+- 42 `server/data/http-cache` blobs remain reachable in history, **12.2 MB
+  uncompressed** — but the entire packed repository is **3.56 MiB**. A full
+  clone is smaller than a single mid-sized npm dependency. The bloat concern did
+  not materialize.
+- The cache was untracked in `137cdbe`, so it does not grow further.
+- **No secrets are involved.** `.env` was never committed, and scanning every
+  commit for AWS/Gemini/Groq/x.ai key patterns returns nothing. The usual
+  forcing reason for a rewrite does not apply here.
+- The blobs are public component data (footprint geometry and 3D models from
+  easyeda/jlcsearch), not anything private.
+
+Against that, a rewrite changes every commit SHA, requires a force-push to the
+existing GitHub remote, and breaks the audit trail — which matters unusually
+much here, since this decision log and `POC_RESULTS.md` reference commits and
+phases as evidence.
+
+Trading a verifiable history for ~2 MB is a bad trade. Revisit only if a real
+secret is ever committed, in which case rewriting is mandatory and the size
+question is irrelevant.
