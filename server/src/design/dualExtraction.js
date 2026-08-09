@@ -25,6 +25,7 @@
  * as GND=pin5. Both are genuinely verbatim; both pass both deterministic gates.
  * Only disagreement between independent readings catches it.
  */
+import { buildExtractorTiers, callWithRotation } from "./extractorTiers.js";
 import {
   gateStructural,
   gateEvidence,
@@ -176,16 +177,30 @@ export const OUTCOME = Object.freeze({
   NOT_ATTEMPTED: "not_attempted",
 });
 
-/** Default extractor pair. `datasheetText` is filled in per call. */
+/**
+ * Default extractor pair, each backed by a credential chain.
+ *
+ * Rotation happens INSIDE an extractor: a key running out of quota moves to the
+ * next credential for the same extractor and is invisible to the comparator.
+ * `verification_mode` only degrades when an extractor exhausts every tier.
+ */
 export const defaultExtractors = () => {
-  const provider = detectProvider(extractorBKey());
+  const tiers = buildExtractorTiers();
   return [
-    { id: "A", name: "gemini", model: "gemini-flash-latest", call: callGemini },
+    {
+      id: "A",
+      name: `gemini(${tiers.A.length} key${tiers.A.length === 1 ? "" : "s"})`,
+      tiers: tiers.A,
+      call: (prompt, options) => callWithRotation(tiers.A, prompt, options),
+    },
     {
       id: "B",
-      name: provider?.name ?? "extractor-b(unconfigured)",
-      model: provider?.defaultModel,
-      call: callExtractorB,
+      name:
+        tiers.B.length > 0
+          ? `${[...new Set(tiers.B.map((t) => t.provider))].join("+")}(${tiers.B.length} tier${tiers.B.length === 1 ? "" : "s"})`
+          : "extractor-b(unconfigured)",
+      tiers: tiers.B,
+      call: (prompt, options) => callWithRotation(tiers.B, prompt, options),
     },
   ];
 };
@@ -214,8 +229,11 @@ async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetT
       id: extractor.id,
       name: extractor.name,
       ok: false,
+      // Only a provider failure once EVERY credential tier has been tried —
+      // a single exhausted key rotates rather than degrading the run.
       status: "provider_failure",
       reason: response.reason,
+      tiersTried: response.tiersTried ?? null,
       claims: [],
     };
   }
@@ -245,6 +263,9 @@ async function runExtractor(extractor, { partNumber, pkg, neededPins, datasheetT
     name: extractor.name,
     ok: true,
     status: claims.length > 0 ? "ok" : "declined",
+    // Which credential actually served this, for the provenance record.
+    servedBy: response.servedBy ?? null,
+    tiersTried: response.tiersTried ?? null,
     claims,
   };
 }
@@ -427,8 +448,22 @@ export async function extractWithVerification({
     verification_mode: mode,
     degraded: isDegraded(mode),
     degradedWarning: isDegraded(mode) ? DEGRADED_WARNING : null,
-    extractorA: { name: extractorA.name, ok: resultA.ok, status: resultA.status, reason: resultA.reason },
-    extractorB: { name: extractorB.name, ok: resultB.ok, status: resultB.status, reason: resultB.reason },
+    extractorA: {
+      name: extractorA.name,
+      ok: resultA.ok,
+      status: resultA.status,
+      reason: resultA.reason,
+      servedBy: resultA.servedBy ?? null,
+      tiersTried: resultA.tiersTried ?? null,
+    },
+    extractorB: {
+      name: extractorB.name,
+      ok: resultB.ok,
+      status: resultB.status,
+      reason: resultB.reason,
+      servedBy: resultB.servedBy ?? null,
+      tiersTried: resultB.tiersTried ?? null,
+    },
     claimCounts: { A: resultA.claims.length, B: resultB.claims.length },
     // Which providers failed this part, so the caller can update health state.
     providerFailures: {

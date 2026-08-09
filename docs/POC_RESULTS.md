@@ -362,10 +362,18 @@ datasheet, parts engine, or LLM extraction will ever resolve them, and
 |---|---|---|
 | `smart_dustbin`, `gas_leakage_detector` | `U4/U7.AUDIO` (`MBI5124GP-B`) | `MBI5124GP-B` is a constant-current **LED driver**. It has no audio function at all. Its pins are `SDI`, `CLK`, `LE`, `OE`, `OUT0..OUT15`, `R-EXT`, `VDD`, `GND`. |
 | `gas_leakage_detector` | `U7.GPIO1` (`MBI5124GP-B`) | Same part has no GPIO either — its control inputs are `SDI`/`CLK`/`LE`/`OE`. |
+| all four fixtures | `U1/U5/U6.VDD` → `POWER_RAIL_3V3` (`TP4110`) | **Net-topology error, not a pin gap.** `TP4110` is a lithium-battery charger IC (same family as the well-known `TP4056`). Its only supply pin is `VIN`, the raw USB/wall-adapter charging input (~4.5–6.5 V) — electrically a *different net* from a 3V3 board logic rail, not another name for it. Wiring it into `POWER_RAIL_3V3` connects a charger input to a regulated logic supply. |
 
 Worth raising with whoever owns the Hardware Agent: an `AUDIO` net onto an LED
 driver suggests the upstream part-selection step matched on `part_class: output`
-without checking the function actually required.
+without checking the function actually required. The `TP4110` case is the same
+shape one level up — a `power`-class part was wired to the power rail without
+checking whether its supply pin is an *input to be charged from* or a *rail to be
+powered by*.
+
+`TP4110.VDD` therefore stays `PIN_NOT_FOUND` in the pipeline, and that is the
+correct end state — not a gap for the extraction pipeline to keep chasing. The
+pin was never ambiguous; the net is wrong.
 
 
 **`gas_leakage_detector.json` — `U1.GPIO1` appears in two different nets.**

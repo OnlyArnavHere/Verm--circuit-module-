@@ -1229,3 +1229,109 @@ doubling, with no LLM involvement at all — including `MCP7940NT-I/SN` and
 Worth stating plainly because it inverts the expected story: the expensive
 mechanism contributed nothing here, and a one-line correctness fix contributed
 17 pins. The dual-extraction design remains proven only by the near-miss test.
+
+---
+
+## D-057 — Ollama here is HOSTED cloud, not local
+
+**Phase:** 6
+**Status:** Determined empirically — changes its resilience value
+
+Checked before wiring it in, because the answer matters:
+
+```
+localhost:11434        unreachable
+`ollama` binary        not on PATH
+ollama process         none
+https://ollama.com/api/chat with the key   HTTP 200, real completion (gpt-oss:20b)
+```
+
+So `ollama_API_KEY` is **Ollama Cloud** — another rate-limited hosted tier, not
+an unlimited local runtime. Worth stating plainly: a local Ollama would have been
+a genuinely different kind of resilience (no quota, works offline, survives every
+cloud outage simultaneously). A hosted tier only adds one more thing that can be
+rate-limited, on a different vendor's schedule.
+
+It exposes no rate-limit headers, so its limits are not observable in advance —
+only discoverable by hitting them.
+
+It is still worth having in Extractor B's chain: it serves `gpt-oss`, a different
+model family from both Gemini and Llama, so it can stand in for B without
+weakening the independence that auto-accept depends on. Verified live: with both
+Groq tiers forced dead, `ollama-cloud` served the extraction and returned
+well-formed JSON.
+
+---
+
+## D-058 — Key rotation is a credential concern, not an evidence concern
+
+**Phase:** 6
+**Status:** Accepted
+
+Rotation sits *inside* an extractor, beneath provider-level failover:
+
+```
+Extractor A : gemini#1 -> gemini#2
+Extractor B : groq#1 -> groq#2 -> ollama-cloud
+```
+
+An exhausted key moves to the next tier for the same extractor. **Whichever
+credential served the request, nothing about verification changes**: the same
+three gates run, the auto-accept rule is identical, and `verification_mode` stays
+`DUAL`. Degraded mode applies only when an extractor exhausts *every* tier — that
+is the boundary between "different credential" and "no independent second
+reading". Tests assert a result served by a secondary key still auto-accepts, and
+that exhausting a whole chain degrades and never auto-accepts.
+
+Two details worth keeping:
+
+- **Only quota-shaped failures rotate** (429/413/402/503, quota or TPM text). A
+  malformed request fails identically on every credential, so rotating would burn
+  keys a later part may need. Asserted by test.
+- **`servedBy` is recorded** in each result's provenance, so a reviewer can tell
+  which credential and model produced a claim.
+
+---
+
+## D-059 — Rotation is resilience, not yield; the honest limits of it
+
+**Phase:** 6
+**Status:** Accepted — expectation-setting
+
+Recorded so this is not later mistaken for a yield improvement:
+
+- The batch that prompted this had **zero outages and zero `NOT_ATTEMPTED`**.
+  Quota was not the binding constraint on anything.
+- **30 of 31 unresolved pins are source-document limitations** — mux tables that
+  map functions to ports, and a BGA ball map that does not survive PDF text
+  extraction. No number of keys or providers addresses a datasheet that does not
+  contain the answer as text.
+- Across all of Phase 6's extraction infrastructure, **one pin has been confirmed
+  end-to-end** (`LP103SB6F.GND`). A single catalogue-completeness fix (D-054)
+  resolved **seventeen**.
+
+Rotation is reasonable resilience for when quota *is* the constraint. It should
+not be expected to move the current numbers, and it has not been run against the
+batch again for that reason.
+
+---
+
+## D-060 — TP4110.VDD reclassified: upstream net-topology error
+
+**Phase:** 6
+**Status:** Closed — moved out of pin resolution
+
+`TP4110` is a lithium-battery charger IC (same family as `TP4056`). Its supply
+pin `VIN` is the raw USB/wall-adapter charging input (~4.5–6.5 V) — electrically
+a **different net** from a regulated 3V3 logic rail, not an alternate name for
+one. So wiring `U1.VDD` into `POWER_RAIL_3V3` connects a charger input to a logic
+supply.
+
+That makes it an **upstream net-topology error**, the same category as the
+SCK↔MOSI, split-I2C, and `MBI5124GP-B` phantom-pin findings — not a
+pin-identification gap. It is logged in `docs/POC_RESULTS.md` under UPSTREAM DATA
+ERRORS, and `TP4110.VDD` correctly remains `PIN_NOT_FOUND`.
+
+This also settles D-032's open question in the same direction it guessed:
+declining to map `VDD -> VIN` was right, and for a stronger reason than
+"unverified" — the two are genuinely different nets.
