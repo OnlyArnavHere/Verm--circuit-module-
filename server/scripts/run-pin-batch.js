@@ -22,6 +22,8 @@ import {
   extractorBKey,
   detectProvider,
   OUTCOME,
+  VERIFICATION_MODE,
+  isDegraded,
 } from "../src/design/dualExtraction.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -83,7 +85,38 @@ console.log(`${queue.length} part(s) with unresolved pins, ${queue.reduce((n, t)
 // 2. Run each part
 // ---------------------------------------------------------------------------
 const autoVerified = fs.existsSync(AUTO_PATH) ? JSON.parse(fs.readFileSync(AUTO_PATH, "utf8")) : {};
-const report = { generatedAt: new Date().toISOString(), extractorB: provider.name, parts: [] };
+
+/**
+ * Provider health. A failure marks a provider down, but only for a cooldown of
+ * RETRY_AFTER_PARTS — a 429 is frequently transient, and treating one outage as
+ * down-for-the-whole-run would degrade every remaining result unnecessarily.
+ */
+const RETRY_AFTER_PARTS = 3;
+const health = { A: { downSince: null, reason: null }, B: { downSince: null, reason: null } };
+const degradedParts = [];
+
+function currentlyUnavailable(index) {
+  const out = {};
+  for (const key of ["A", "B"]) {
+    const state = health[key];
+    if (state.downSince === null) continue;
+    if (index - state.downSince >= RETRY_AFTER_PARTS) {
+      // Cooldown elapsed — clear the mark so this part retries the provider.
+      console.log(`  (retrying extractor ${key} after cooldown)`);
+      state.downSince = null;
+      state.reason = null;
+      continue;
+    }
+    out[key] = state.reason;
+  }
+  return out;
+}
+const report = {
+  generatedAt: new Date().toISOString(),
+  extractorB: provider.name,
+  degradedParts: [],
+  parts: [],
+};
 
 const lcscFor = (partNumber, pkg) => partsCache[`${partNumber}::${pkg}`]?.lcsc ?? null;
 
@@ -95,7 +128,7 @@ async function datasheetFor(partNumber, lcsc) {
   return fetched;
 }
 
-for (const target of queue) {
+for (const [index, target] of queue.entries()) {
   const lcsc = lcscFor(target.partNumber, target.package);
   const entry = {
     partNumber: target.partNumber,
@@ -156,6 +189,7 @@ for (const target of queue) {
       footprintPads,
       padAliases,
       padVocabulary,
+      unavailable: currentlyUnavailable(index),
     });
   } catch (error) {
     entry.notFound = target.pins.map((pin) => ({ logical_pin: pin, reason: `extraction error: ${error.message}` }));
@@ -171,6 +205,24 @@ for (const target of queue) {
     A: { ...outcome.extractorA, claims: outcome.claimCounts?.A ?? null },
     B: { ...outcome.extractorB, claims: outcome.claimCounts?.B ?? null },
   };
+  // Persisted, not just logged: a reviewer reading this record later needs to
+  // know it was degraded without having watched the run.
+  entry.verification_mode = outcome.verification_mode;
+  entry.degraded = outcome.degraded;
+  if (outcome.degradedWarning) entry.degradedWarning = outcome.degradedWarning;
+
+  // Update provider health from this part's outcome.
+  for (const key of ["A", "B"]) {
+    const failure = outcome.providerFailures?.[key];
+    if (failure) {
+      if (health[key].downSince === null) health[key].downSince = index;
+      health[key].reason = failure;
+    } else if (key === "A" ? outcome.extractorA.ok : outcome.extractorB.ok) {
+      health[key].downSince = null;
+      health[key].reason = null;
+    }
+  }
+  if (outcome.degraded) degradedParts.push({ part: target.partNumber, mode: outcome.verification_mode });
 
   for (const comparison of outcome.comparisons) {
     if (comparison.outcome === OUTCOME.AUTO_ACCEPTED) {
@@ -184,6 +236,12 @@ for (const target of queue) {
       entry.needsReview.push({
         logical_pin: comparison.logical_pin,
         reason: comparison.reason,
+        verification_mode: comparison.verification_mode,
+        // "provider_outage" vs "extractor_conflict" — a reviewer needs to know
+        // whether two extractors disagreed or only one ever ran.
+        cause: comparison.degradedReason ?? "extractor_conflict",
+        ...(comparison.warning ? { warning: comparison.warning } : {}),
+        ...(comparison.physical_pin ? { proposedPin: comparison.physical_pin } : {}),
         a: comparison.a && { pin: comparison.a.physical_pin, evidence: comparison.a.evidence, gates: comparison.a.gates },
         b: comparison.b && { pin: comparison.b.physical_pin, evidence: comparison.b.evidence, gates: comparison.b.gates },
       });
@@ -213,16 +271,16 @@ for (const target of queue) {
 
   report.parts.push(entry);
   console.log(
-    `auto=${entry.autoAccepted.length} review=${entry.needsReview.length} ` +
-      `none=${entry.notFound.length}` +
-      (entry.notAttempted.length ? ` NOT-ATTEMPTED=${entry.notAttempted.length}` : "")
+    `[${outcome.verification_mode}] auto=${entry.autoAccepted.length} ` +
+      `review=${entry.needsReview.length} none=${entry.notFound.length}` +
+      (entry.notAttempted.length ? ` NOT-ATTEMPTED=${entry.notAttempted.length}` : "") +
+      (outcome.degraded ? "  DEGRADED" : "")
   );
 
-  // Stop on a genuinely exhausted quota. Continuing would mark every remaining
-  // pin as unattempted and produce a report that looks complete but covered
-  // nothing — the failure mode this batch has already hit twice.
-  if (/daily quota exhausted/i.test(outcome.extractorA.reason ?? "")) {
-    console.log("\nABORTING: Extractor A quota exhausted. Remaining parts NOT attempted.");
+  // Halt only when BOTH providers are down — failover covers one-of-two, not
+  // zero-of-two, because with no extraction at all there is nothing to gate.
+  if (outcome.verification_mode === VERIFICATION_MODE.NONE) {
+    console.log("\nABORTING: both extractors unavailable. Remaining parts NOT attempted.");
     break;
   }
 
@@ -230,6 +288,7 @@ for (const target of queue) {
   await new Promise((resolve) => setTimeout(resolve, 4000));
 }
 
+report.degradedParts = degradedParts;
 fs.writeFileSync(AUTO_PATH, `${JSON.stringify(autoVerified, null, 2)}\n`);
 fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
@@ -255,6 +314,15 @@ console.log(
   `auto-accepted: ${totals.auto}   needs review: ${totals.review}   ` +
     `PIN_NOT_FOUND: ${totals.none}   NOT ATTEMPTED: ${totals.unattempted}`
 );
+if (degradedParts.length > 0) {
+  console.log(
+    `\n**  DEGRADED MODE affected ${degradedParts.length} part(s): ` +
+      `${degradedParts.map((d) => `${d.part}(${d.mode})`).join(", ")}\n` +
+      `    Single-provider results were NOT auto-accepted — they were routed to\n` +
+      `    review, because gates verify consistency, not correctness.`
+  );
+}
+
 if (totals.unattempted > 0) {
   console.log(
     `\n${totals.unattempted} pin(s) were NOT ATTEMPTED (extractor unavailable) — ` +

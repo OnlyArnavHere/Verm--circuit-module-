@@ -1,6 +1,7 @@
 {
-  "generatedAt": "2026-08-09T12:31:48.498Z",
+  "generatedAt": "2026-08-09T13:02:04.263Z",
   "extractorB": "groq",
+  "degradedParts": [],
   "parts": [
     {
       "partNumber": "BLE-SER-A-ANT",
@@ -34,23 +35,13 @@
       "package": "SOIC-16",
       "lcsc": "C28326",
       "requestedPins": [
-        "AUDIO",
-        "GND",
-        "VDD"
+        "AUDIO"
       ],
       "autoAccepted": [],
       "needsReview": [],
       "notFound": [
         {
           "logical_pin": "AUDIO",
-          "reason": "neither extractor returned this pin"
-        },
-        {
-          "logical_pin": "GND",
-          "reason": "neither extractor returned this pin"
-        },
-        {
-          "logical_pin": "VDD",
           "reason": "neither extractor returned this pin"
         }
       ],
@@ -61,59 +52,32 @@
         "A": {
           "name": "gemini",
           "ok": true,
+          "status": "declined",
           "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     },
     {
       "partNumber": "ESPC2-12-N4",
       "package": "SMD,24x16mm",
       "lcsc": "C19949080",
       "requestedPins": [
-        "ANT",
-        "GND",
-        "VDD"
+        "ANT"
       ],
       "autoAccepted": [],
-      "needsReview": [
-        {
-          "logical_pin": "GND",
-          "reason": "only one extractor returned this pin (extractor B did not)",
-          "a": {
-            "pin": "9",
-            "evidence": "9   GND   P   Power, 3.3V/500mA Recommended",
-            "gates": {
-              "structural": {
-                "pass": false,
-                "reason": "claimed physical pin \"9\" does not exist on the compiled footprint (0 pads available)"
-              },
-              "evidence": {
-                "pass": true,
-                "score": 1,
-                "reason": "evidence appears verbatim in the datasheet text"
-              },
-              "relevance": {
-                "pass": true,
-                "reason": "evidence mentions \"9\""
-              }
-            }
-          },
-          "b": null
-        }
-      ],
+      "needsReview": [],
       "notFound": [
         {
           "logical_pin": "ANT",
-          "reason": "neither extractor returned this pin"
-        },
-        {
-          "logical_pin": "VDD",
           "reason": "neither extractor returned this pin"
         }
       ],
@@ -124,15 +88,19 @@
         "A": {
           "name": "gemini",
           "ok": true,
-          "claims": 1
+          "status": "declined",
+          "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     },
     {
       "partNumber": "FS32K116LFT0MLFT",
@@ -171,15 +139,19 @@
         "A": {
           "name": "gemini",
           "ok": true,
+          "status": "declined",
           "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     },
     {
       "partNumber": "HDSP-521G",
@@ -213,76 +185,29 @@
         "A": {
           "name": "gemini",
           "ok": true,
+          "status": "declined",
           "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     },
     {
       "partNumber": "LMA2718T421-OA5-2",
       "package": "SMD-4P,2.8x1.9mm",
       "lcsc": "C7587901",
       "requestedPins": [
-        "GND",
-        "SCL",
-        "VDD"
+        "SCL"
       ],
       "autoAccepted": [],
-      "needsReview": [
-        {
-          "logical_pin": "GND",
-          "reason": "only one extractor returned this pin (extractor B did not)",
-          "a": {
-            "pin": "pin2",
-            "evidence": "2   GND   Ground   Ground",
-            "gates": {
-              "structural": {
-                "pass": false,
-                "reason": "claimed physical pin \"pin2\" does not exist on the compiled footprint (0 pads available)"
-              },
-              "evidence": {
-                "pass": true,
-                "score": 1,
-                "reason": "evidence appears verbatim in the datasheet text"
-              },
-              "relevance": {
-                "pass": false,
-                "reason": "evidence does not mention pin \"pin2\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
-              }
-            }
-          },
-          "b": null
-        },
-        {
-          "logical_pin": "VDD",
-          "reason": "only one extractor returned this pin (extractor B did not)",
-          "a": {
-            "pin": "pin4",
-            "evidence": "4   VDD   Power   Power Supply",
-            "gates": {
-              "structural": {
-                "pass": false,
-                "reason": "claimed physical pin \"pin4\" does not exist on the compiled footprint (0 pads available)"
-              },
-              "evidence": {
-                "pass": true,
-                "score": 1,
-                "reason": "evidence appears verbatim in the datasheet text"
-              },
-              "relevance": {
-                "pass": false,
-                "reason": "evidence does not mention pin \"pin4\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
-              }
-            }
-          },
-          "b": null
-        }
-      ],
+      "needsReview": [],
       "notFound": [
         {
           "logical_pin": "SCL",
@@ -296,15 +221,19 @@
         "A": {
           "name": "gemini",
           "ok": true,
-          "claims": 3
+          "status": "declined",
+          "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     },
     {
       "partNumber": "LP103SB6F",
@@ -315,29 +244,375 @@
       ],
       "autoAccepted": [],
       "needsReview": [],
-      "notFound": [],
-      "notAttempted": [
+      "notFound": [
         {
           "logical_pin": "VDD",
-          "reason": "extractor A did not run: Gemini daily quota exhausted (per-day limit)"
+          "reason": "neither extractor returned this pin"
         }
       ],
+      "notAttempted": [],
       "datasheetUrl": "cached:C387729",
       "datasheetChars": 14148,
       "extractors": {
         "A": {
           "name": "gemini",
-          "ok": false,
-          "reason": "Gemini daily quota exhausted (per-day limit)",
+          "ok": true,
+          "status": "declined",
           "claims": 0
         },
         "B": {
           "name": "groq",
           "ok": false,
+          "status": "skipped",
           "reason": "not run — extractor A produced no gate-passing claim",
           "claims": 0
         }
-      }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "MBI5124GP-B",
+      "package": "SSOP-24",
+      "lcsc": "C256866",
+      "requestedPins": [
+        "AUDIO",
+        "GPIO1"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C256866",
+      "datasheetChars": 23914,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "MC9RS08KA1CSCR",
+      "package": "SOIC-8",
+      "lcsc": "C2053131",
+      "requestedPins": [
+        "ANT",
+        "MOSI",
+        "SDA"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "MOSI",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C2053131",
+      "datasheetChars": 233181,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "MC9S08DZ32ACLC",
+      "package": "LQFP-32(7x7)",
+      "lcsc": "C1337499",
+      "requestedPins": [
+        "ANT",
+        "AUDIO",
+        "GPIO1",
+        "SCL"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "ANT",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "AUDIO",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SCL",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C1337499",
+      "datasheetChars": 829505,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "MIMXRT1172CVM8A",
+      "package": "MAPBGA-289",
+      "lcsc": "C3220126",
+      "requestedPins": [
+        "GND",
+        "SDA",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "SDA",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C3220126",
+      "datasheetChars": 233905,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "lcsc": "C5155573",
+      "requestedPins": [
+        "GND",
+        "GPIO1",
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "GND",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "GPIO1",
+          "reason": "neither extractor returned this pin"
+        },
+        {
+          "logical_pin": "VDD",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C5155573",
+      "datasheetChars": 1421,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "RF-BM-2340A2I",
+      "package": "SMD,15.2x11.2mm",
+      "lcsc": "C20624106",
+      "requestedPins": [
+        "TX"
+      ],
+      "autoAccepted": [],
+      "needsReview": [],
+      "notFound": [
+        {
+          "logical_pin": "TX",
+          "reason": "neither extractor returned this pin"
+        }
+      ],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C20624106",
+      "datasheetChars": 10051,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "declined",
+          "claims": 0
+        },
+        "B": {
+          "name": "groq",
+          "ok": false,
+          "status": "skipped",
+          "reason": "not run — extractor A produced no gate-passing claim",
+          "claims": 0
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
+    },
+    {
+      "partNumber": "TP4110",
+      "package": "SOP-16",
+      "lcsc": "C382136",
+      "requestedPins": [
+        "VDD"
+      ],
+      "autoAccepted": [],
+      "needsReview": [
+        {
+          "logical_pin": "VDD",
+          "reason": "extractor B failed a deterministic gate",
+          "verification_mode": "DUAL",
+          "cause": "extractor_conflict",
+          "a": {
+            "pin": "pin16",
+            "evidence": "16   VIN   外部电源输入端",
+            "gates": {
+              "structural": {
+                "pass": true,
+                "normalizedPin": "pin16",
+                "reason": "\"VIN\" normalized to \"pin16\", which exists on the compiled footprint"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": true,
+                "reason": "evidence mentions \"VIN\""
+              }
+            }
+          },
+          "b": {
+            "pin": "pin16",
+            "evidence": "VDD 充电输入电压 4.5~5.5 V",
+            "gates": {
+              "structural": {
+                "pass": true,
+                "normalizedPin": "pin16",
+                "reason": "\"VIN\" normalized to \"pin16\", which exists on the compiled footprint"
+              },
+              "evidence": {
+                "pass": true,
+                "score": 1,
+                "reason": "evidence appears verbatim in the datasheet text"
+              },
+              "relevance": {
+                "pass": false,
+                "reason": "evidence does not mention pin \"VIN\" — the excerpt cannot support the claim (it may be a parameter symbol or unrelated text that merely contains the pin name)"
+              }
+            }
+          }
+        }
+      ],
+      "notFound": [],
+      "notAttempted": [],
+      "datasheetUrl": "cached:C382136",
+      "datasheetChars": 5237,
+      "extractors": {
+        "A": {
+          "name": "gemini",
+          "ok": true,
+          "status": "ok",
+          "claims": 1
+        },
+        "B": {
+          "name": "groq",
+          "ok": true,
+          "status": "ok",
+          "claims": 1
+        }
+      },
+      "verification_mode": "DUAL",
+      "degraded": false
     }
   ]
 }

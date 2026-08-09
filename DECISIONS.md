@@ -1164,3 +1164,68 @@ Consequence worth noting: **Extractor B has still never run in a batch.** B only
 runs when A produces a gate-passing claim, and gate 1 was rejecting them all. So
 the dual-extraction design remains proven only by the near-miss test, not at
 scale — the batch numbers so far say nothing about it.
+
+---
+
+## D-055 — Provider failover: degraded results never auto-accept
+
+**Phase:** 6
+**Status:** Accepted
+
+A provider outage mid-batch no longer stops the run or produces false
+`PIN_NOT_FOUND`. The remaining extractor continues and all three deterministic
+gates still run — but **gate-passing in single-provider mode does not
+auto-accept**. It routes to the same batched human review as a disagreement,
+tagged `provider_outage` rather than `extractor_conflict`.
+
+This is not extra caution. The LP103SB6F near-miss produced exactly this shape:
+one extractor, reading only the package diagram, passed every gate and returned
+the **wrong** pin. Gates verify that a claim is well-formed and genuinely quoted
+from the source — internal consistency — not that it is correct. Independent
+agreement is what supplies the missing evidence, so a single-provider result has
+an evidentiary **gap**, not merely lower confidence.
+
+Implementation:
+
+| Concern | Behaviour |
+|---|---|
+| `verification_mode` | `DUAL` / `GEMINI_ONLY` / `GROQ_ONLY` / `NONE`, recorded on **every** result |
+| One provider down | Continue on the other; gates run; gate-passing → review, never auto-accept |
+| Both down | `NOT_ATTEMPTED` and halt — with no extraction there is nothing to gate |
+| Transient outages | A failure marks a provider down for a 3-part cooldown, then it is retried; one 429 must not degrade the whole run |
+| Warning persistence | The degraded warning is written to the batch summary **and** each affected result's provenance, not just console output — a reviewer reading the record later did not watch the run |
+
+A test asserts the load-bearing rule directly: for both degraded modes, a claim
+passing all gates yields `NEEDS_REVIEW`, never `AUTO_ACCEPTED`. Another asserts
+that B being skipped *by design* (A produced nothing worth corroborating) is not
+mistaken for an outage.
+
+---
+
+## D-056 — The batch's real win came from fixing our own bug, not from the LLM
+
+**Phase:** 6
+**Status:** Accepted — outcome record
+
+The batch now completes: **14 parts, DUAL mode throughout, 0 NOT ATTEMPTED**.
+
+| Outcome | Count |
+|---|---|
+| auto-accepted by dual extraction | **0** |
+| needs review | 1 (`TP4110 VDD` — gate 3 rejecting B's parameter-symbol evidence) |
+| `PIN_NOT_FOUND` (extractors ran, found nothing) | 30 |
+| not attempted | 0 |
+
+Zero auto-accepts. The honest reading is that on these parts the extractors
+either declined or produced evidence that could not survive gate 3 — which is the
+system working, not failing.
+
+The substantive gain came from D-054, the empty-pad-list bug: populating the
+missing pinouts let the **existing catalogue path** resolve pins that had been
+wrongly reported unresolvable. Real pins went **15/63 → 32/63**, more than
+doubling, with no LLM involvement at all — including `MCP7940NT-I/SN` and
+`MCP9808T-E/MC` resolving completely and dropping out of the queue.
+
+Worth stating plainly because it inverts the expected story: the expensive
+mechanism contributed nothing here, and a one-line correctness fix contributed
+17 pins. The dual-extraction design remains proven only by the near-miss test.
