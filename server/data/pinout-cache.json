@@ -10,6 +10,74 @@
     },
     "padCount": 48
   },
+  "jlcpcb:C1337499": {
+    "ok": true,
+    "pins": {
+      "VDD": "pin2",
+      "VSS": "pin3",
+      "RESET": "pin6"
+    },
+    "padCount": 32
+  },
+  "jlcpcb:C148052": {
+    "ok": true,
+    "pins": {
+      "SDA": "pin5",
+      "SCL": "pin6",
+      "MFP": "pin7",
+      "VCC": "pin8",
+      "VSS": "pin4",
+      "VBAT": "pin3",
+      "X2": "pin2",
+      "X1": "pin1"
+    },
+    "padCount": 8
+  },
+  "jlcpcb:C194710": {
+    "ok": true,
+    "pins": {
+      "SDA": "pin1",
+      "SCL": "pin2",
+      "ALERT": "pin3",
+      "GND": "pin4",
+      "A2": "pin5",
+      "A1": "pin6",
+      "A0": "pin7",
+      "VDD": "pin8",
+      "EP": "pin9"
+    },
+    "padCount": 9
+  },
+  "jlcpcb:C19949080": {
+    "ok": true,
+    "pins": {
+      "EN": "pin1",
+      "IO0": "pin2",
+      "IO1": "pin3",
+      "IO2": "pin4",
+      "IO3": "pin5",
+      "IO4": "pin6",
+      "IO5": "pin7",
+      "VCC": "pin8",
+      "GND": "pin9",
+      "IO6": "pin10",
+      "IO7": "pin11",
+      "IO9": "pin12",
+      "IO10": "pin13",
+      "IO18": "pin14",
+      "RXD0": "pin15",
+      "TXD0": "pin16"
+    },
+    "padCount": 16
+  },
+  "jlcpcb:C2053131": {
+    "ok": true,
+    "pins": {
+      "VSS": "pin4",
+      "VDD": "pin3"
+    },
+    "padCount": 8
+  },
   "jlcpcb:C20624106": {
     "ok": true,
     "pins": {
@@ -89,6 +157,23 @@
       "EP": "pin17"
     },
     "padCount": 17
+  },
+  "jlcpcb:C28326": {
+    "ok": true,
+    "pins": {
+      "C": "pin2",
+      "B": "pin3",
+      "D": "pin4",
+      "A": "pin5",
+      "PHASE": "pin6",
+      "BLANKING": "pin7",
+      "VSS": "pin8",
+      "VDD": "pin16",
+      "F": "pin15",
+      "G": "pin14",
+      "E": "pin13"
+    },
+    "padCount": 16
   },
   "jlcpcb:C3220126": {
     "ok": true,
@@ -407,6 +492,24 @@
     },
     "padCount": 16
   },
+  "jlcpcb:C387729": {
+    "ok": true,
+    "pins": {
+      "D_POS": "pin1",
+      "GND": "pin2",
+      "FBO": "pin3",
+      "QC_EN": "pin4",
+      "PS": "pin5",
+      "D_NEG": "pin6"
+    },
+    "padCount": 6
+  },
+  "jlcpcb:C5155573": {
+    "ok": false,
+    "pins": {},
+    "padCount": 6,
+    "message": "footprint exposes no named pins"
+  },
   "jlcpcb:C521286": {
     "ok": true,
     "pins": {
@@ -416,6 +519,50 @@
       "CE": "pin1"
     },
     "padCount": 8
+  },
+  "jlcpcb:C5650089": {
+    "ok": true,
+    "pins": {
+      "E1": "pin1",
+      "D1": "pin2",
+      "C1": "pin3",
+      "DP1": "pin4",
+      "E2": "pin5",
+      "D2": "pin6",
+      "G2": "pin7",
+      "C2": "pin8",
+      "DP2": "pin9",
+      "B2": "pin10",
+      "A2": "pin11",
+      "F2": "pin12",
+      "B1": "pin15",
+      "A1": "pin16",
+      "G1": "pin17",
+      "F1": "pin18"
+    },
+    "padCount": 18
+  },
+  "jlcpcb:C7587901": {
+    "ok": true,
+    "pins": {
+      "OUT": "pin1",
+      "GND1": "pin2",
+      "GND2": "pin3",
+      "VDD": "pin4"
+    },
+    "padCount": 4
+  },
+  "jlcpcb:C82747": {
+    "ok": true,
+    "pins": {
+      "OC": "pin3",
+      "CS": "pin2",
+      "OD": "pin1",
+      "VSS": "pin6",
+      "VDD": "pin5",
+      "NC": "pin4"
+    },
+    "padCount": 6
   },
   "sot23_6": {
     "ok": false,

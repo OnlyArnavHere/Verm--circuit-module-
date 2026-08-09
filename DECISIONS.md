@@ -1086,3 +1086,81 @@ Consequences, stated plainly:
 
 The batch must be re-run once quota resets (or billing is enabled) before any
 statement about hit rate is worth making.
+
+---
+
+## D-052 — Excerpting verified: both readings survive reduction
+
+**Phase:** 6
+**Status:** Verified
+
+`selectPinSections` could have destroyed the property the design was validated on:
+the near-miss needs LP103SB6F's datasheet to contain **both** the correct
+per-package table (`"GND 3 2 Ground."` → pin2) and the misleading package diagram
+(→ pin5). If reduction dropped either, disagreement becomes impossible and the
+mechanism silently degrades into single-source agreement.
+
+`scripts/verify-excerpting.js` checks the text each extractor **actually
+receives**, 14/14:
+
+| | result |
+|---|---|
+| A (restricted) receives the diagram, not the table | PASS |
+| B receives both table and diagram | PASS |
+| forced caps 8000 / 5000 / 3000 chars: reduction fires, **both survive** | PASS |
+| a single reduced text still holds both the correct and misleading reading | PASS |
+
+Worth stating precisely: at the production 24K cap this datasheet (14,148 chars)
+is **not reduced at all**, so the near-miss alone does not exercise the selector.
+That is why the forced-cap cases exist. The live cross-model near-miss was then
+re-run with excerpting active and still passes.
+
+---
+
+## D-053 — "Not attempted" is not "not found"
+
+**Phase:** 6
+**Status:** Accepted — correctness fix
+
+The batch recorded pins as `PIN_NOT_FOUND` when Extractor A had returned HTTP 429
+and never ran. Those are different claims: *"we tried and it isn't there"* versus
+*"we never tried"*. Conflating them overstates coverage — a run that examined 6 of
+16 parts produced a report that read as complete.
+
+Added a distinct `NOT_ATTEMPTED` outcome, plus:
+- 429 retry honouring the server's own `retryDelay`, and immediate surrender on a
+  **per-day** quota (waiting cannot clear it);
+- the batch **aborts** on quota exhaustion instead of marking every remaining pin
+  unresolvable;
+- the summary lists exactly which parts were never reached.
+
+This is the third time a transport failure has masqueraded as a result in this
+phase (413s looked like disagreement, empty pad lists looked like model failure,
+429s looked like PIN_NOT_FOUND). The pattern is consistent enough to name: **an
+infrastructure failure that is reported as a domain answer is worse than a crash**,
+because it looks like evidence.
+
+---
+
+## D-054 — Gate 1 needs the pad list populated first
+
+**Phase:** 6
+**Status:** Accepted — real bug found by the batch
+
+Gate 1 checks a claimed pin against the footprint's pad list. When the pinout
+cache had no entry for a footprint the list was **empty**, so gate 1 rejected
+every claim as "pin does not exist on the footprint".
+
+That reads as a model failure and is not one. `LMA2718T421-OA5-2` quoted a genuine
+pin-table row — `"2   GND   Ground   Ground"` — and was rejected; likewise
+`ESPC2-12-N4`. Both were reported as unresolvable when the fault was ours.
+
+The batch now extracts a missing pinout before gating, and all 11 previously
+missing footprints are populated. Re-checked deterministically against the exact
+claims that failed: `LMA2718T421 GND/VDD` and `ESPC2-12-N4 GND` now pass gates 1
+and 3.
+
+Consequence worth noting: **Extractor B has still never run in a batch.** B only
+runs when A produces a gate-passing claim, and gate 1 was rejecting them all. So
+the dual-extraction design remains proven only by the near-miss test, not at
+scale — the batch numbers so far say nothing about it.

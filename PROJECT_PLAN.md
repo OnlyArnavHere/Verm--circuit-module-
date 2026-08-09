@@ -162,7 +162,7 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 1. Only call the extractor with a real, already-fetched datasheet. Fetch order: LCSC's stable unsigned link (`lcsc.com/product-detail/<code>.html` → `datasheet.lcsc.com/datasheet/pdf/<hash>.pdf`, confirmed working) first, JLCPCB's signed OSS link as fallback (confirmed session/referer-independent failure — its signature binds to something a scripted client can't reproduce, not just missing cookies). If no datasheet fetches, go straight to `PIN_NOT_FOUND`, no model call.
 2. **Extractor A (Gemini, `gemini-flash-latest`):** reads only the datasheet, proposes `logical_pin`, `physical_pin`, near-verbatim `evidence`.
 3. **Deterministic gates on Extractor A's proposal:** Gate 1 (structural) — claimed pin exists on the compiled footprint. Gate 2 (anti-hallucination) — `evidence` fuzzy-matches a substring of the actual extracted datasheet text, checked in code. Self-reported confidence is never a gate.
-4. **If Extractor A passes both gates: Extractor B (Grok — a genuinely different model family, not a second Gemini call) independently re-extracts the same target pin from the same datasheet, blind to Extractor A's proposal.** Not a confirmatory "does this look right" check — Extractor B doesn't see Extractor A's answer or evidence at all, it does its own extraction from scratch. Extractor B's proposal runs through the same two deterministic gates independently.
+4. **If Extractor A passes both gates: Extractor B (Groq — a genuinely different model family, not a second Gemini call) independently re-extracts the same target pin from the same datasheet, blind to Extractor A's proposal.** Not a confirmatory "does this look right" check — Extractor B doesn't see Extractor A's answer or evidence at all, it does its own extraction from scratch. Extractor B's proposal runs through the same two deterministic gates independently.
 5. **Auto-accept only on independent agreement:** if both extractors land on the same physical pin, and both independently passed both gates, the entry enters `curatedPinouts.js` automatically — no human step. This is the actual speed gain: unambiguous parts (most of them) clear without anyone reviewing them.
 6. **Disagreement (or either extractor failing a gate) routes to human review**, via `confirm-extraction.js`, presenting both proposals and both evidence excerpts side by side so the reviewer sees exactly what the two extractors disagreed about — same script as before, now only invoked on the cases that actually need a human, not every case.
 7. Cache with full provenance: datasheet URL, both extractors' proposals, both gate results, agreement outcome, and (for disagreement cases) confirmer/timestamp.
@@ -171,7 +171,7 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 
 **Required validation before trusting this design at scale:** retroactively reconstruct the `LP103SB6F` near-miss as a controlled test — force one extraction path to see only the diagram (withholding the table) so it proposes the wrong `pin5`, run the real independent extractor against the full datasheet, and confirm the comparator correctly flags disagreement rather than auto-accepting either answer. This tests the design against the one known real failure mode before it's trusted on parts nobody's checked by hand.
 
-**GROK_API_KEY is being added to `.env` for Extractor B** — check for it before assuming Extractor B is unavailable.
+**GROQ_API_KEY is being added to `.env` for Extractor B** — check for it before assuming Extractor B is unavailable.
 
 **Pilot status: proven end-to-end, one part confirmed.** `LP103SB6F.GND` → `pin2`, both gates passed, human-confirmed, in `curatedPinouts.js`. `LP103SB6F.VDD` correctly stayed `PIN_NOT_FOUND` (the part has no VDD pin — its supply is an internally-generated rail, `PS` — and the model correctly declined to invent one).
 
@@ -185,6 +185,8 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 **Priority 2 — remaining Group C parts** (`BLE-SER-A-ANT`, `CD4543BM96`, `ESPC2-12-N4`, `HDSP-521G`, `LMA2718T421-OA5-2`, `MC9RS08KA1CSCR`, `MC9S08DZ32ACLC`, `MCP7940NT-I/SN`, `MCP9808T-E/MC`, `PS-5850SVB-6PNW`).
 
 **Batch, don't drip-feed the review.** Run extraction across all remaining parts, let both deterministic gates run, then present everything that passed both gates together in one batch report for confirmation — not one part at a time in separate round trips. Whatever fails either gate or has no fetchable datasheet reports as `PIN_NOT_FOUND` in the same batch report, no separate escalation needed for those. If `confirm-extraction.js` doesn't yet support confirming multiple pins in one invocation, add that rather than requiring one command per pin.
+
+**Gemini quota resolved** — switched to a Gemini API key with unused quota, replacing the exhausted daily-limited one. Clear to re-run the batch.
 
 **Expanding scope doesn't mean forcing a higher hit rate.** `PIN_NOT_FOUND` on a genuinely unresolvable pin is still the correct, honest outcome — the goal is trying every remaining part with real evidence, not making every pin resolve by any means.
 

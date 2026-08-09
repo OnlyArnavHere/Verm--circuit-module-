@@ -135,7 +135,13 @@ export async function callExtractorB(
 export const OUTCOME = Object.freeze({
   AUTO_ACCEPTED: "auto_accepted", // both extractors agreed, both passed both gates
   NEEDS_REVIEW: "needs_review", // disagreement, or a gate failure on either side
-  NOT_FOUND: "not_found", // no datasheet, or no extractor produced a claim
+  NOT_FOUND: "not_found", // genuinely unresolvable: extractors ran and found nothing
+  // The extractor never actually ran (quota, rate limit, transport). This is NOT
+  // PIN_NOT_FOUND: "we tried and it is not there" and "we never tried" are
+  // different claims, and recording the second as the first is a lie about
+  // coverage. Keeping them distinct is what stops an aborted batch from looking
+  // like a completed one.
+  NOT_ATTEMPTED: "not_attempted",
 });
 
 /** Default extractor pair. `datasheetText` is filled in per call. */
@@ -209,6 +215,15 @@ export function comparePin(logicalPin, resultA, resultB) {
   const b = findClaim(resultB, logicalPin);
 
   const base = { logical_pin: logicalPin, a, b };
+
+  // Extractor A never ran => nothing was attempted for this pin.
+  if (!resultA.ok && !a) {
+    return {
+      ...base,
+      outcome: OUTCOME.NOT_ATTEMPTED,
+      reason: `extractor A did not run: ${resultA.reason}`,
+    };
+  }
 
   if (!a && !b) {
     return { ...base, outcome: OUTCOME.NOT_FOUND, reason: "neither extractor returned this pin" };
@@ -308,6 +323,9 @@ export async function extractWithVerification({
     package: pkg,
     extractorA: { name: extractorA.name, ok: resultA.ok, reason: resultA.reason },
     extractorB: { name: extractorB.name, ok: resultB.ok, reason: resultB.reason },
+    // Raw claim counts distinguish "the model declined" (ok, 0 claims) from
+    // "the call failed" (not ok) — these mean very different things.
+    claimCounts: { A: resultA.claims.length, B: resultB.claims.length },
     comparisons,
     autoAccepted: comparisons.filter((c) => c.outcome === OUTCOME.AUTO_ACCEPTED),
     needsReview: comparisons.filter((c) => c.outcome === OUTCOME.NEEDS_REVIEW),

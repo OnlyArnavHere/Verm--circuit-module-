@@ -16,6 +16,7 @@ import "../src/config.js";
 import { buildValidatedDesign } from "../src/design/validatedDesign.js";
 import { resolveComponents } from "../src/design/resolver.js";
 import { fetchDatasheet } from "../src/design/datasheetExtraction.js";
+import { extractPinout } from "../src/design/pinout.js";
 import {
   extractWithVerification,
   extractorBKey,
@@ -104,6 +105,7 @@ for (const target of queue) {
     autoAccepted: [],
     needsReview: [],
     notFound: [],
+    notAttempted: [],
   };
 
   process.stdout.write(`${target.partNumber.padEnd(22)} ${String(lcsc ?? "-").padEnd(11)} pins=${target.pins.join(",").padEnd(28)} `);
@@ -126,7 +128,17 @@ for (const target of queue) {
   entry.datasheetChars = datasheet.text.length;
 
   // Pad vocabulary: the identifiers the datasheet itself would use.
-  const pinout = pinoutCache[target.footprint];
+  //
+  // The pad list MUST be populated before gating. An empty list makes gate 1
+  // reject every claim as "pin does not exist on the footprint", which reads as
+  // a model failure but is really us not knowing the footprint — it silently
+  // sank LMA2718T421 and ESPC2-12-N4 on a first run despite both quoting real
+  // pin-table rows.
+  let pinout = pinoutCache[target.footprint];
+  if (!pinout && target.footprint) {
+    pinout = await extractPinout(target.footprint);
+    pinoutCache[target.footprint] = pinout;
+  }
   const padAliases = pinout?.ok ? pinout.pins : null;
   const padCount = pinout?.padCount ?? 0;
   const footprintPads = Array.from({ length: padCount }, (_, i) => `pin${i + 1}`);
@@ -152,6 +164,14 @@ for (const target of queue) {
     continue;
   }
 
+  // Record HOW each extractor behaved. Without this, "neither extractor returned
+  // this pin" is ambiguous between a genuine decline and a transport failure —
+  // the exact ambiguity that made an earlier all-413 run look like disagreement.
+  entry.extractors = {
+    A: { ...outcome.extractorA, claims: outcome.claimCounts?.A ?? null },
+    B: { ...outcome.extractorB, claims: outcome.claimCounts?.B ?? null },
+  };
+
   for (const comparison of outcome.comparisons) {
     if (comparison.outcome === OUTCOME.AUTO_ACCEPTED) {
       entry.autoAccepted.push({
@@ -167,6 +187,8 @@ for (const target of queue) {
         a: comparison.a && { pin: comparison.a.physical_pin, evidence: comparison.a.evidence, gates: comparison.a.gates },
         b: comparison.b && { pin: comparison.b.physical_pin, evidence: comparison.b.evidence, gates: comparison.b.gates },
       });
+    } else if (comparison.outcome === OUTCOME.NOT_ATTEMPTED) {
+      entry.notAttempted.push({ logical_pin: comparison.logical_pin, reason: comparison.reason });
     } else {
       entry.notFound.push({ logical_pin: comparison.logical_pin, reason: comparison.reason });
     }
@@ -191,8 +213,21 @@ for (const target of queue) {
 
   report.parts.push(entry);
   console.log(
-    `auto=${entry.autoAccepted.length} review=${entry.needsReview.length} none=${entry.notFound.length}`
+    `auto=${entry.autoAccepted.length} review=${entry.needsReview.length} ` +
+      `none=${entry.notFound.length}` +
+      (entry.notAttempted.length ? ` NOT-ATTEMPTED=${entry.notAttempted.length}` : "")
   );
+
+  // Stop on a genuinely exhausted quota. Continuing would mark every remaining
+  // pin as unattempted and produce a report that looks complete but covered
+  // nothing — the failure mode this batch has already hit twice.
+  if (/daily quota exhausted/i.test(outcome.extractorA.reason ?? "")) {
+    console.log("\nABORTING: Extractor A quota exhausted. Remaining parts NOT attempted.");
+    break;
+  }
+
+  // Pace the free tiers rather than sprinting into a rate limit.
+  await new Promise((resolve) => setTimeout(resolve, 4000));
 }
 
 fs.writeFileSync(AUTO_PATH, `${JSON.stringify(autoVerified, null, 2)}\n`);
@@ -201,17 +236,32 @@ fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 // ---------------------------------------------------------------------------
 // 3. Batch summary
 // ---------------------------------------------------------------------------
+const attempted = new Set(report.parts.map((p) => p.partNumber));
+const skippedEntirely = queue.filter((t) => !attempted.has(t.partNumber));
+
 const totals = report.parts.reduce(
   (acc, part) => ({
     auto: acc.auto + part.autoAccepted.length,
     review: acc.review + part.needsReview.length,
     none: acc.none + part.notFound.length,
+    unattempted: acc.unattempted + part.notAttempted.length,
   }),
-  { auto: 0, review: 0, none: 0 }
+  { auto: 0, review: 0, none: 0, unattempted: 0 }
 );
+totals.unattempted += skippedEntirely.reduce((n, t) => n + t.pins.length, 0);
 
 console.log(`\n${"=".repeat(74)}\nBATCH SUMMARY\n${"=".repeat(74)}`);
-console.log(`auto-accepted: ${totals.auto}   needs review: ${totals.review}   PIN_NOT_FOUND: ${totals.none}`);
+console.log(
+  `auto-accepted: ${totals.auto}   needs review: ${totals.review}   ` +
+    `PIN_NOT_FOUND: ${totals.none}   NOT ATTEMPTED: ${totals.unattempted}`
+);
+if (totals.unattempted > 0) {
+  console.log(
+    `\n${totals.unattempted} pin(s) were NOT ATTEMPTED (extractor unavailable) — ` +
+      `these are NOT PIN_NOT_FOUND and say nothing about resolvability.`
+  );
+  for (const t of skippedEntirely) console.log(`  never reached: ${t.partNumber} (${t.pins.join(", ")})`);
+}
 
 if (totals.auto > 0) {
   console.log(`\nAUTO-ACCEPTED (both extractors agreed independently, both passed both gates):`);

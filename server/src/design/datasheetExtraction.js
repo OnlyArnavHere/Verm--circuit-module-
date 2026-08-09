@@ -499,10 +499,16 @@ export function buildPrompt({ partNumber, package: pkg, neededPins, datasheetTex
 export const geminiConfigured = () =>
   Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 
+/** Sleep helper for rate-limit backoff. */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function callGemini(
   prompt,
   {
     fetchImpl = fetch,
+    // Free-tier quotas are tight; a 429 is often a per-minute limit that clears.
+    // Retrying respects the server's own retryDelay rather than guessing.
+    retries = 2,
     // `gemini-flash-latest` rather than a pinned version: measured 2026-08-09,
     // gemini-2.0-flash returns 429 (quota) on this key and gemini-2.5-flash is
     // retired for new users.
@@ -528,8 +534,38 @@ export async function callGemini(
         }),
       }
     );
+    if (response.status === 429 && retries > 0) {
+      const body = await response.text();
+      let waitMs = 20000;
+      let perDay = false;
+      try {
+        const parsed = JSON.parse(body);
+        for (const detail of parsed.error?.details ?? []) {
+          if (detail.retryDelay) {
+            waitMs = Math.min(60000, (parseFloat(detail.retryDelay) || 20) * 1000 + 2000);
+          }
+          for (const violation of detail.violations ?? []) {
+            if (/PerDay/i.test(violation.quotaId ?? "")) perDay = true;
+          }
+        }
+      } catch {
+        /* use default */
+      }
+      // A per-DAY quota will not clear by waiting; say so instead of stalling.
+      if (perDay) {
+        return { ok: false, quotaExhausted: true, reason: "Gemini daily quota exhausted (per-day limit)" };
+      }
+      await sleep(waitMs);
+      return callGemini(prompt, { fetchImpl, model, apiKey, retries: retries - 1 });
+    }
+
     if (!response.ok) {
-      return { ok: false, reason: `Gemini returned HTTP ${response.status}` };
+      const body = await response.text().catch(() => "");
+      return {
+        ok: false,
+        quotaExhausted: response.status === 429,
+        reason: `Gemini returned HTTP ${response.status}${body ? `: ${body.slice(0, 120)}` : ""}`,
+      };
     }
     const payload = await response.json();
     const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
