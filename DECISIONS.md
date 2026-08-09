@@ -771,3 +771,72 @@ behaviour the whole design depends on.
 act (`--confirm <PIN> --by <name>`, recording who and when) rather than someone
 editing a JSON cache. It **refuses to confirm a gate-rejected claim**, so the
 deterministic gates are hard constraints rather than advisory.
+
+---
+
+## D-040 — Circuit diagram restyled to per-class icons; connectivity logic reused
+
+**Phase:** 7
+**Status:** Accepted — supersedes D-014's *visual* choice, not D-015's rules
+
+The product reference for "circuit diagram" is Fritzing/Tinkercad-style breadboard
+imagery. That reference carries an assumption that does not hold here: breadboard
+art presumes THT parts and modules, while this project's components are SMD/chip
+level. `MIMXRT1172CVM8A` is a 289-ball BGA that cannot sit on a breadboard, and no
+photorealistic image of it exists in that idiom.
+
+Resolved by keeping the *reading experience* (approachable, non-formal, legible to
+a non-engineer) and dropping the realism assumption: **eight generic per-
+`part_class` icons**, connected with colour-coded wires.
+
+Explicitly rejected, recorded so they are not drifted back into:
+- physical breadboard-grid layout simulation — out of scope, meaningless for BGA/QFN
+- per-exact-part image generation/lookup — no reliable per-MPN source, unbounded
+
+**This was a rendering-layer swap, not a rebuild.** D-015's rules still govern what
+is drawn: only net-participating pins, grounds as symbols, power collapsed to one
+rail, orthogonal routing, deterministic layout. Only `partIcons.js` is new; the
+connectivity code in `circuitDiagram.js` is unchanged.
+
+The ground and VCC glyphs remain real EE symbols. They denote *rails*, not parts,
+and no clearer pictorial exists for "this goes to ground" — the part symbols are
+what changed.
+
+---
+
+## D-041 — Icons are original art, one per class, by IP necessity
+
+**Phase:** 7
+**Status:** Accepted
+
+The eight icons are hand-authored flat glyphs on a 24×24 grid in
+`server/src/render/partIcons.js`. They deliberately do **not** copy or imitate
+Fritzing, Arduino, Tinkercad, or any vendor's board artwork — that is an IP
+problem, not a style preference.
+
+Per-class rather than per-part is also a correctness point, not just scope: there
+is no meaningful pictorial for a bare BGA-289, so the icon honestly represents the
+*category*. Two different sensors render identically and the part number below
+disambiguates. An unknown `part_class` falls back to a neutral grey "Component"
+rather than guessing an icon.
+
+---
+
+## D-042 — Wire colour rule: rails fixed, signals rotate by sorted index
+
+**Phase:** 7
+**Status:** Accepted
+
+| Net | Colour |
+|---|---|
+| `ground` | slate `#3a3a3a` |
+| `power` | red `#b3261e` |
+| `signal` | 6-colour palette, indexed by position in the **name-sorted** signal list |
+
+Rails get fixed colours because their meaning is fixed. Signals rotate so two nets
+crossing the same gutter stay tellable apart. Assignment is by sorted net name and
+never by draw order, so a design always yields the same colours — verified:
+three renders of `smart_dustbin` are byte-identical.
+
+Pin stubs take their net's colour, so a connection reads as one continuous run
+rather than a black stub joined to a coloured wire.

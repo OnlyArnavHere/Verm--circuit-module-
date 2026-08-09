@@ -1,110 +1,144 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1278 860" width="1278" height="860" font-family="ui-sans-serif, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1308 1034" width="1308" height="1034" font-family="ui-sans-serif, system-ui, sans-serif">
 <rect width="100%" height="100%" fill="#fffdf7"/>
 <text x="90" y="34" font-size="19" font-weight="600" fill="#1a1a1a">dunkai_design — circuit diagram</text>
 <g transform="translate(114 0)">
-<line x1="-6" y1="74" x2="810" y2="74" stroke="#b3261e" stroke-width="3"/>
+<line x1="-6" y1="74" x2="830" y2="74" stroke="#b3261e" stroke-width="3"/>
 <path d="M-6 70.905 L-10.08 74" fill="none" stroke="#b3261e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M-6 70.905 L-1.92 74" fill="none" stroke="#b3261e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M-6 70.905 L-6 77.747" fill="none" stroke="#b3261e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="-6" y="48" font-size="13" font-weight="600" fill="#b3261e" text-anchor="middle">+3V3</text>
 <path d="M34 74 L34 132 L116 132 L116 150" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
 <circle cx="34" cy="74" r="3.6" fill="#b3261e"/>
 <text x="122" y="145" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M34 74 L34 372 L116 372 L116 390" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<path d="M34 74 L34 414 L116 414 L116 432" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
 <circle cx="34" cy="74" r="3.6" fill="#b3261e"/>
-<text x="122" y="385" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M34 74 L34 612 L116 612 L116 630" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<text x="122" y="427" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M34 74 L34 696 L116 696 L116 714" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
 <circle cx="34" cy="74" r="3.6" fill="#b3261e"/>
-<text x="122" y="625" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M402 74 L402 132 L484 132 L484 150" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
-<circle cx="402" cy="74" r="3.6" fill="#b3261e"/>
-<text x="490" y="145" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M770 74 L770 132 L852 132 L852 150" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
-<circle cx="770" cy="74" r="3.6" fill="#b3261e"/>
-<text x="858" y="145" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M770 74 L770 376 L852 376 L852 394" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
-<circle cx="770" cy="74" r="3.6" fill="#b3261e"/>
-<text x="858" y="389" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M770 74 L770 620 L852 620 L852 638" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
-<circle cx="770" cy="74" r="3.6" fill="#b3261e"/>
-<text x="858" y="633" font-size="10.5" fill="#b3261e">VDD</text>
-<path d="M796 453 L687 453 L687 209 L646 209" fill="none" stroke="#1a5e8a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M278 689 L336 689 L336 209 L428 209" fill="none" stroke="#1a5e8a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M796 697 L721 697 L721 235 L646 235" fill="none" stroke="#1a5e8a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M796 209 L738 209 L738 261 L646 261" fill="none" stroke="#1a5e8a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<line x1="169" y1="234" x2="169" y2="294" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M169.4 282.4 L169 295.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M160.2 295.6 L177.8 295.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M162.2 298.8 L175.8 298.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M166.6 301.6 L171.4 301.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="177" y="249" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="169" y1="474" x2="169" y2="534" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M169.4 522.4 L169 535.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M160.2 535.6 L177.8 535.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M162.2 538.8 L175.8 538.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M166.6 541.6 L171.4 541.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="177" y="489" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="169" y1="718" x2="169" y2="778" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M169.4 766.4 L169 779.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M160.2 779.6 L177.8 779.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M162.2 782.8 L175.8 782.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M166.6 785.6 L171.4 785.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="177" y="733" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="537" y1="290" x2="537" y2="350" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M537.4 338.4 L537 351.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M528.2 351.6 L545.8 351.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M530.2 354.8 L543.8 354.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M534.6 357.6 L539.4 357.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="545" y="305" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="905" y1="238" x2="905" y2="298" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M905.4 286.4 L905 299.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M896.2 299.6 L913.8 299.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M898.2 302.8 L911.8 302.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M902.6 305.6 L907.4 305.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="913" y="253" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="905" y1="482" x2="905" y2="542" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M905.4 530.4 L905 543.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M896.2 543.6 L913.8 543.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M898.2 546.8 L911.8 546.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M902.6 549.6 L907.4 549.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="913" y="497" font-size="10.5" fill="#6b6b6b">GND</text>
-<line x1="905" y1="726" x2="905" y2="786" stroke="#3a3a3a" stroke-width="2"/>
-<path d="M905.4 774.4 L905 787.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M896.2 787.6 L913.8 787.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M898.2 790.8 L911.8 790.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M902.6 793.6 L907.4 793.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="913" y="741" font-size="10.5" fill="#6b6b6b">GND</text>
-<rect x="90" y="150" width="158" height="84" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M160 150 A 9 9 0 0 0 178 150" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="169" y="174" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U5</text>
-<text x="169" y="188" font-size="9.5" fill="#6b6b6b" text-anchor="middle">TP4110</text>
-<text x="97" y="227" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">PWR</text>
-<rect x="90" y="390" width="158" height="84" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M160 390 A 9 9 0 0 0 178 390" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="169" y="414" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U6</text>
-<text x="169" y="428" font-size="9.5" fill="#6b6b6b" text-anchor="middle">HY2111-GB</text>
-<text x="97" y="467" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">PWR</text>
-<rect x="90" y="630" width="158" height="88" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M160 630 A 9 9 0 0 0 178 630" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="169" y="654" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U2</text>
-<text x="169" y="668" font-size="9.5" fill="#6b6b6b" text-anchor="middle">LDC1314RGHR</text>
-<text x="97" y="711" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">SENSOR</text>
-<line x1="248" y1="689" x2="278" y2="689" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="241" y="685" font-size="10" fill="#1a1a1a" text-anchor="end">SCL</text>
-<rect x="458" y="150" width="158" height="140" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M528 150 A 9 9 0 0 0 546 150" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="537" y="174" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U1</text>
-<text x="537" y="188" font-size="9.5" fill="#6b6b6b" text-anchor="middle">FS32K116LFT0MLFT</text>
-<text x="465" y="283" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">MCU</text>
-<line x1="458" y1="209" x2="428" y2="209" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="465" y="205" font-size="10" fill="#1a1a1a" text-anchor="start">SDA</text>
-<line x1="616" y1="209" x2="646" y2="209" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="609" y="205" font-size="10" fill="#1a1a1a" text-anchor="end">AUDIO</text>
-<line x1="616" y1="235" x2="646" y2="235" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="609" y="231" font-size="10" fill="#1a1a1a" text-anchor="end">MOSI</text>
-<line x1="616" y1="261" x2="646" y2="261" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="609" y="257" font-size="10" fill="#1a1a1a" text-anchor="end">RX</text>
-<rect x="826" y="150" width="158" height="88" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M896 150 A 9 9 0 0 0 914 150" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="905" y="174" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U3</text>
-<text x="905" y="188" font-size="9.5" fill="#6b6b6b" text-anchor="middle">RF-BM-2340A2I</text>
-<text x="833" y="231" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">COMM</text>
-<line x1="826" y1="209" x2="796" y2="209" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="833" y="205" font-size="10" fill="#1a1a1a" text-anchor="start">TX</text>
-<rect x="826" y="394" width="158" height="88" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M896 394 A 9 9 0 0 0 914 394" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="905" y="418" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U4</text>
-<text x="905" y="432" font-size="9.5" fill="#6b6b6b" text-anchor="middle">MBI5124GP-B</text>
-<text x="833" y="475" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">OUT</text>
-<line x1="826" y1="453" x2="796" y2="453" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="833" y="449" font-size="10" fill="#1a1a1a" text-anchor="start">AUDIO</text>
-<rect x="826" y="638" width="158" height="88" rx="3" fill="#fdfbf4" stroke="#8a6d3b" stroke-width="2"/>
-<path d="M896 638 A 9 9 0 0 0 914 638" fill="none" stroke="#8a6d3b" stroke-width="1.6"/>
-<text x="905" y="662" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U7</text>
-<text x="905" y="676" font-size="9.5" fill="#6b6b6b" text-anchor="middle">IS25LP080D-JNLE-TR</text>
-<text x="833" y="719" font-size="8.5" fill="#8a6d3b" font-weight="600" letter-spacing="0.5">MEM</text>
-<line x1="826" y1="697" x2="796" y2="697" stroke="#1a1a1a" stroke-width="1.8"/>
-<text x="833" y="693" font-size="10" fill="#1a1a1a" text-anchor="start">SCK</text>
-<text x="687" y="202" font-size="10.5" fill="#1a5e8a" text-anchor="middle" font-weight="500" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">AUDIO_9</text>
-<text x="336" y="189" font-size="10.5" fill="#1a5e8a" text-anchor="middle" font-weight="500" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">I2C_7</text>
-<text x="721" y="202" font-size="10.5" fill="#1a5e8a" text-anchor="middle" font-weight="500" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">SPI_10</text>
-<text x="738" y="202" font-size="10.5" fill="#1a5e8a" text-anchor="middle" font-weight="500" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">UART_8</text>
+<text x="122" y="709" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M412 74 L412 132 L494 132 L494 150" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="412" cy="74" r="3.6" fill="#b3261e"/>
+<text x="500" y="145" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M790 74 L790 132 L872 132 L872 150" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="790" cy="74" r="3.6" fill="#b3261e"/>
+<text x="878" y="145" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M790 74 L790 434 L872 434 L872 452" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="790" cy="74" r="3.6" fill="#b3261e"/>
+<text x="878" y="447" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M790 74 L790 736 L872 736 L872 754" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="790" cy="74" r="3.6" fill="#b3261e"/>
+<text x="878" y="749" font-size="10.5" fill="#b3261e">VDD</text>
+<path d="M816 569 L707 569 L707 267 L666 267" fill="none" stroke="#1a5e8a" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M288 831 L346 831 L346 267 L438 267" fill="none" stroke="#0f766e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M816 871 L741 871 L741 293 L666 293" fill="none" stroke="#7c3aed" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M816 267 L758 267 L758 319 L666 319" fill="none" stroke="#b45309" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+<line x1="174" y1="276" x2="174" y2="336" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M174.4 324.4 L174 337.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M165.2 337.6 L182.8 337.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M167.2 340.8 L180.8 340.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.6 343.6 L176.4 343.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="182" y="291" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="174" y1="558" x2="174" y2="618" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M174.4 606.4 L174 619.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M165.2 619.6 L182.8 619.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M167.2 622.8 L180.8 622.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.6 625.6 L176.4 625.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="182" y="573" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="174" y1="860" x2="174" y2="920" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M174.4 908.4 L174 921.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M165.2 921.6 L182.8 921.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M167.2 924.8 L180.8 924.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.6 927.6 L176.4 927.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="182" y="875" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="552" y1="348" x2="552" y2="408" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M552.4 396.4 L552 409.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M543.2 409.6 L560.8 409.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M545.2 412.8 L558.8 412.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M549.6 415.6 L554.4 415.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="560" y="363" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="930" y1="296" x2="930" y2="356" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M930.4 344.4 L930 357.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M921.2 357.6 L938.8 357.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M923.2 360.8 L936.8 360.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M927.6 363.6 L932.4 363.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="938" y="311" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="930" y1="598" x2="930" y2="658" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M930.4 646.4 L930 659.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M921.2 659.6 L938.8 659.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M923.2 662.8 L936.8 662.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M927.6 665.6 L932.4 665.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="938" y="613" font-size="10.5" fill="#6b6b6b">GND</text>
+<line x1="930" y1="900" x2="930" y2="960" stroke="#3a3a3a" stroke-width="2"/>
+<path d="M930.4 948.4 L930 961.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M921.2 961.6 L938.8 961.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M923.2 964.8 L936.8 964.8" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M927.6 967.6 L932.4 967.6" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="938" y="915" font-size="10.5" fill="#6b6b6b">GND</text>
+<rect x="90" y="150" width="168" height="126" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M102 150 H246 A 12 12 0 0 1 258 162 V165 H90 V162 A 12 12 0 0 1 102 150 Z" fill="#b3261e" opacity="0.85"/>
+<g transform="translate(145 171) scale(2.4167)"><rect x="2.6" y="7.5" width="16" height="9" rx="1.8" fill="#fbe3e0" stroke="#b3261e" stroke-width="1.4"/>
+     <rect x="18.6" y="10" width="2.8" height="4" rx="0.8" fill="#b3261e"/>
+     <path d="M 11.6 8.9 L 8.4 12.4 L 10.9 12.4 L 9.9 15.3 L 13.2 11.6 L 10.7 11.6 Z" fill="#b3261e"/></g>
+<text x="174" y="242" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U5</text>
+<text x="174" y="267" font-size="9" fill="#6b6b6b" text-anchor="middle">TP4110</text>
+<text x="174" y="161" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">POWER</text>
+<rect x="90" y="432" width="168" height="126" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M102 432 H246 A 12 12 0 0 1 258 444 V447 H90 V444 A 12 12 0 0 1 102 432 Z" fill="#b3261e" opacity="0.85"/>
+<g transform="translate(145 453) scale(2.4167)"><rect x="2.6" y="7.5" width="16" height="9" rx="1.8" fill="#fbe3e0" stroke="#b3261e" stroke-width="1.4"/>
+     <rect x="18.6" y="10" width="2.8" height="4" rx="0.8" fill="#b3261e"/>
+     <path d="M 11.6 8.9 L 8.4 12.4 L 10.9 12.4 L 9.9 15.3 L 13.2 11.6 L 10.7 11.6 Z" fill="#b3261e"/></g>
+<text x="174" y="524" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U6</text>
+<text x="174" y="549" font-size="9" fill="#6b6b6b" text-anchor="middle">HY2111-GB</text>
+<text x="174" y="443" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">POWER</text>
+<rect x="90" y="714" width="168" height="146" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M102 714 H246 A 12 12 0 0 1 258 726 V729 H90 V726 A 12 12 0 0 1 102 714 Z" fill="#0f766e" opacity="0.85"/>
+<g transform="translate(145 735) scale(2.4167)"><rect x="4" y="12.5" width="16" height="7.5" rx="1.8" fill="#dff3f1" stroke="#0f766e" stroke-width="1.4"/>
+     <circle cx="12" cy="16.25" r="2" fill="none" stroke="#0f766e" stroke-width="1.3"/>
+     <path d="M 8.5 10.4 A 3.5 3.5 0 0 1 15.5 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="1"/><path d="M 5.8 10.4 A 6.2 6.2 0 0 1 18.2 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="0.649"/><path d="M 3.0999999999999996 10.4 A 8.9 8.9 0 0 1 20.9 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="0.29799999999999993"/></g>
+<text x="174" y="806" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U2</text>
+<text x="174" y="851" font-size="9" fill="#6b6b6b" text-anchor="middle">LDC1314RGHR</text>
+<text x="174" y="725" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">SENSOR</text>
+<line x1="258" y1="831" x2="288" y2="831" stroke="#0f766e" stroke-width="2.6" stroke-linecap="round"/>
+<text x="251" y="827" font-size="10" fill="#1a1a1a" text-anchor="end">SCL</text>
+<rect x="468" y="150" width="168" height="198" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M480 150 H624 A 12 12 0 0 1 636 162 V165 H468 V162 A 12 12 0 0 1 480 150 Z" fill="#4f46b8" opacity="0.85"/>
+<g transform="translate(523 171) scale(2.4167)"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="#e8e6fb" stroke="#4f46b8" stroke-width="1.4"/>
+     <rect x="9.5" y="9.5" width="5" height="5" rx="0.6" fill="none" stroke="#4f46b8" stroke-width="1"/>
+     <line x1="3.6" y1="9" x2="6.5" y2="9" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="9" x2="20.4" y2="9" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="12" x2="6.5" y2="12" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="12" x2="20.4" y2="12" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="15" x2="6.5" y2="15" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="15" x2="20.4" y2="15" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+     <line x1="9" y1="3.6" x2="9" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="9" y1="17.5" x2="9" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="12" y1="3.6" x2="12" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="12" y1="17.5" x2="12" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="15" y1="3.6" x2="15" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="15" y1="17.5" x2="15" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+     <circle cx="8.4" cy="8.4" r="0.85" fill="#4f46b8"/></g>
+<text x="552" y="242" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U1</text>
+<text x="552" y="339" font-size="9" fill="#6b6b6b" text-anchor="middle">FS32K116LFT0MLFT</text>
+<text x="552" y="161" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">MICROCONTROLLER</text>
+<line x1="468" y1="267" x2="438" y2="267" stroke="#0f766e" stroke-width="2.6" stroke-linecap="round"/>
+<text x="475" y="263" font-size="10" fill="#1a1a1a" text-anchor="start">SDA</text>
+<line x1="636" y1="267" x2="666" y2="267" stroke="#1a5e8a" stroke-width="2.6" stroke-linecap="round"/>
+<text x="629" y="263" font-size="10" fill="#1a1a1a" text-anchor="end">AUDIO</text>
+<line x1="636" y1="293" x2="666" y2="293" stroke="#7c3aed" stroke-width="2.6" stroke-linecap="round"/>
+<text x="629" y="289" font-size="10" fill="#1a1a1a" text-anchor="end">MOSI</text>
+<line x1="636" y1="319" x2="666" y2="319" stroke="#b45309" stroke-width="2.6" stroke-linecap="round"/>
+<text x="629" y="315" font-size="10" fill="#1a1a1a" text-anchor="end">RX</text>
+<rect x="846" y="150" width="168" height="146" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M858 150 H1002 A 12 12 0 0 1 1014 162 V165 H846 V162 A 12 12 0 0 1 858 150 Z" fill="#7c3aed" opacity="0.85"/>
+<g transform="translate(901 171) scale(2.4167)"><rect x="9" y="14" width="6" height="6" rx="1.2" fill="#f0e6fa" stroke="#7c3aed" stroke-width="1.4"/>
+     <line x1="12" y1="14" x2="12" y2="8.4" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/>
+     <circle cx="12" cy="7" r="1.5" fill="#7c3aed"/>
+     <path d="M 7.6 10.2 A 6 6 0 0 1 7.6 4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/><path d="M 16.4 10.2 A 6 6 0 0 0 16.4 4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/><path d="M 5.2 11.6 A 9 9 0 0 1 5.2 3.2" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><path d="M 18.8 11.6 A 9 9 0 0 0 18.8 3.2" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></g>
+<text x="930" y="242" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U3</text>
+<text x="930" y="287" font-size="9" fill="#6b6b6b" text-anchor="middle">RF-BM-2340A2I</text>
+<text x="930" y="161" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">COMMS</text>
+<line x1="846" y1="267" x2="816" y2="267" stroke="#b45309" stroke-width="2.6" stroke-linecap="round"/>
+<text x="853" y="263" font-size="10" fill="#1a1a1a" text-anchor="start">TX</text>
+<rect x="846" y="452" width="168" height="146" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M858 452 H1002 A 12 12 0 0 1 1014 464 V467 H846 V464 A 12 12 0 0 1 858 452 Z" fill="#b45309" opacity="0.85"/>
+<g transform="translate(901 473) scale(2.4167)"><rect x="3.5" y="4.5" width="17" height="11.5" rx="1.6" fill="#fdefd6" stroke="#b45309" stroke-width="1.4"/>
+     <line x1="6.6" y1="8.2" x2="17.4" y2="8.2" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="6.6" y1="10.8" x2="14.6" y2="10.8" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="6.6" y1="13.4" x2="15.8" y2="13.4" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="12" y1="16" x2="12" y2="18.6" stroke="#b45309" stroke-width="1.4"/>
+     <line x1="8" y1="19.4" x2="16" y2="19.4" stroke="#b45309" stroke-width="1.6" stroke-linecap="round"/></g>
+<text x="930" y="544" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U4</text>
+<text x="930" y="589" font-size="9" fill="#6b6b6b" text-anchor="middle">MBI5124GP-B</text>
+<text x="930" y="463" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">OUTPUT</text>
+<line x1="846" y1="569" x2="816" y2="569" stroke="#1a5e8a" stroke-width="2.6" stroke-linecap="round"/>
+<text x="853" y="565" font-size="10" fill="#1a1a1a" text-anchor="start">AUDIO</text>
+<rect x="846" y="754" width="168" height="146" rx="12" fill="#ffffff" stroke="#ddd8cd" stroke-width="1.5"/>
+<path d="M858 754 H1002 A 12 12 0 0 1 1014 766 V769 H846 V766 A 12 12 0 0 1 858 754 Z" fill="#8a5a2b" opacity="0.85"/>
+<g transform="translate(901 775) scale(2.4167)"><rect x="4.2" y="15.2" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="1"/>
+           <circle cx="7.4" cy="17.4" r="0.85" fill="#8a5a2b"/><rect x="4.2" y="11.4" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="0.88"/>
+           <circle cx="7.4" cy="13.600000000000001" r="0.85" fill="#8a5a2b"/><rect x="4.2" y="7.6" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="0.76"/>
+           <circle cx="7.4" cy="9.8" r="0.85" fill="#8a5a2b"/></g>
+<text x="930" y="846" font-size="17" font-weight="700" fill="#1a1a1a" text-anchor="middle">U7</text>
+<text x="930" y="891" font-size="9" fill="#6b6b6b" text-anchor="middle">IS25LP080D-JNLE-TR</text>
+<text x="930" y="765" font-size="8.5" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.7">STORAGE</text>
+<line x1="846" y1="871" x2="816" y2="871" stroke="#7c3aed" stroke-width="2.6" stroke-linecap="round"/>
+<text x="853" y="867" font-size="10" fill="#1a1a1a" text-anchor="start">SCK</text>
+<text x="707" y="258" font-size="10.5" fill="#1a5e8a" text-anchor="middle" font-weight="600" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">AUDIO_9</text>
+<text x="346" y="242" font-size="10.5" fill="#0f766e" text-anchor="middle" font-weight="600" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">I2C_7</text>
+<text x="741" y="252" font-size="10.5" fill="#7c3aed" text-anchor="middle" font-weight="600" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">SPI_10</text>
+<text x="758" y="210" font-size="10.5" fill="#b45309" text-anchor="middle" font-weight="600" paint-order="stroke" stroke="#fffdf7" stroke-width="3.5">UART_8</text>
 </g>
 </svg>

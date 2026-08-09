@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1056 178" width="1056" height="178" font-family="ui-sans-serif, system-ui, sans-serif">
+<rect width="100%" height="100%" fill="#fffdf7"/>
+<rect x="12" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M24 16 H108 A 12 12 0 0 1 120 28 V31 H12 V28 A 12 12 0 0 1 24 16 Z" fill="#4f46b8" opacity="0.85"/>
+<g transform="translate(36 48) scale(2.5)"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="#e8e6fb" stroke="#4f46b8" stroke-width="1.4"/>
+     <rect x="9.5" y="9.5" width="5" height="5" rx="0.6" fill="none" stroke="#4f46b8" stroke-width="1"/>
+     <line x1="3.6" y1="9" x2="6.5" y2="9" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="9" x2="20.4" y2="9" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="12" x2="6.5" y2="12" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="12" x2="20.4" y2="12" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="15" x2="6.5" y2="15" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="17.5" y1="15" x2="20.4" y2="15" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+     <line x1="9" y1="3.6" x2="9" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="9" y1="17.5" x2="9" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="12" y1="3.6" x2="12" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="12" y1="17.5" x2="12" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/><line x1="15" y1="3.6" x2="15" y2="6.5" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="15" y1="17.5" x2="15" y2="20.4" stroke="#4f46b8" stroke-width="1.4" stroke-linecap="round"/>
+     <circle cx="8.4" cy="8.4" r="0.85" fill="#4f46b8"/></g>
+<text x="66" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">processing</text>
+<text x="66" y="165" font-size="11" text-anchor="middle" fill="#4f46b8">Microcontroller</text>
+<rect x="144" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M156 16 H240 A 12 12 0 0 1 252 28 V31 H144 V28 A 12 12 0 0 1 156 16 Z" fill="#0f766e" opacity="0.85"/>
+<g transform="translate(168 48) scale(2.5)"><rect x="4" y="12.5" width="16" height="7.5" rx="1.8" fill="#dff3f1" stroke="#0f766e" stroke-width="1.4"/>
+     <circle cx="12" cy="16.25" r="2" fill="none" stroke="#0f766e" stroke-width="1.3"/>
+     <path d="M 8.5 10.4 A 3.5 3.5 0 0 1 15.5 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="1"/><path d="M 5.8 10.4 A 6.2 6.2 0 0 1 18.2 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="0.649"/><path d="M 3.0999999999999996 10.4 A 8.9 8.9 0 0 1 20.9 10.4" fill="none" stroke="#0f766e" stroke-width="1.3" stroke-linecap="round" opacity="0.29799999999999993"/></g>
+<text x="198" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">sensor</text>
+<text x="198" y="165" font-size="11" text-anchor="middle" fill="#0f766e">Sensor</text>
+<rect x="276" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M288 16 H372 A 12 12 0 0 1 384 28 V31 H276 V28 A 12 12 0 0 1 288 16 Z" fill="#b45309" opacity="0.85"/>
+<g transform="translate(300 48) scale(2.5)"><rect x="3.5" y="4.5" width="17" height="11.5" rx="1.6" fill="#fdefd6" stroke="#b45309" stroke-width="1.4"/>
+     <line x1="6.6" y1="8.2" x2="17.4" y2="8.2" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="6.6" y1="10.8" x2="14.6" y2="10.8" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="6.6" y1="13.4" x2="15.8" y2="13.4" stroke="#b45309" stroke-width="1.2" stroke-linecap="round"/>
+     <line x1="12" y1="16" x2="12" y2="18.6" stroke="#b45309" stroke-width="1.4"/>
+     <line x1="8" y1="19.4" x2="16" y2="19.4" stroke="#b45309" stroke-width="1.6" stroke-linecap="round"/></g>
+<text x="330" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">output</text>
+<text x="330" y="165" font-size="11" text-anchor="middle" fill="#b45309">Output</text>
+<rect x="408" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M420 16 H504 A 12 12 0 0 1 516 28 V31 H408 V28 A 12 12 0 0 1 420 16 Z" fill="#7c3aed" opacity="0.85"/>
+<g transform="translate(432 48) scale(2.5)"><rect x="9" y="14" width="6" height="6" rx="1.2" fill="#f0e6fa" stroke="#7c3aed" stroke-width="1.4"/>
+     <line x1="12" y1="14" x2="12" y2="8.4" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/>
+     <circle cx="12" cy="7" r="1.5" fill="#7c3aed"/>
+     <path d="M 7.6 10.2 A 6 6 0 0 1 7.6 4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/><path d="M 16.4 10.2 A 6 6 0 0 0 16.4 4.6" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/><path d="M 5.2 11.6 A 9 9 0 0 1 5.2 3.2" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><path d="M 18.8 11.6 A 9 9 0 0 0 18.8 3.2" fill="none" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></g>
+<text x="462" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">communication</text>
+<text x="462" y="165" font-size="11" text-anchor="middle" fill="#7c3aed">Comms</text>
+<rect x="540" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M552 16 H636 A 12 12 0 0 1 648 28 V31 H540 V28 A 12 12 0 0 1 552 16 Z" fill="#b3261e" opacity="0.85"/>
+<g transform="translate(564 48) scale(2.5)"><rect x="2.6" y="7.5" width="16" height="9" rx="1.8" fill="#fbe3e0" stroke="#b3261e" stroke-width="1.4"/>
+     <rect x="18.6" y="10" width="2.8" height="4" rx="0.8" fill="#b3261e"/>
+     <path d="M 11.6 8.9 L 8.4 12.4 L 10.9 12.4 L 9.9 15.3 L 13.2 11.6 L 10.7 11.6 Z" fill="#b3261e"/></g>
+<text x="594" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">power</text>
+<text x="594" y="165" font-size="11" text-anchor="middle" fill="#b3261e">Power</text>
+<rect x="672" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M684 16 H768 A 12 12 0 0 1 780 28 V31 H672 V28 A 12 12 0 0 1 684 16 Z" fill="#8a5a2b" opacity="0.85"/>
+<g transform="translate(696 48) scale(2.5)"><rect x="4.2" y="15.2" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="1"/>
+           <circle cx="7.4" cy="17.4" r="0.85" fill="#8a5a2b"/><rect x="4.2" y="11.4" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="0.88"/>
+           <circle cx="7.4" cy="13.600000000000001" r="0.85" fill="#8a5a2b"/><rect x="4.2" y="7.6" width="15.6" height="4.4" rx="1.2" fill="#efe7dd" stroke="#8a5a2b" stroke-width="1.3" opacity="0.76"/>
+           <circle cx="7.4" cy="9.8" r="0.85" fill="#8a5a2b"/></g>
+<text x="726" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">storage</text>
+<text x="726" y="165" font-size="11" text-anchor="middle" fill="#8a5a2b">Storage</text>
+<rect x="804" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M816 16 H900 A 12 12 0 0 1 912 28 V31 H804 V28 A 12 12 0 0 1 816 16 Z" fill="#2f7d3a" opacity="0.85"/>
+<g transform="translate(828 48) scale(2.5)"><circle cx="12" cy="12" r="8.2" fill="#e2f2e4" stroke="#2f7d3a" stroke-width="1.4"/>
+     <line x1="12" y1="12" x2="12" y2="6.8" stroke="#2f7d3a" stroke-width="1.5" stroke-linecap="round"/>
+     <line x1="12" y1="12" x2="15.6" y2="13.6" stroke="#2f7d3a" stroke-width="1.5" stroke-linecap="round"/>
+     <circle cx="12" cy="12" r="1.1" fill="#2f7d3a"/>
+     <line x1="12" y1="4.6" x2="12" y2="5.9" stroke="#2f7d3a" stroke-width="1.2" stroke-linecap="round" transform="rotate(0 12 12)"/><line x1="12" y1="4.6" x2="12" y2="5.9" stroke="#2f7d3a" stroke-width="1.2" stroke-linecap="round" transform="rotate(90 12 12)"/><line x1="12" y1="4.6" x2="12" y2="5.9" stroke="#2f7d3a" stroke-width="1.2" stroke-linecap="round" transform="rotate(180 12 12)"/><line x1="12" y1="4.6" x2="12" y2="5.9" stroke="#2f7d3a" stroke-width="1.2" stroke-linecap="round" transform="rotate(270 12 12)"/></g>
+<text x="858" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">clock</text>
+<text x="858" y="165" font-size="11" text-anchor="middle" fill="#2f7d3a">Clock</text>
+<rect x="936" y="16" width="108" height="108" rx="14" fill="#ffffff" stroke="#ddd8cd"/>
+<path d="M948 16 H1032 A 12 12 0 0 1 1044 28 V31 H936 V28 A 12 12 0 0 1 948 16 Z" fill="#b5306b" opacity="0.85"/>
+<g transform="translate(960 48) scale(2.5)"><rect x="3.4" y="13.8" width="17.2" height="6.4" rx="1.8" fill="#fce7ef" stroke="#b5306b" stroke-width="1.4"/>
+     <path d="M 7.4 13.8 A 4.6 4.6 0 0 1 16.6 13.8 Z" fill="#fce7ef" stroke="#b5306b" stroke-width="1.4"/>
+     <line x1="12" y1="4.2" x2="12" y2="7.6" stroke="#b5306b" stroke-width="1.4" stroke-linecap="round"/>
+     <path d="M 10.1 6.4 L 12 8.4 L 13.9 6.4" fill="none" stroke="#b5306b" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="990" y="148" font-size="13" text-anchor="middle" fill="#1a1a1a" font-weight="600">input</text>
+<text x="990" y="165" font-size="11" text-anchor="middle" fill="#b5306b">Input</text>
+</svg>

@@ -1,3 +1,134 @@
+# Circuit Diagram Rendering — approach
+
+> **Superseded visual style (Phase 7, 2026-08-09).** The original decision below
+> chose real EE symbols from `schematic-symbols`. The confirmed product direction
+> is a **stylized icon-based pictorial diagram**. The connectivity logic from
+> Phase 3 is unchanged and still in use — only the visual symbol layer changed.
+> The current approach is documented first; the original investigation is kept
+> below because its reasoning still governs *what* gets drawn.
+
+---
+
+# Current approach — stylized icon-based pictorial (Phase 7)
+
+**Date:** 2026-08-09 · **Status:** current
+
+## Why not literal breadboard art
+
+The product reference was Fritzing/Tinkercad-style breadboard imagery. That style
+assumes breadboard-friendly THT parts and modules — an Arduino Uno, a DHT11 on
+header pins. **This project's parts are SMD/chip-level**: `MIMXRT1172CVM8A` is a
+289-ball BGA that cannot physically sit on a breadboard, and no photorealistic
+"breadboard picture" of it exists or could.
+
+So literal breadboard realism has no valid target for most real components here.
+What survives from that reference is the *reading experience* — approachable,
+non-formal, legible to a non-engineer — and that is what this delivers, via
+generic per-category icons instead of per-part photographs.
+
+Two options were considered and **explicitly rejected**:
+- **Physical breadboard-grid layout simulation** — out of scope, and meaningless
+  for BGA/QFN parts.
+- **Per-exact-part image generation or lookup** — no reliable image source per
+  MPN, and unbounded scope.
+
+## What is drawn
+
+**Eight icons, one per `part_class`** — not per part number.
+
+![part class icons](samples/part-class-icons.png)
+
+| `part_class` | Icon | Colour |
+|---|---|---|
+| `processing` | chip with leads and a pin-1 dot | indigo `#4f46b8` |
+| `sensor` | sensing element emitting waves | teal `#0f766e` |
+| `output` | display panel on a stand | amber `#b45309` |
+| `communication` | antenna radiating | violet `#7c3aed` |
+| `power` | battery with a bolt | red `#b3261e` |
+| `storage` | stacked memory layers | bronze `#8a5a2b` |
+| `clock` | clock face | green `#2f7d3a` |
+| `input` | button with a press arrow | rose `#b5306b` |
+
+**Original art.** These are hand-authored flat glyphs on a 24×24 grid in
+[`server/src/render/partIcons.js`](../server/src/render/partIcons.js). They do not
+copy or imitate Fritzing, Arduino, Tinkercad, or any vendor's board artwork —
+that would be an IP problem, not merely a style risk. They are generic category
+glyphs, cached and reused across every design: a one-time asset cost.
+
+An unknown `part_class` falls back to a neutral grey "Component" style rather
+than guessing an icon.
+
+## Wire colour rule
+
+One rule, applied every render — never improvised per diagram:
+
+| Net | Colour | Why fixed |
+|---|---|---|
+| `net_class: "ground"` | slate `#3a3a3a` | meaning is fixed, so the colour is |
+| `net_class: "power"` | red `#b3261e` | same |
+| `net_class: "signal"` | 6-colour palette, by index in the **name-sorted** signal list | signals rotate so two nets crossing one gutter stay tellable apart |
+
+Signal palette: blue `#1a5e8a`, teal `#0f766e`, violet `#7c3aed`, amber
+`#b45309`, rose `#b5306b`, green `#2f7d3a`.
+
+Assignment is by **sorted net name**, never by draw order, so the same design
+always produces the same colours. A pin stub takes its net's colour, so each
+connection reads as one continuous coloured run from pin to pin.
+
+## What was reused, not rebuilt
+
+Phase 7 changed the symbol layer only. All of Phase 3's connectivity logic is
+untouched and still governs the drawing (D-015):
+
+- only pins that **participate in a net** are drawn — `rc_car`'s U2 is a 289-pad
+  BGA and the diagram shows `VDD` and `SDA`
+- **grounds** become ground symbols, not a giant GND net
+- **power** collapses to one labelled `+3V3` rail with drops
+- orthogonal wire routing, junction dots, deterministic column layout
+
+The ground and VCC glyphs are still the real EE symbols from `schematic-symbols`.
+That is deliberate: they denote *rails*, not parts, and there is no clearer or
+more widely recognised pictorial for "this goes to ground". The part symbols are
+what changed.
+
+## Samples
+
+Regenerate with `cd server && node scripts/render-circuit-samples.js`.
+
+| Fixture | Icon-based (current) | EE-symbol (previous) |
+|---|---|---|
+| `rc_car` (3 parts) | [PNG](samples/circuit-rc_car.png) · [SVG](samples/circuit-rc_car.svg) | [PNG](samples/circuit-rc_car-PREVIOUS-ee-symbols.png) |
+| `smart_dustbin` (7) | [PNG](samples/circuit-smart_dustbin.png) · [SVG](samples/circuit-smart_dustbin.svg) | [PNG](samples/circuit-smart_dustbin-PREVIOUS-ee-symbols.png) |
+| `gas_leakage_detector` (8) | [PNG](samples/circuit-gas_leakage_detector.png) · [SVG](samples/circuit-gas_leakage_detector.svg) | — |
+| `noise_pollution_monitor` (8) | [PNG](samples/circuit-noise_pollution_monitor.png) · [SVG](samples/circuit-noise_pollution_monitor.svg) | — |
+
+### Distinct from the other three outputs
+
+- vs. **schematic** — the schematic shows every pin with pin numbers and net
+  labels in formal EE notation; this shows category icons and only connected pins
+- vs. **PCB layout** — that is copper and footprints at true scale
+- vs. **3D** — that is the physical board
+
+## Known limitations
+
+- **Net labels can still collide** when several signals leave one component edge
+  at similar heights. Staggered across 4 vertical buckets, which resolved the
+  `smart_dustbin` overlap; `gas_leakage_detector` still shows `GPIO_5`/`I2C_3`
+  adjacent. Cosmetic.
+- **Icons are category-level by design.** Two different sensors render
+  identically — the part number below the icon disambiguates.
+- **Fixed three-column layout**, fine to 8 components (all fixtures).
+- **No crossing minimisation** — wires may cross, as in real circuit diagrams.
+
+---
+
+# Original investigation (Phase 3) — how the connectivity rules were chosen
+
+*Retained because the reasoning below still determines what gets drawn; only the
+symbol set has been superseded.*
+
+## Original decision record
+
 # Circuit Diagram Rendering — investigation and decision
 
 **Date:** 2026-08-09

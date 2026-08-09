@@ -1,6 +1,6 @@
 # PROJECT PLAN — PCB & Circuit Design Agent
 
-**Status:** Phases 1-5.6 complete and verified. Phase 6 in progress (Group A done, Group C pilot proven end-to-end on LP103SB6F).
+**Status:** Clean slate, Phase 1 not yet started.
 **Owner of execution:** Claude Code, working phase by phase from this document.
 **Do not skip ahead.** Each phase ends with a checkpoint deliverable. Do not start the next phase until the current one's deliverable exists and is checked off below.
 
@@ -10,7 +10,7 @@
 
 Downstream of an **already-built Hardware Agent** (do not touch it, do not rebuild it), this module takes its JSON output and produces exactly these four outputs, **each as a real exportable file, not just an in-session render**:
 
-1. **Circuit diagram** — must visually resemble an actual electronics circuit (recognizable component symbols/icons and wire-style connections), distinct from the schematic's formal EE capture (full pin-level annotation, net labels, standard schematic symbol library). A generic node-edge graph (e.g. plain Graphviz output) does **not** satisfy this on its own — see Phase 3 investigation below → file (SVG)
+1. **Circuit diagram** — a stylized, approachable pictorial wiring diagram: generic icon art per `part_class` (not per exact part number — no realistic image exists for e.g. a bare BGA-289, so icons represent the category: microcontroller, sensor, power regulator, etc.), connected with clean, color-coded wires. Deliberately distinct from the schematic's formal EE notation, and deliberately *not* a literal photorealistic breadboard scene — see Phase 7 for why that assumption doesn't map to this project's actual (SMD/chip-level) components, and what's built instead → file (SVG)
 2. **Schematic diagram** — proper electrical schematic capture, from tscircuit → file (SVG, plus `.kicad_sch`)
 3. **PCB layout** — physical board with footprints, placement, traces, layers → file (`.kicad_pcb` + Gerber set + `.drl`, per Phase 2 findings)
 4. **PCB 3D view** — rendered/interactive 3D representation → file (`.glb`/`.gltf`, per Phase 2 findings)
@@ -109,6 +109,8 @@ Investigate the **current, real** tscircuit ecosystem via its official repos/doc
 
 Document the investigation and chosen approach in `docs/CIRCUIT_DIAGRAM_APPROACH.md` with a rendered sample attached/referenced. This is a real decision point, not busywork — pick something and move on, but show your reasoning.
 
+**Update after checkpoint review (post-Phase 6):** the `schematic-symbols`-based renderer built here (351 real EE symbols, net-participating-pins-only, grounds-as-symbols, power-collapsed — D-015's rules) is being **restyled, not discarded**, in the new Phase 7. The connectivity-simplification logic stays; the visual symbol set changes from real EE symbols to generic stylized icons per `part_class`. See Phase 7.
+
 Then: design the `ValidatedDesign` schema that sits between the agent and the compiler — independent enough of tscircuit that it could be swapped later. Must represent: resolved components (symbol/footprint/3D refs, resolved physical pins), resolved nets (physical pads, de-duplicated), board constraints.
 
 **Added scope from Phase 2 findings — this is now mandatory, not optional:**
@@ -152,38 +154,37 @@ Two real defects surfaced by the resolution audit — both must be fixed before 
 
 `curatedPinouts.js` is the mechanism (proven in the `sot23_6`/`HY2111-GB` slice — keyed by part number, not package, with empirical pad-correspondence verification).
 
-**Groups, by resolution difficulty (confirmed against real fixture nets, not the plan's original guess):**
-- **Group A** (trivial — part already exposes matching named pads): `MBI5124GP-B`, `RF-BM-2340A2I`. 4 pins total.
-- **Group B** (part exposes named pins, but no direct counterpart — needs a datasheet decision on which physical pin a function maps to): `FS32K116LFT0MLFT`, `MIMXRT1172CVM8A`. 8 pins total, both parts are the MCUs at the center of the two showcased fixtures.
-- **Group C** (footprint exposes zero named pins, full datasheet lookup required): 11 parts, 37 pins. Genuinely open-ended — do not chase all of it now.
+**Groups, by resolution difficulty (confirmed against real fixture nets):**
+- **Group A** (part already exposes matching named pads) — done: `RF-BM-2340A2I.GND` resolved for real. `RF-BM-2340A2I.TX` and `MBI5124GP-B`'s `AUDIO`/`GPIO1` are **upstream Hardware Agent data errors** (no TX pin exists; the LED driver has neither function) — logged under a distinct "UPSTREAM DATA ERRORS" section in `docs/POC_RESULTS.md`, not resolution gaps a datasheet could ever fix.
+- **Group B and Group C are now one track, not separate.** The A/B/C split only ever reflected how much manual effort was needed, not a difference in mechanism — `FS32K116LFT0MLFT`'s remaining pins and `MIMXRT1172CVM8A` need the same datasheet-grounded path as the rest of Group C. Run them through the same pilot mechanism below once it's proven, don't build a separate bespoke path for Group B.
 
-**Approved sub-approach for Group C (and any Group B gaps): Gemini-assisted datasheet extraction, human-confirmed.** Gemini acts as researcher, never as authority — same Agent/Deterministic split as the rest of this system, applied to pin research specifically:
-1. Only call Gemini with a real, already-fetched datasheet (via the JLCPCB part-detail page pattern found for `LP103SB6F` — reuse it, don't have Gemini search for its own source). If the datasheet can't be fetched, go straight to `PIN_NOT_FOUND`, no Gemini call.
-2. Prompt: extract only the specific logical pins the fixture actually needs (not a full pinout), return strict structured JSON with `logical_pin`, `physical_pin`, and a near-verbatim `evidence` excerpt.
-3. **Deterministic gate 1 (structural):** claimed physical pin/ball must actually exist in the compiled footprint's real pad list.
-4. **Deterministic gate 2 (anti-hallucination):** the `evidence` excerpt must fuzzy-match a substring of the actual extracted datasheet text — checked in code, not by asking Gemini to self-grade. Reject automatically if it doesn't match. Gemini's own `confidence` field is informational only, not a gate.
-5. **Human-confirm gate**, at least for now: nothing enters `curatedPinouts.js` as trusted without a human flipping it from "proposed" to "verified," even after passing both deterministic gates. Revisit relaxing this once there's a track record.
-6. Cache with full provenance: datasheet URL, evidence excerpt, both gate results, and who/when confirmed — not just the final pin number.
+**Gemini-assisted datasheet extraction, human-confirmed.** Gemini acts as researcher, never authority — same Agent/Deterministic split as the rest of this system, applied to pin research specifically:
+1. Only call Gemini with a real, already-fetched datasheet. Fetch order: LCSC's stable unsigned link (`lcsc.com/product-detail/<code>.html` → `datasheet.lcsc.com/datasheet/pdf/<hash>.pdf`, confirmed working) first, JLCPCB's signed OSS link as fallback (confirmed session/referer-independent failure — its signature binds to something a scripted client can't reproduce, not just missing cookies). If no datasheet fetches, go straight to `PIN_NOT_FOUND`, no Gemini call.
+2. Model: `gemini-flash-latest` (the floating alias) — `gemini-2.0-flash` hit quota, `gemini-2.5-flash` is retired for new users.
+3. Prompt: extract only the specific logical pins the fixture actually needs, strict structured JSON: `logical_pin`, `physical_pin`, near-verbatim `evidence`.
+4. **Deterministic gate 1 (structural):** claimed physical pin must actually exist in the compiled footprint's real pad list.
+5. **Deterministic gate 2 (anti-hallucination):** `evidence` must fuzzy-match a substring of the actual extracted datasheet text, checked in code. Reject automatically if not. Self-reported `confidence` is informational only, never a gate.
+6. **Human-confirm gate**, via the attributable `confirm-extraction.js --confirm <pin> --by <name>` command — nothing enters `curatedPinouts.js` without it, even after both deterministic gates pass. Proven necessary in practice: the pilot hit a real near-miss where a datasheet's package diagram would have passed both gates with a wrong pin (a per-package table read correctly beat a plausible-but-wrong diagram reading) — this is why the human gate stays.
+7. Cache with full provenance: datasheet URL, evidence excerpt, both gate results, confirmer/timestamp.
 
-**Pilot first, generalize later:** prove this end-to-end on `LP103SB6F` alone (real datasheet link already found) before deciding whether to apply it across the rest of Group C. Not yet implemented — evaluated and approved in shape, pending the pilot.
+**Pilot status: proven end-to-end, one part confirmed.** `LP103SB6F.GND` → `pin2`, both gates passed, human-confirmed, in `curatedPinouts.js`. `LP103SB6F.VDD` correctly stayed `PIN_NOT_FOUND` (the part has no VDD pin — its supply is an internally-generated rail, `PS` — and the model correctly declined to invent one).
 
 **Not required for checkpoint success:** resolving every part. `PIN_NOT_FOUND` on an unresolved part is the correct, honest failure mode this system is designed to produce.
 
-**Definition of done:** Groups A and B resolved and verified; the Gemini-assisted pilot proven end-to-end on `LP103SB6F` with both deterministic gates demonstrably catching a deliberately-bad extraction (same rigor as the pinLabels/traceCount bug proofs); documented decision on whether to generalize to the rest of Group C.
+**Definition of done:** Group A resolved (done) with upstream data errors correctly distinguished from resolution gaps (done); pilot proven end-to-end on one real part with both deterministic gates demonstrated catching a real near-miss (done); documented decision on generalizing to the rest of Group B/C (pending — hold until explicitly told to expand scope).
 
-### Phase 6c — LLM-assisted datasheet pin extraction (evaluated, approved design, not yet started)
-For parts that don't resolve via the parts engine or curated table (Group C): fetch the manufacturer datasheet (via the JLCPCB part-detail page's Documents link, proven reachable off the same LCSC code the parts engine already returns), send Gemini the datasheet plus only the specific logical pins the fixture actually needs, require strict structured JSON output (`logical_pin`, `physical_pin`, `source: "manufacturer_datasheet"`, `evidence`), and run the result through deterministic validation before it's trusted.
+### Phase 7 — Stylized icon-based circuit diagram (new, supersedes Phase 3's visual style, not its logic)
+**Why this exists:** the non-negotiable product reference for "circuit diagram" turned out to be Fritzing/Tinkercad-style — but literal photorealistic breadboard imagery assumes breadboard-friendly THT/module parts (an Arduino Uno, a generic sensor module), and this project's real components are SMD/BGA chip-level parts (`MIMXRT1172CVM8A` is a 289-ball BGA) that physically cannot go on a breadboard. There's no "real photo" for most of our fixtures in that style. Decision (see conversation, confirmed): build a **stylized icon-based pictorial diagram** instead — generic per-`part_class` icon art (8 categories: processing, sensor, output, communication, power, storage, clock, input — not per-exact-part, since no realistic image target exists for most real parts), connected with clean, color-coded wires. This keeps the intended *reading experience* (approachable, non-formal, readable by a non-engineer) without a broken realism assumption.
 
-**Non-negotiable boundaries:**
-- Gemini runs only at cache-population time, never in the compile path — preserves section 9's determinism guarantee. The compiler only ever reads cached, already-verified entries.
-- Validation gates on structural fact (does the claimed physical pin exist on the footprint actually compiled — same discipline as D-023/`assertPadIntegrity`), never on the model's self-reported confidence.
-- New source tier: `llm_extracted`, distinct from `curated` (human-verified) and `mock`. Don't collapse it into either.
-- Evidence field must be a real datasheet excerpt, not a paraphrase — audit trail, not proof.
-- Unclear/unsupported datasheet → `PIN_NOT_FOUND`, same as any other unresolvable case. No forcing an answer.
-- First several extractions get explicit human sign-off against the real datasheet before the pattern is trusted for the rest of Group C.
-- Cache verified mappings permanently (same as curated table) so Gemini is called once per part, not repeatedly.
+**Reuse, don't rebuild, the connectivity logic.** Phase 3's `schematic-symbols`-based renderer already solved the hard part: which pins to show (only net-participating ones), how to simplify grounds (as symbols) and power (collapsed to one rail) — D-015's rules. Phase 7 swaps the *visual symbol layer* (351 real EE symbols → 8 generic stylized icons) on top of the same underlying `ValidatedDesign` connectivity data and simplification rules. Don't redo the net-simplification work.
 
-**Status:** approved in principle, implementation not started. This is real engineering scope (prompt design, schema enforcement, the structural validator, caching) — worth doing as an accelerant for the remaining Group C bulk once Group A/B and the LP103SB6F datasheet-link proof-of-concept are done, not before.
+**Icon sourcing — original art only.** Do not copy or closely imitate real Fritzing/Arduino/Tinkercad board artwork or any other copyrighted/trademarked component imagery — that's a real IP problem, not just a style risk. Build a small set of original, generic, flat-style icons (one per `part_class`) — simple enough to be unambiguous, distinct enough to be visually identifiable at a glance. Cache/reuse across all designs; this is a one-time asset cost, not per-design work.
+
+**Wire color-coding:** pick a small, consistent scheme (e.g. by `net_class` — ground/power/signal — or a rotating palette per net) and document the rule in `docs/CIRCUIT_DIAGRAM_APPROACH.md` so it's not ad-hoc per render.
+
+**Scope discipline:** this is a rendering-layer change on top of already-computed data, not a new data pipeline. Don't let it balloon into a physical breadboard-grid layout simulator (explicitly rejected — see conversation) or per-exact-part image generation (explicitly rejected in favor of per-category icons).
+
+**Definition of done:** `docs/CIRCUIT_DIAGRAM_APPROACH.md` updated with the icon-based approach, the 8 category icons (original art, not copied), the wire color-coding rule, and a rendered sample per Phase 5's fixtures for comparison against the old EE-symbol version. Icons and wiring are legible and visually distinct from both the schematic and the PCB layout outputs.
 
 ---
 
@@ -212,11 +213,12 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ## 6. Checklist (update as phases complete)
 
-- [x] Phase 1 — Repo & job skeleton *(`npm run verify:phase1` → 8/8)*
-- [x] Phase 2 — tscircuit feasibility report *(all 4 outputs exportable headless + offline)*
-- [x] Phase 3 — ValidatedDesign schema *(+ circuit-diagram approach, footprint mapper, pad assertion)*
-- [x] Phase 4 — Architecture doc *(`docs/ARCHITECTURE.md`)*
-- [x] Phase 5 — Minimal POC (real-first resolution: rc_car.json + smart_dustbin.json end-to-end, 18/19 parts resolved for real; validator proven against noise_pollution_monitor.json, all 4 known bugs + 5th I2C SCL↔SDA bug caught)
-- [x] Phase 5.5 — DRC wired in *(DRC_FAILURE proven to fire on overlapping components)*
-- [x] Phase 5.6 — Resolution-integrity fixes *(3D now verified from compiled output; offline run = 0 network calls)*
-- [~] Phase 6 — Pin-name resolution *(Group A done; rail rule; fan-out check; Group C pilot ran end-to-end for real on LP103SB6F — awaiting human confirmation. Group B + rest of Group C not started.)*
+- [x] Phase 1 — Repo & job skeleton
+- [x] Phase 2 — tscircuit feasibility report
+- [x] Phase 3 — ValidatedDesign schema
+- [x] Phase 4 — Architecture doc
+- [x] Phase 5 — Minimal POC (real-first resolution: rc_car.json + smart_dustbin.json end-to-end, 18/19 parts resolved for real; validator proven against noise_pollution_monitor.json, all 4 known bugs + 5th I2C SCL↔SDA bug + PIN_IN_MULTIPLE_NETS bug caught)
+- [x] Phase 5.5 — DRC wired in
+- [x] Phase 5.6 — Resolution-integrity fixes (false real:true bug, false determinism/no-cache bug)
+- [ ] Phase 6 — Pin-name resolution (Group A done; pilot proven end-to-end on LP103SB6F.GND, human-confirmed; Group B/rest of Group C on hold pending scope-expansion decision)
+- [x] Phase 7 — Stylized icon-based circuit diagram *(8 original per-class icons, documented wire-colour rule, samples for all 4 fixtures; connectivity logic reused unchanged)*
