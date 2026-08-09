@@ -114,7 +114,9 @@ Regenerate with `cd server && node scripts/render-circuit-samples.js`.
 - **Net labels can still collide** when several signals leave one component edge
   at similar heights. Staggered across 4 vertical buckets, which resolved the
   `smart_dustbin` overlap; `gas_leakage_detector` still shows `GPIO_5`/`I2C_3`
-  adjacent. Cosmetic.
+  adjacent. **Accepted as known cosmetic polish — deliberately not pursued
+  further** (reviewed 2026-08-09). Legibility is unaffected; only the two labels
+  sit close together.
 - **Icons are category-level by design.** Two different sensors render
   identically — the part number below the icon disambiguates.
 - **Fixed three-column layout**, fine to 8 components (all fixtures).

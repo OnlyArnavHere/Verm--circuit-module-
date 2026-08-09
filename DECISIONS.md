@@ -840,3 +840,44 @@ three renders of `smart_dustbin` are byte-identical.
 
 Pin stubs take their net's colour, so a connection reads as one continuous run
 rather than a black stub joined to a coloured wire.
+
+---
+
+## D-043 — First LLM-sourced pinout promoted to the curated table
+
+**Phase:** 6
+**Status:** Accepted
+
+`LP103SB6F` `GND -> pin2` is now in `curatedPinouts.js` — the first entry sourced
+through the datasheet pipeline rather than by hand. It passed every gate in order:
+datasheet fetched from LCSC (408 KB), Gemini proposed with a verbatim excerpt,
+gate 1 (pin2 exists on the compiled 6-pad footprint), gate 2 (evidence matched
+datasheet text, score 1.0), then human confirmation
+(`--confirm GND --by "vrusha"`, recorded in `datasheet-extraction-cache.json`).
+
+Two things are deliberately preserved in the entry's `evidence`:
+
+1. **The near-miss.** The datasheet's package diagram extracts as
+   `1 2 3 4 5 6 D+ D- PS QC_EN GND FBO`, which naively reads GND = pin 5. The
+   pin-description table is authoritative and self-consistent (`D+`=1, `GND`=2,
+   `FBO`=3, `QC_EN`=4, `PS`=5, `D-`=6). Recorded so nobody "corrects" pin2 to
+   pin5 later, and asserted by test.
+2. **VDD's absence is intentional.** LP103SB6F has no VDD pin — its supply is
+   `PS`, an internally generated rail — so `VDD` stays `PIN_NOT_FOUND`. The entry
+   maps one pin, not two, and the resolver reports `1/2 real`.
+
+Note the entry stores the part's **real** pin names; a logical `GND` reaches
+`HY2111-GB`'s `VSS` through the rail-equivalence rule at match time, not through
+the table. A test asserts the two SOT-23-6 parts keep genuinely different pinouts.
+
+---
+
+## D-044 — `gas_leakage_detector` net-label proximity: accepted cosmetic
+
+**Phase:** 7
+**Status:** Accepted — will not be pursued
+
+`GPIO_5` and `I2C_3` render adjacent in `gas_leakage_detector`. Label staggering
+was widened from 3 buckets to 4, which fixed `smart_dustbin`; this case remains.
+Reviewed and accepted as cosmetic polish — legibility is unaffected. Logged so it
+is a known state rather than an unnoticed defect.

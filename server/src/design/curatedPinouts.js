@@ -25,6 +25,37 @@
  * since that would mean we are not looking at the part we think we are.
  */
 const CURATED_PINOUTS = Object.freeze({
+  /**
+   * First entry sourced via the Phase 6 LLM-assisted pipeline rather than by
+   * hand. It reached this table only after: the datasheet was fetched from LCSC,
+   * Gemini proposed the mapping with a verbatim excerpt, both deterministic
+   * gates passed, and a human confirmed it (`confirmedBy: "vrusha"`, recorded in
+   * data/datasheet-extraction-cache.json).
+   *
+   * VDD is deliberately absent: LP103SB6F has no VDD pin. Its supply is `PS`
+   * ("Power Source. Connection point for an external bypass capacitor for the
+   * internally generated supply voltage"), so `VDD` correctly stays
+   * PIN_NOT_FOUND rather than being mapped to something plausible.
+   */
+  LP103SB6F: {
+    package: "SOT-23-6",
+    pins: {
+      GND: "pin2",
+    },
+    evidence:
+      "Manufacturer datasheet (LP103S, via LCSC C387729): the Functional Pin " +
+      'Description table row "GND  3  2  Ground." — columns are ' +
+      "name | SOP8 pin | SOT23-6 pin, so GND is pin 2 in the SOT-23-6 package. " +
+      "Verified verbatim against the extracted PDF text (gate 2 score 1.0) and " +
+      "against the compiled 6-pad footprint (gate 1). Confirmed by a human " +
+      "2026-08-09. NOTE: the datasheet's package top-view diagram extracts as " +
+      '"1 2 3 4 5 6 D+ D- PS QC_EN GND FBO", which naively reads GND=pin5; the ' +
+      "pin-description table is authoritative and self-consistent (D+=1, GND=2, " +
+      "FBO=3, QC_EN=4, PS=5, D-=6 — each pin used exactly once). " +
+      "Pad-numbering correspondence with footprinter's `sot23_6` holds for the " +
+      "same reason recorded on the HY2111-GB entry below.",
+  },
+
   "HY2111-GB": {
     package: "SOT-23-6",
     pins: {

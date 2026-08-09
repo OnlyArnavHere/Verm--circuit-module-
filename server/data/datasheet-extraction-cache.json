@@ -27,10 +27,10 @@
             "reason": "evidence appears verbatim in the datasheet text"
           }
         },
-        "status": "proposed"
+        "status": "verified"
       }
     ],
-    "confirmedBy": null,
-    "confirmedAt": null
+    "confirmedBy": "vrusha",
+    "confirmedAt": "2026-08-09T07:48:39.197Z"
   }
 }

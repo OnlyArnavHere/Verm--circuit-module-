@@ -64,10 +64,25 @@ test("the package guard refuses a curated pinout for the wrong package", () => {
 });
 
 test("a pinout is never applied to a different part in the same package", () => {
-  // LP103SB6F is also SOT-23-6 but has a completely different pinout. Keying by
-  // package instead of part number would have handed it HY2111-GB's pins.
-  const result = curatedPinout("LP103SB6F", "SOT-23-6");
-  assert.equal(result.ok, false, "no curated pinout exists for this part yet");
+  // HY2111-GB and LP103SB6F are BOTH SOT-23-6 with genuinely different pinouts.
+  // Keying by package instead of part number would have handed one the other's
+  // pins — this asserts they stay distinct.
+  const hy = curatedPinout("HY2111-GB", "SOT-23-6");
+  const lp = curatedPinout("LP103SB6F", "SOT-23-6");
+
+  assert.equal(hy.ok, true);
+  assert.equal(lp.ok, true);
+
+  // Entries store the part's REAL pin names; logical GND reaches HY2111-GB's
+  // VSS through the rail-equivalence rule at match time, not via the table.
+  assert.equal(hy.pins.VSS, "pin6", "HY2111-GB's ground is VSS on pin 6");
+  assert.equal(lp.pins.GND, "pin2", "LP103SB6F's ground is GND on pin 2");
+  assert.notDeepEqual(hy.pins, lp.pins, "same package, different pinouts");
+});
+
+test("an uncurated part in a curated package inherits nothing", () => {
+  const result = curatedPinout("SOME-OTHER-SOT23-PART", "SOT-23-6");
+  assert.equal(result.ok, false, "sharing a package grants no pinout");
   assert.match(result.reason, /no curated pinout/);
 });
 
@@ -80,4 +95,46 @@ test("every curated pinout entry carries evidence of pad-numbering correspondenc
     /verified empirically|pad-numbering|pin N is the same physical pin/i,
     "evidence must state why pad numbering corresponds (D-023)"
   );
+});
+
+// ---------------------------------------------------------------------------
+// LP103SB6F — the first entry sourced via the LLM-assisted pipeline
+// ---------------------------------------------------------------------------
+
+test("LP103SB6F GND resolves for real from the confirmed extraction", async () => {
+  const resolved = await resolveComponent(
+    { ref_id: "U5", part_number: "LP103SB6F", part_class: "power", package: "SOT-23-6" },
+    { logicalPinsByRef: { U5: ["VDD", "GND"] }, allowNetwork: false }
+  );
+
+  const gnd = resolved.resolution.pins.perPin.GND;
+  assert.equal(gnd.real, true);
+  assert.equal(gnd.pad, "pin2", "datasheet table: GND is pin 2 on SOT23-6");
+  assert.equal(gnd.source, SOURCE.CURATED);
+});
+
+test("LP103SB6F VDD stays PIN_NOT_FOUND — the part genuinely has no VDD", async () => {
+  // Its supply is `PS`, an internally generated rail. Mapping VDD to something
+  // plausible would be exactly the guess this system forbids.
+  const resolved = await resolveComponent(
+    { ref_id: "U5", part_number: "LP103SB6F", part_class: "power", package: "SOT-23-6" },
+    { logicalPinsByRef: { U5: ["VDD", "GND"] }, allowNetwork: false }
+  );
+
+  assert.equal(resolved.resolution.pins.perPin.VDD.real, false);
+  assert.ok(resolved.errors.some((e) => e.code === "PIN_NOT_FOUND" && e.target === "U5.VDD"));
+  assert.equal(
+    resolved.resolution.pins.real,
+    false,
+    "one unmatched pin keeps the whole map unsafe to manufacture from"
+  );
+});
+
+test("the LP103SB6F entry records its datasheet provenance", () => {
+  const result = curatedPinout("LP103SB6F", "SOT-23-6");
+  assert.ok(result.evidence.includes("LCSC C387729"), "datasheet source recorded");
+  assert.match(result.evidence, /gate 2 score 1\.0/, "gate results recorded");
+  assert.match(result.evidence, /Confirmed by a human/, "human confirmation recorded");
+  // The near-miss reading must stay documented so it is not "corrected" later.
+  assert.match(result.evidence, /naively reads GND=pin5/);
 });
