@@ -1517,3 +1517,99 @@ part's real pin set at selection time.
 
 Downstream, this is now detected automatically and continuously rather than by
 inspection, so future Hardware Agent output is checked on arrival.
+
+---
+
+## D-067 — Placement promoted to explicit ValidatedDesign state
+
+**Phase:** 8
+**Status:** Accepted — prerequisite for any modification workflow
+
+Placement was computed inside `generateTscircuitSource` at compile time, so it
+was not a value anything could read, diff, or change. A repositioning transform
+would have had to reach into the compiler.
+
+Now explicit state on `ValidatedDesign`, with the old grid as the default
+generator and per-component `source: auto_grid | modified` so a later re-layout
+cannot silently discard a requested position.
+
+**Verified neutral, not assumed:** the emitted coordinates were compared against
+the exact pre-Phase-8 formula for all 7 `smart_dustbin` components — identical on
+every one. Worth doing, because the first attempt at this refactor was **not**
+neutral: `run-poc.js` builds the compiler input from upstream + nets and did not
+carry `placement`, so the compiler emitted a board with **no components at all**
+(padAssert FAIL, netAssert FAIL, 3D 0/7). A "looks right" check would have missed
+it; comparing artifacts caught it immediately.
+
+Side benefit, per the plan: this closes a latent layering gap. Deciding where a
+part sits is design planning — an Agent-layer concern — and it had been living
+inside the deterministic compiler. Noted in `docs/ARCHITECTURE.md`.
+
+---
+
+## D-068 — Pre-check is a guard, not a substitute for DRC
+
+**Phase:** 8
+**Status:** Accepted — and proven, not asserted
+
+Two layers protect a repositioning:
+
+1. a cheap deterministic pre-check (board containment, bounding-box overlap) that
+   rejects the obvious before spending a ~40s compile;
+2. the **real DRC re-run**, which is authoritative.
+
+The proof was constructed so the pre-check would *pass*. `U3` half-width 7.9 +
+`U1` half-width 5.0 = 12.9mm, so placing `U3` 13.0mm away clears the bbox test by
+0.1mm and sits inside the board. The real DRC still rejected it:
+
+```
+v2 BLOCKED — 33 DRC failure(s)
+  DRC_FAILURE: Courtyard of U3 overlaps with courtyard of U1
+  ...32 further routing failures
+v1 artifacts unchanged: CONFIRMED
+```
+
+Courtyards are larger than component bodies, which a bounding-box check
+structurally cannot model. That is exactly why the pre-check is not allowed to be
+the gate.
+
+---
+
+## D-069 — Use real footprint extents, not estimated ones
+
+**Phase:** 8
+**Status:** Accepted — found by running the real request
+
+The first end-to-end run **blocked a legitimate request**. Cause: the pre-check
+was fed the count of *resolved logical pins* (2 for `U3`) instead of a real size,
+so a 15.8mm module was modelled as 3mm and "left edge, 5mm margin" placed it
+1.4mm off the board.
+
+Fixed by reading true extents from `pcb_component` elements in the compiled v1
+board (`componentSizesFrom`). `U3` is 15.8 × 13.2mm; the estimate said 3 × 3.
+
+Worth recording because the failure was silent in the right direction — DRC
+caught it, so nothing bad shipped, but a user would have seen a reasonable
+request refused for no visible reason. A test asserts the estimate and the real
+size produce *different* answers, so this cannot regress unnoticed.
+
+---
+
+## D-070 — Interpretation is single-extractor, unlike Phase 6
+
+**Phase:** 8
+**Status:** Accepted — deliberate asymmetry
+
+Phase 6 requires dual independent extraction before auto-accepting a pin mapping.
+Modification interpretation deliberately does **not**, and the difference is
+about consequence, not confidence.
+
+A wrong pin mapping enters `curatedPinouts.js` and silently corrupts every future
+board built from it. A wrong *interpretation* cannot: it is checked by
+deterministic validation, then by the real DRC re-run, and the interpreted
+instruction is stored on the version for the user to read. The worst outcome is a
+rejected modification with a visible reason.
+
+Extractor B is used only as a fallback when the primary interpreter is
+unavailable — the same failover shape as D-055, without the dual-agreement
+requirement.

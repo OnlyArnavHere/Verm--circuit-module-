@@ -111,11 +111,76 @@ const JobSchema = new Schema(
     // Not `errors` — Mongoose reserves that path on documents for its own
     // validation state, and shadowing it breaks document behaviour.
     validationErrors: { type: [JobErrorSchema], default: [] },
+
+    /**
+     * DRC summary for this version. `warningDelta` vs the parent is surfaced for
+     * visibility but never gates — only new DRC_FAILUREs block a version.
+     */
+    drc: {
+      ran: { type: Boolean },
+      failures: { type: Number },
+      warnings: { type: Number },
+      warningDelta: { type: Number },
+      byType: { type: Schema.Types.Mixed },
+    },
     statusHistory: { type: [StatusEventSchema], default: [] },
 
     /** Conversational change requests create a new version, never an overwrite. */
     version: { type: Number, default: 1 },
     parentJobId: { type: String, default: null, index: true },
+
+    // --- design lineage (Phase 8) -------------------------------------------
+    /** Stable across every version of one design. Backfilled to jobId for v1. */
+    designId: { type: String, index: true },
+    /** Newest successful version for this designId. Only ever flipped to false. */
+    isCurrent: { type: Boolean, default: true, index: true },
+
+    /**
+     * How this version came to exist. For a modification this carries the raw
+     * request, the interpreted instruction, and the resolved placement delta —
+     * the same provenance discipline applied everywhere else in this project.
+     */
+    origin: {
+      kind: { type: String, enum: ["upload", "modification"], default: "upload" },
+      request: {
+        naturalLanguage: { type: String },
+        receivedAt: { type: Date },
+        requestedBy: { type: String },
+      },
+      instruction: { type: Schema.Types.Mixed },
+      interpretedBy: { type: String },
+      resolvedPlacement: { type: Schema.Types.Mixed },
+    },
+
+    /** Full ValidatedDesign snapshot for this version, including placement. */
+    validatedDesign: { type: Schema.Types.Mixed },
+
+    /**
+     * Modification attempts that were REJECTED, recorded on the version they were
+     * attempted against. Deliberately not stored as version documents: a version
+     * number always denotes a complete, artifact-bearing, DRC-passed board, so
+     * there are no gaps in the sequence to explain.
+     */
+    modificationAttempts: {
+      type: [
+        new Schema(
+          {
+            attemptedAt: { type: Date, default: Date.now },
+            request: { type: Schema.Types.Mixed },
+            instruction: { type: Schema.Types.Mixed },
+            outcome: { type: String, enum: ["rejected"], default: "rejected" },
+            rejectedBy: {
+              type: String,
+              enum: ["interpretation", "validation", "drc", "assertions"],
+            },
+            // Not `errors` — Mongoose reserves that path on documents (D-005).
+            rejectionErrors: { type: [Schema.Types.Mixed], default: [] },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
 
     startedAt: { type: Date },
     completedAt: { type: Date },
@@ -131,10 +196,15 @@ JobSchema.methods.hasAllOutputs = function hasAllOutputs() {
 JobSchema.methods.toPublicJSON = function toPublicJSON() {
   return {
     jobId: this.jobId,
+    designId: this.designId ?? this.jobId,
     designName: this.designName,
     status: this.status,
     version: this.version,
+    isCurrent: this.isCurrent,
     parentJobId: this.parentJobId,
+    origin: this.origin,
+    drc: this.drc,
+    modificationAttempts: this.modificationAttempts,
     outputs: this.outputs,
     hasAllOutputs: this.hasAllOutputs(),
     modifications: this.modifications,

@@ -278,6 +278,15 @@ This only applies where we already have positively-resolved real capability data
 
 **Definition of done:** structured-instruction and version schemas proposed and reviewed; one real fixture taken through a real natural-language repositioning request end-to-end, producing a genuine v2 with regenerated outputs; v1 confirmed unchanged and still accessible; DRC re-run proven to actually catch a deliberately-bad repositioning (same rigor as the pinLabels/traceCount proofs — not just claimed).
 
+**Prerequisite found and confirmed:** placement was derived at compile time (grid-based), not stored — `ValidatedDesign` had no placement field, so there was nowhere for a repositioning transform to write without reaching into the compiler and breaking the layer separation. Promoting placement to explicit `ValidatedDesign` state (existing grid logic as v1's default generator, per-component `source: auto_grid | modified` so re-layout can't silently discard a human-requested position) is approved — touches Phase 3's schema and Phase 5's compiler, necessarily. Side benefit: closes a latent gap where "design planning" (section 13, an Agent-layer job) was silently living inside the deterministic compiler — worth a one-line note in `docs/ARCHITECTURE.md`, not extra scope.
+
+**Five design decisions confirmed:**
+1. Placement prerequisite — approved (above).
+2. Rejected modification attempts record on the parent Job as `modificationAttempts`, never as a version document. Versions only ever represent complete, artifact-bearing, DRC-passed designs — same invariant as curated pinouts only getting entries that passed verification.
+3. Backfill existing job records (`designId = jobId`, `v1`, `isCurrent: true`) rather than leaving them un-versioned — small one-time deterministic migration, avoids permanent special-casing in every future version-lineage query.
+4. `absolute` mode stays, scoped specifically to *extracting user-stated coordinates* ("put it at x=20, y=15"), never to the model inventing a coordinate from a vague request ("near the corner" routes through `edge`/`relative_to` instead, where the deterministic layer resolves actual millimetres). Same deterministic validation (board-outline containment, DRC) applies to `absolute`'s output as every other mode — no shortcut just because a human supplied the number.
+5. DRC blocks on new `DRC_FAILURE` count > 0 only, not on any warning increase (9–21 baseline warnings on both fixtures makes a warning-increase gate unworkably strict). Optional, non-blocking addition: surface the warning-count delta in version provenance for visibility, even though it doesn't gate.
+
 
 
 The system fails **explicitly**, never silently and never by guessing:

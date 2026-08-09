@@ -14,6 +14,7 @@
  * See docs/VALIDATED_DESIGN_SCHEMA.md for the full field reference.
  */
 import { resolveFootprint } from "./footprintMap.js";
+import { generateGridPlacement } from "./placement.js";
 
 /** Bump when the shape changes incompatibly. Part of the determinism key. */
 export const VALIDATED_DESIGN_VERSION = "1.0";
@@ -210,6 +211,11 @@ export function buildValidatedDesign(upstream) {
     components,
     nets,
     constraints,
+    // Explicit state, not derived at compile time (Phase 8). The default
+    // generator reproduces the compiler's previous grid exactly, so v1 boards
+    // are unchanged; a modification overwrites individual entries and marks
+    // them `modified` so a later re-layout cannot silently discard them.
+    placement: generateGridPlacement(components, constraints.board_outline),
   };
 
   return {

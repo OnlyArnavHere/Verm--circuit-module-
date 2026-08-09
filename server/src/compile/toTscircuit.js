@@ -50,19 +50,18 @@ export function generateTscircuitSource(upstream, resolvedComponents) {
   const pinMaps = {};
   const lines = [];
 
-  // Spread components across the board deterministically so the autorouter has
-  // room; placement quality is not the point of the POC, reproducibility is.
-  const perRow = Math.ceil(Math.sqrt(components.length));
-  const stepX = width / (perRow + 1);
-  const stepY = height / (Math.ceil(components.length / perRow) + 1);
+  // Placement is READ, not computed (Phase 8). It is explicit ValidatedDesign
+  // state so a modification can change it; the compiler must not re-derive it,
+  // or a human-requested position would be silently overwritten on recompile.
+  const placement = upstream.placement?.components ?? {};
 
-  components.forEach((component, index) => {
+  for (const component of components) {
     const resolved = byRef.get(component.ref_id);
     const footprint = resolved?.resolution.footprint.value;
 
     // A component whose footprint never resolved is omitted from the compile
     // rather than given an invented one.
-    if (!footprint) return;
+    if (!footprint) continue;
 
     // Prefer the resolver's real name->pad mapping; fall back to positional
     // assignment only for logical pins the part has no named pad for.
@@ -85,17 +84,17 @@ export function generateTscircuitSource(upstream, resolvedComponents) {
     }
     pinMaps[component.ref_id] = padFor;
 
-    const col = index % perRow;
-    const row = Math.floor(index / perRow);
-    const pcbX = Number((-width / 2 + stepX * (col + 1)).toFixed(3));
-    const pcbY = Number((height / 2 - stepY * (row + 1)).toFixed(3));
+    const seat = placement[component.ref_id];
+    if (!seat) continue; // no placement => not on the board
+    const pcbX = seat.x_mm;
+    const pcbY = seat.y_mm;
 
     // Schematic placement is required as well as PCB placement: without schX/schY
     // the schematic ports get no coordinates and tscircuit silently *skips* the
     // traces that reference them ("does not have x/y coordinates"), leaving nets
     // unrouted while still reporting success.
-    const schX = Number(((col - (perRow - 1) / 2) * 5).toFixed(3));
-    const schY = Number((-(row * 5)).toFixed(3));
+    const schX = seat.sch_x;
+    const schY = seat.sch_y;
 
     // NOTE: `pinLabels` is deliberately NOT set. Setting it prevents tscircuit
     // from producing PCB traces at all — verified in isolation: identical boards
@@ -106,7 +105,7 @@ export function generateTscircuitSource(upstream, resolvedComponents) {
       `    <chip name=${jsx(component.ref_id)} footprint=${jsx(footprint)} ` +
         `pcbX={${pcbX}} pcbY={${pcbY}} schX={${schX}} schY={${schY}} />`
     );
-  });
+  }
 
   // Traces: chain each net's members pairwise, skipping pins we did not assign.
   for (const net of nets) {

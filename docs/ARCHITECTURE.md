@@ -32,6 +32,7 @@ run it, stop — route it through `ValidatedDesign` instead.
 | **Explaining errors** | Turning `FOOTPRINT_NOT_FOUND @ U2` into something a human can act on |
 | **Modification requests** | "Move the regulator away from the antenna" → a new `ValidatedDesign` → a new version |
 | **Proposing corrections** | Suggesting `SPI_10` should be `U7.SCK ↔ U1.SCK`, with reasoning |
+| **Design planning** | Interpreting "move the BLE module to the edge" into a bounded placement instruction |
 
 ### The deterministic layer owns
 
@@ -47,6 +48,8 @@ run it, stop — route it through `ValidatedDesign` instead.
 | tscircuit error ingestion | `design/tscircuitErrors.js` |
 | Independent post-compile assertions | `design/assertions.js` |
 | Compilation + artifact generation | `compile/` |
+| Placement state + default grid | `design/placement.js` |
+| Modification transform (repositioning) | `design/modification.js` |
 | Circuit-diagram rendering | `render/circuitDiagram.js` |
 
 **Nothing in the right-hand column calls an LLM.** That is what makes
@@ -60,6 +63,17 @@ The agent may **propose**; only the deterministic layer may **accept**.
 An agent suggestion becomes real by being written into a `ValidatedDesign` field
 with a `source` — and every non-verified source is visible downstream. An agent
 cannot make a mock look verified, because it does not get to write `source`.
+
+---
+
+### A latent gap that Phase 8 closed
+
+Component placement used to be computed *inside* the deterministic compiler
+(`generateTscircuitSource`). That put a design-planning decision — where a part
+should sit — in the layer that is supposed to only execute decisions, and made it
+invisible and unmodifiable. Phase 8 promoted placement to explicit
+`ValidatedDesign` state, so planning is expressible at the Agent layer where it
+belongs and the compiler merely consumes it.
 
 ---
 

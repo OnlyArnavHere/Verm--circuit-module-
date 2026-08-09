@@ -73,6 +73,8 @@ async function runFixture(name) {
   }
 
   // De-duplicated nets feed the compiler; upstream components are unchanged.
+  // `placement` must travel with it — since Phase 8 the compiler READS placement
+  // rather than deriving it, so omitting it emits a board with no components.
   const deduped = {
     ...upstream,
     nets: validated.design.nets.map((net) => ({
@@ -80,6 +82,7 @@ async function runFixture(name) {
       net_class: net.net_class,
       connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`),
     })),
+    placement: validated.design.placement,
   };
 
   // --- resolve (real first, mock per field) --------------------------------
