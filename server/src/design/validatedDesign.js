@@ -45,10 +45,17 @@ function deduplicateNets(nets) {
   const kept = [];
   const modifications = [];
 
-  const memberSet = (net) => new Set((net.connections ?? []).map(String));
-  const sorted = [...nets].sort(
-    (a, b) => (b.connections?.length ?? 0) - (a.connections?.length ?? 0)
-  );
+  // Works for both schema shapes: v1 "U1.VDD" strings and v2
+  // members[{ref_id, role}]. A v2 member is keyed by ref+role so that two
+  // nets are only "the same endpoint" when the role matches too.
+  const memberSet = (net) =>
+    new Set(
+      net.members
+        ? net.members.map((m) => `${m.ref_id}.${m.role}`)
+        : (net.connections ?? []).map(String)
+    );
+  const memberCount = (net) => net.members?.length ?? net.connections?.length ?? 0;
+  const sorted = [...nets].sort((a, b) => memberCount(b) - memberCount(a));
 
   for (const net of sorted) {
     const members = memberSet(net);
@@ -62,8 +69,8 @@ function deduplicateNets(nets) {
     if (superset) {
       modifications.push({
         target: `nets.${net.name}`,
-        field: "connections",
-        originalValue: net.connections,
+        field: net.members ? "members" : "connections",
+        originalValue: net.members ?? net.connections,
         correctedValue: null,
         reason:
           `Net "${net.name}" is fully contained in "${superset.name}", which already ` +
@@ -144,8 +151,17 @@ export function buildValidatedDesign(upstream) {
   const nets = dedup.nets.map((net) => ({
     name: net.name,
     net_class: net.net_class,
-    members: (net.connections ?? []).map((connection) => {
-      const { component, pin } = parsePinRef(connection);
+    // v2 carries the interface so the compiler and diagram can group a bus.
+    ...(net.interface ? { interface: net.interface } : {}),
+    members: (
+      // Schema 2.0: {ref_id, role}, no pin name asserted. Schema 1.0: "U1.SDA".
+      net.members
+        ? net.members.map((m) => ({ component: m.ref_id, pin: null, role: m.role, ref: `${m.ref_id}.${m.role}` }))
+        : (net.connections ?? []).map((connection) => {
+            const parsed = parsePinRef(connection);
+            return { component: parsed.component, pin: parsed.pin, role: null, ref: connection };
+          })
+    ).map(({ component, pin, role, ref: connection }) => {
 
       if (!knownRefs.has(component)) {
         errors.push({
@@ -158,7 +174,11 @@ export function buildValidatedDesign(upstream) {
 
       return {
         ref_id: component,
+        // v1 states a pin name (fabricated, D-076); v2 states a role and the
+        // resolver maps it onto a real pad. Both are preserved so an error can
+        // always name what actually failed.
         logicalPin: pin,
+        ...(role ? { role } : {}),
         // Logical -> physical pad resolution needs a verified pinout. Left null
         // deliberately; see `pins.source === "unresolved"` above.
         physicalPin: null,

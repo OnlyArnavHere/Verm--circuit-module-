@@ -13,12 +13,17 @@ const loadFixture = async (name) =>
 
 test("accepts every real Hardware Agent fixture", async () => {
   const files = (await fs.readdir(fixturesDir)).filter((f) => f.endsWith(".json"));
-  assert.equal(files.length, 4, "expected 4 fixtures");
+  assert.ok(files.length >= 5, `expected at least 5 fixtures, got ${files.length}`);
 
   for (const file of files) {
-    const result = checkIntakeShape(await loadFixture(file));
+    const fixture = await loadFixture(file);
+    const result = checkIntakeShape(fixture);
     assert.equal(result.ok, true, `${file} should pass intake: ${result.message}`);
-    assert.equal(result.schemaVersion, "1.0");
+    // Fixtures now span both schema versions: the four original v1 documents
+    // plus captured dunkai output. Assert intake reports the version the file
+    // actually declares rather than pinning every fixture to 1.0.
+    assert.equal(result.schemaVersion, fixture.schema_version);
+    assert.ok(["1.0", "2.0"].includes(result.schemaVersion), `${file}: ${result.schemaVersion}`);
   }
 });
 
@@ -42,9 +47,79 @@ test("rejects non-object roots", () => {
 });
 
 test("rejects an unsupported schema_version by its own code", () => {
-  const result = checkIntakeShape({ schema_version: "2.0", design_name: "x" });
+  // 2.0 is now SUPPORTED (role-based nets), so this needs a version that is
+  // genuinely unknown — otherwise the test silently stops testing anything.
+  const result = checkIntakeShape({ schema_version: "9.9", design_name: "x" });
   assert.equal(result.ok, false);
   assert.equal(result.code, "UNSUPPORTED_SCHEMA_VERSION");
+});
+
+test("schema 2.0 is accepted and reported as such", () => {
+  const result = checkIntakeShape({
+    schema_version: "2.0",
+    design_name: "x",
+    components: [
+      { ref_id: "U1", part_class: "processing", part_number: "P1", package: "SOP-8", quantity: 1 },
+      { ref_id: "U2", part_class: "sensor", part_number: "P2", package: "SOP-8", quantity: 1 },
+    ],
+    nets: [
+      {
+        name: "I2C_1_CLOCK",
+        interface: "I2C",
+        net_class: "signal",
+        members: [
+          { ref_id: "U1", role: "CLOCK" },
+          { ref_id: "U2", role: "CLOCK" },
+        ],
+      },
+    ],
+    constraints: { layer_count: 4, board_outline: { shape: "rectangle", width_mm: 100, height_mm: 60 } },
+  });
+  assert.equal(result.ok, true, result.message);
+  assert.equal(result.schemaVersion, "2.0");
+});
+
+test("a schema 2.0 net may not smuggle asserted pin names back in", () => {
+  const result = checkIntakeShape({
+    schema_version: "2.0",
+    design_name: "x",
+    components: [
+      { ref_id: "U1", part_class: "processing", part_number: "P1", package: "SOP-8", quantity: 1 },
+    ],
+    nets: [
+      {
+        name: "BAD",
+        interface: "I2C",
+        net_class: "signal",
+        members: [{ ref_id: "U1", role: "CLOCK" }],
+        connections: ["U1.SCL"],
+      },
+    ],
+    constraints: { layer_count: 4, board_outline: { shape: "rectangle", width_mm: 100, height_mm: 60 } },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.some((i) => i.includes("connections is not valid in schema 2.0")));
+});
+
+test("a schema 2.0 net with an unknown role is rejected", () => {
+  const result = checkIntakeShape({
+    schema_version: "2.0",
+    design_name: "x",
+    components: [
+      { ref_id: "U1", part_class: "processing", part_number: "P1", package: "SOP-8", quantity: 1 },
+    ],
+    nets: [
+      {
+        name: "BAD",
+        interface: "I2C",
+        net_class: "signal",
+        members: [{ ref_id: "U1", role: "SDA" }],
+      },
+    ],
+    constraints: { layer_count: 4, board_outline: { shape: "rectangle", width_mm: 100, height_mm: 60 } },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.some((i) => i.includes('role "SDA" is not a known role')));
 });
 
 test("reports every missing top-level section, not just the first", () => {

@@ -1865,3 +1865,85 @@ and must not be relaxed to make dunkai output compile.
 correct fix is at the selection step — validate a net's required function
 against the selected part's real pin set — which is the same recommendation
 Phase 6.6 already reached from the opposite direction.
+
+## D-077 — Schema 2.0: upstream states interface + role, never a pin name
+
+**Phase:** post-9 (upstream integration)
+**Status:** Accepted — **supersedes the v1 net contract for new designs**
+
+D-076 established that upstream pin names are fabricated by an interface→name
+table. Schema 2.0 removes the ability to fabricate them: upstream no longer
+asserts pin names at all.
+
+### The contract
+
+A net is **one wire**. Each member declares its **role** on that wire:
+
+```jsonc
+{ "name": "I2C_1_CLOCK", "interface": "I2C", "net_class": "signal",
+  "members": [{ "ref_id": "U1", "role": "CLOCK" },
+              { "ref_id": "U2", "role": "CLOCK" }] }
+```
+
+`components` is unchanged — `ref_id`/`part_class`/`part_number`/`package`/
+`quantity` are catalogue facts upstream genuinely has. Only `nets` changed.
+
+This makes three of the four §1 bugs **structurally unrepresentable** rather than
+merely detected: a clock cannot be tied to a data pin (a net carries one role,
+enforced by a compatibility matrix), an I2C bus cannot split into half-nets (one
+net per signal, carrying every participant), and redundant `POWER_N` nets cannot
+appear (rails are declared once). The checks that caught them stay — a
+hand-written or third-party v2 document could still get it wrong, and trusting
+that silently is exactly what this project does not do.
+
+`TX`/`RX` is the one legitimate exception to one-role-per-net: a UART link joins
+two complementary roles. It is whitelisted explicitly, not by loosening the rule.
+
+### Both versions are accepted, and stay distinguishable
+
+`SUPPORTED_SCHEMA_VERSIONS = ["1.0", "2.0"]`. `normalizeUpstream.js` collapses
+both into one internal member shape so no downstream module needs its own
+branch. Each member carries **`roleIsDeclared`**: true when upstream stated the
+role (v2), false when we inferred it from an asserted pin name (v1). That flag
+is load-bearing — a v1 role is evidence about a *string*, not about the part,
+and the two must never blur. The five existing fixtures remain v1 and keep
+D-076's framing.
+
+### No mock path in schema 2.0
+
+v1 falls back to labelled positional mocks so a design still compiles. **v2 does
+not.** An unresolvable role stays `UNRESOLVED` and blocks compilation, reported
+as `PIN_NOT_FOUND` or `PART_CAPABILITY_MISMATCH`. This is a deliberate trade:
+some v2 designs will produce fewer complete artifacts than v1 did for the same
+input. A design that cannot be resolved should not look manufacturable, and v1's
+mock path is exactly how "looks complete" and "is correct" came apart before.
+
+### GPIO is allocated, not looked up — and the allocation is naive
+
+Every other role resolves by name against the part's real pins. GPIO cannot: a
+GPIO net needs a *choice*. Upstream carries no sub-requirement to honour —
+verified, the architecture edge schema is `{source, target, interface}` with no
+qualifier field, and `PWM`/`ADC`/`Analog`/`I2S` are first-class interfaces rather
+than GPIO sub-roles, so nothing is being discarded. `allocateGpio()` therefore
+takes the **lowest-numbered unallocated general-purpose pad**, deterministically,
+and records a `GPIO_ALLOCATED` modification with its reason. It is never silent.
+
+**Accepted limitation — numeric order is not electrical suitability.** Real parts
+have pins that are unsuitable for an arbitrary GPIO assignment:
+
+- **strapping/boot pins** sampled at reset (a pull-up can change boot mode),
+- **input-only** pins that cannot drive an output,
+- **programming/debug pins** (SWD/JTAG/UART bootloader) that break flashing,
+- pins with **special analog or high-current** characteristics.
+
+`extractPinout()` returns only names and pad numbers — **there is no per-pin
+capability metadata to filter on**, so no amount of care in the allocator can
+currently avoid these. Numeric-order allocation is an MVP limitation, accepted
+knowingly, **not a bug**. It is safe to ship because the allocation is recorded
+as a modification a human can review, not buried.
+
+Revisit if per-pin capability data becomes available — catalogue attributes, a
+curated per-part table in the shape of `curatedPinouts.js`, or datasheet
+extraction. At that point the allocator should filter candidates by suitability
+before ordering them. Until then, do not present GPIO assignment as verified: it
+is a deterministic guess with a paper trail.

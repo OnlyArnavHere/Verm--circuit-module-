@@ -1,0 +1,334 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, schema v2 (role-based), net-builder bug FIXED",
+    "captured": "2026-08-21",
+    "source": "dunkai @ 1d3babf + uncommitted v2 net builder, run.py --requirements",
+    "generator": "role-emitting net builder (D-077); _interface_pin_name and the v1 builder are deleted",
+    "pair": "Before/after partner of dunkai_real_v1_unfixed.json. SAME requirements input file. NOT the same component set: the architecture agent is LLM-driven and non-deterministic, so this run produced 10 subsystems where the v1 run produced 11, with different parts selected (MCU MC9RS08KA1CSCR here vs FS32K116LFT0MLFT there). The pair is valid for comparing NET SHAPE and validation semantics, not for a part-by-part diff.",
+    "what_changed": {
+      "pin_names": "none. Members carry {ref_id, role} only; there is no field a pin name could occupy.",
+      "i2c": "one bus, two nets (CLOCK + DATA), every participant on each. v1 emitted 3 disconnected half-nets all terminating at U1.SDA.",
+      "spi": "CLOCK/MOSI/MISO shared across the bus + one CS net per peripheral. v1 tied U4.SCK and U5.SCK to U1.MOSI.",
+      "power": "one POWER_RAIL from real Power edges + one GND. v1 added redundant POWER_1..3 on top of POWER_RAIL_3V3.",
+      "uart": "two nets, TX->RX and RX->TX, the only place differing roles legitimately share a wire."
+    },
+    "validation": "dunkai reports handoff_validation.well_formed, NOT validation.passed -- it makes no buildability claim under v2. This capture is well_formed=false on one real gap: U6 (BT2S) has package '-', so the PCB module cannot resolve a footprint. v1 reported passed=true for the same component.",
+    "not_exercised": [
+      "GPIO allocation -- this run produced no GPIO edge, so allocateGpio() is unexercised here (v1's run had one)",
+      "wireless_links -- no BLE/WiFi/RF edges in this architecture"
+    ],
+    "known_caveats": [
+      "eda.py parse_bom_csv still calls the live EasyEDA API per BOM row, so packages are not offline-reproducible.",
+      "Captured after the HF fetch timeout fix (1d3babf); this run needed zero retries."
+    ]
+  },
+  "schema_version": "2.0",
+  "design_name": "dunkai_design",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "MC9RS08KA1CSCR",
+      "package": "SOIC-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "sensor",
+      "part_number": "HDC1080DMBR",
+      "package": "WSON-6(3x3)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "clock",
+      "part_number": "PCF8563",
+      "package": "SOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "storage",
+      "part_number": "IS62WVS2568GBLL-45NLI-TR",
+      "package": "SOIC-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "output",
+      "part_number": "YD2310AR-7.3",
+      "package": "\u63d2\u4ef6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U6",
+      "part_class": "communication",
+      "part_number": "BT2S",
+      "package": "-",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U7",
+      "part_class": "power",
+      "part_number": "TP4336",
+      "package": "ESOP-8L",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U8",
+      "part_class": "power",
+      "part_number": "AD4057",
+      "package": "SOT-23-6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U9",
+      "part_class": "power",
+      "part_number": "LNK623PG",
+      "package": "DIP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U10",
+      "part_class": "clock",
+      "part_number": "YSN8563S",
+      "package": "SOP-8",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "POWER_RAIL",
+      "interface": "Power",
+      "net_class": "power",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U7",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U8",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U9",
+          "role": "SUPPLY"
+        }
+      ]
+    },
+    {
+      "name": "GND",
+      "interface": "Power",
+      "net_class": "ground",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U2",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U3",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U4",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U6",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U7",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U8",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U9",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U10",
+          "role": "GROUND"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_CLOCK",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U2",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U3",
+          "role": "CLOCK"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_DATA",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "DATA"
+        },
+        {
+          "ref_id": "U2",
+          "role": "DATA"
+        },
+        {
+          "ref_id": "U3",
+          "role": "DATA"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_CLOCK",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U4",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U5",
+          "role": "CLOCK"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_MOSI",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "MOSI"
+        },
+        {
+          "ref_id": "U4",
+          "role": "MOSI"
+        },
+        {
+          "ref_id": "U5",
+          "role": "MOSI"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_MISO",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "MISO"
+        },
+        {
+          "ref_id": "U4",
+          "role": "MISO"
+        },
+        {
+          "ref_id": "U5",
+          "role": "MISO"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_CS_U4",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CHIP_SELECT"
+        },
+        {
+          "ref_id": "U4",
+          "role": "CHIP_SELECT"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_CS_U5",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CHIP_SELECT"
+        },
+        {
+          "ref_id": "U5",
+          "role": "CHIP_SELECT"
+        }
+      ]
+    },
+    {
+      "name": "UART_10_TX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "TX"
+        },
+        {
+          "ref_id": "U6",
+          "role": "RX"
+        }
+      ]
+    },
+    {
+      "name": "UART_11_RX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "RX"
+        },
+        {
+          "ref_id": "U6",
+          "role": "TX"
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}

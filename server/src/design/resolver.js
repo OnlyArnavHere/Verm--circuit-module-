@@ -13,6 +13,8 @@ import { resolvePart } from "./partsEngine.js";
 import { extractPinout, matchLogicalPin } from "./pinout.js";
 import { curatedPinout } from "./curatedPinouts.js";
 import { classifyUnresolvedPin, CAPABILITY_VERDICT } from "./capabilityCheck.js";
+import { resolveRole, allocateGpio } from "./roleMap.js";
+import { pinRequestsByRef } from "./normalizeUpstream.js";
 
 /**
  * Provenance values, most trusted first. `source` records *how* a value was
@@ -48,6 +50,8 @@ const field = (source, value, extra = {}) => ({
  */
 export async function resolveComponent(component, options = {}) {
   const errors = [];
+  // Corrections and allocations are never silent (PROJECT_PLAN section 5).
+  const modifications = [];
 
   // --- footprint + pads ----------------------------------------------------
   //
@@ -132,9 +136,18 @@ export async function resolveComponent(component, options = {}) {
   // logical pin (U3.SCL) can often be matched to a real pad by name instead of
   // being assigned positionally. Resolved per pin, not per component: some pins
   // match for real while others on the same part do not.
-  const logicalPins = [...(options.logicalPinsByRef?.[component.ref_id] ?? [])].sort();
+  // Schema 2.0 sends {interface, role} and no pin name; schema 1.0 sends an
+  // asserted pin name. `requests` carries whichever applies, already normalized.
+  const requests = options.pinRequestsByRef?.[component.ref_id]
+    ?? [...(options.logicalPinsByRef?.[component.ref_id] ?? [])]
+      .sort()
+      .map((logicalPin) => ({ interface: null, role: null, logicalPin, roleIsDeclared: false }));
+  // Label a request for the maps/messages: "I2C/CLOCK" (v2) or "SDA" (v1).
+  const labelOf = (r) => (r.roleIsDeclared ? `${r.interface}/${r.role}` : r.logicalPin);
+  const logicalPins = requests.map(labelOf);
   const pinMap = {};
   const pinDetail = {};
+  const allocatedPads = new Set();
   let realPins = 0;
   // Provenance of the pin mapping as a whole: curated (part-specific verified
   // table) or parts_engine (names read off the catalogue footprint).
@@ -151,9 +164,44 @@ export async function resolveComponent(component, options = {}) {
     const pinSource = curatedPins.ok ? SOURCE.CURATED : SOURCE.PARTS_ENGINE;
     pinsResolvedFrom = pinSource;
 
-    for (const logical of logicalPins) {
-      const match = pinout.ok ? matchLogicalPin(logical, pinout) : { ok: false };
+    for (const request of requests) {
+      const logical = labelOf(request);
+      let match = { ok: false };
+      let allocatedGpio = false;
+      if (pinout.ok) {
+        if (request.roleIsDeclared) {
+          // v2: resolve the DECLARED role against the part's real pin names.
+          if (request.interface === "GPIO") {
+            // GPIO is a choice, not a lookup — allocate deterministically and
+            // record it below as a modification. Never silent.
+            match = allocateGpio(pinout, allocatedPads);
+            allocatedGpio = match.ok;
+          } else {
+            // allocatedPads lets a per-net role (chip select) claim a DISTINCT
+            // pad per net instead of every net getting the same first match.
+            match = resolveRole(
+              request.interface, request.role, pinout, matchLogicalPin, allocatedPads,
+            );
+          }
+        } else {
+          // v1: match the asserted (fabricated, per D-076) pin name by string.
+          match = matchLogicalPin(request.logicalPin, pinout);
+        }
+      }
       if (match.ok) {
+        allocatedPads.add(match.pad);
+        if (allocatedGpio) {
+          modifications.push({
+            target: `${component.ref_id}.${logical}`,
+            originalValue: null,
+            correctedValue: match.matchedName,
+            reason:
+              `GPIO is an allocation, not a lookup: upstream asked for a GPIO connection ` +
+              `without naming a pad, so the lowest-numbered unallocated general-purpose ` +
+              `I/O pin ("${match.matchedName}") was assigned deterministically.`,
+            detectedBy: "GPIO_ALLOCATED",
+          });
+        }
         pinMap[logical] = match.pad;
         pinDetail[logical] = {
           pad: match.pad,
@@ -168,12 +216,20 @@ export async function resolveComponent(component, options = {}) {
         // Not merely "unresolved": if the part's full pin set is confirmed and
         // this function is not in it, that is a capability mismatch — an
         // upstream error rather than something more research would fix.
-        const verdict = classifyUnresolvedPin(logical, pinout);
+        // Classify against a concrete function name: for v2 use the first
+        // candidate the role maps to, since that is what was actually sought.
+        const probe = request.roleIsDeclared
+          ? (match.tried?.[0] ?? request.role)
+          : request.logicalPin;
+        const verdict = classifyUnresolvedPin(probe, pinout);
         const isMismatch = verdict.code === CAPABILITY_VERDICT.MISMATCH;
 
         pinDetail[logical] = {
           pad: null,
-          source: SOURCE.MOCK,
+          // Schema 2.0 has NO mock path: an unresolvable role stays unresolved
+          // and blocks compilation. v1 keeps its labelled-mock behaviour so the
+          // existing fixtures still exercise the legacy path.
+          source: request.roleIsDeclared ? SOURCE.UNRESOLVED : SOURCE.MOCK,
           real: false,
           code: verdict.code,
           capabilityConfirmed: verdict.capabilityConfirmed,
@@ -195,10 +251,12 @@ export async function resolveComponent(component, options = {}) {
       }
     }
   } else {
-    for (const logical of logicalPins) {
+    for (const request of requests) {
+      const logical = labelOf(request);
       pinDetail[logical] = {
         pad: null,
-        source: SOURCE.MOCK,
+        // See above: schema 2.0 never falls back to a positional mock.
+        source: request.roleIsDeclared ? SOURCE.UNRESOLVED : SOURCE.MOCK,
         real: false,
         reason: "no resolved footprint, so no catalogue pinout is available",
       };
@@ -208,7 +266,9 @@ export async function resolveComponent(component, options = {}) {
         code: "PIN_NOT_FOUND",
         message:
           `No verified pinout for "${component.part_number}" (${component.ref_id}); ` +
-          `all ${logicalPins.length} logical pin(s) assigned positionally as labelled mocks.`,
+          (requests.some((r) => r.roleIsDeclared)
+            ? `all ${logicalPins.length} role(s) left UNRESOLVED — schema 2.0 has no mock fallback.`
+            : `all ${logicalPins.length} logical pin(s) assigned positionally as labelled mocks.`),
         target: component.ref_id,
         detail: { part_number: component.part_number },
       });
@@ -218,10 +278,15 @@ export async function resolveComponent(component, options = {}) {
   // Component-level source reflects the weakest pin: fully real only when every
   // logical pin matched a real named pad.
   const allReal = logicalPins.length > 0 && realPins === logicalPins.length;
+  // A v2 request that failed leaves the mapping UNRESOLVED, which must never
+  // reach the compiler; a v1 failure degrades to a labelled MOCK as before.
+  const anyDeclaredUnresolved = requests.some(
+    (r) => r.roleIsDeclared && pinDetail[labelOf(r)]?.real === false
+  );
   const pins = field(
     // Real only when EVERY logical pin matched; a single positional fallback
     // makes the whole mapping unsafe to manufacture from.
-    allReal ? pinsResolvedFrom : SOURCE.MOCK,
+    allReal ? pinsResolvedFrom : anyDeclaredUnresolved ? SOURCE.UNRESOLVED : SOURCE.MOCK,
     pinMap,
     {
       realCount: realPins,
@@ -238,6 +303,7 @@ export async function resolveComponent(component, options = {}) {
   );
 
   return {
+    modifications,
     ref_id: component.ref_id,
     part_number: component.part_number,
     part_class: component.part_class,
@@ -264,17 +330,23 @@ export function logicalPinsByRef(nets) {
 export async function resolveComponents(components, nets = [], options = {}) {
   const resolved = [];
   const errors = [];
-  const byRef = logicalPinsByRef(nets);
+  const modifications = [];
+  // `nets` may be raw v1 nets or already-normalized nets. pinRequestsByRef
+  // understands the normalized shape; logicalPinsByRef remains the v1 fallback.
+  const requestsByRef = options.pinRequestsByRef
+    ?? (nets.some((n) => Array.isArray(n?.members)) ? pinRequestsByRef(nets) : null);
+  const byRef = requestsByRef ? null : logicalPinsByRef(nets);
 
   for (const component of components) {
     const result = await resolveComponent(component, {
       ...options,
-      logicalPinsByRef: byRef,
+      ...(requestsByRef ? { pinRequestsByRef: requestsByRef } : { logicalPinsByRef: byRef }),
     });
     resolved.push(result);
     errors.push(...result.errors);
+    modifications.push(...(result.modifications ?? []));
   }
-  return { components: resolved, errors };
+  return { components: resolved, errors, modifications };
 }
 
 /**

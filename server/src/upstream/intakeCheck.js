@@ -12,7 +12,16 @@
  * and they must stay distinguishable.
  */
 
-const SUPPORTED_SCHEMA_VERSIONS = ["1.0"];
+import { isKnownInterface, KNOWN_ROLES } from "../design/roleMap.js";
+
+// 1.0: nets carry `connections: ["U1.SDA"]` -- upstream ASSERTS a pin name.
+//      Those names are fabricated from an interface->name table (D-076); they are
+//      parsed, never trusted.
+// 2.0: nets carry `interface` + `members: [{ref_id, role}]` -- upstream states
+//      intent only, and this module resolves the role onto a real pad.
+const SUPPORTED_SCHEMA_VERSIONS = ["1.0", "2.0"];
+
+const isV2 = (schemaVersion) => String(schemaVersion ?? "").startsWith("2.");
 
 const PART_CLASSES = [
   "processing",
@@ -105,7 +114,39 @@ export function checkIntakeShape(payload) {
       if (typeof net.name !== "string" || !net.name) {
         issues.push(`${at}.name is missing`);
       }
-      if (!Array.isArray(net.connections)) {
+      if (isV2(schemaVersion)) {
+        // Schema 2.0: interface + members[{ref_id, role}], no pin names.
+        if (typeof net.interface !== "string" || !net.interface) {
+          issues.push(`${at}.interface is missing`);
+        } else if (!isKnownInterface(net.interface)) {
+          issues.push(`${at}.interface "${net.interface}" is not a known interface`);
+        }
+        if (!Array.isArray(net.members)) {
+          issues.push(`${at}.members is missing or not an array`);
+        } else if (net.members.length === 0) {
+          issues.push(`${at}.members is empty`);
+        } else {
+          net.members.forEach((member, memberIndex) => {
+            const where = `${at}.members[${memberIndex}]`;
+            if (member === null || typeof member !== "object") {
+              issues.push(`${where} is not an object`);
+              return;
+            }
+            if (typeof member.ref_id !== "string" || !member.ref_id) {
+              issues.push(`${where}.ref_id is missing`);
+            }
+            if (typeof member.role !== "string" || !member.role) {
+              issues.push(`${where}.role is missing`);
+            } else if (!KNOWN_ROLES.has(member.role)) {
+              issues.push(`${where}.role "${member.role}" is not a known role`);
+            }
+          });
+        }
+        if (Object.prototype.hasOwnProperty.call(net, "connections")) {
+          // A v2 document must not smuggle asserted pin names back in.
+          issues.push(`${at}.connections is not valid in schema 2.0 -- use members[{ref_id, role}]`);
+        }
+      } else if (!Array.isArray(net.connections)) {
         issues.push(`${at}.connections is missing or not an array`);
       } else {
         net.connections.forEach((connection, connectionIndex) => {
