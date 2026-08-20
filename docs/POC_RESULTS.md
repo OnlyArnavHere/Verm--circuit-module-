@@ -509,14 +509,35 @@ data per part.
 
 ## SYSTEMIC FINDING — one upstream bug, many symptoms
 
-**The Hardware Agent assigns class-typical nets without verifying the selected
-part provides that function.**
+**The Hardware Agent derives every pin name from the interface type, never from
+the selected component.**
 
 This is a single upstream defect, not a list of unrelated part-level mistakes,
-and it is worth fixing at the source rather than case by case. The pattern: a
-part is chosen by `part_class`, then a net typical of that class is attached —
-`AUDIO` to an `output` part, `SCL` to a `sensor`, `ANT` to a `communication`
-part — without checking the specific part actually has that pin.
+and it is worth fixing at the source rather than case by case. The symptom seen
+from here is that a part is chosen by `part_class`, then a net typical of that
+class is attached — `AUDIO` to an `output` part, `SCL` to a `sensor`, `ANT` to a
+`communication` part — without checking the specific part actually has that pin.
+
+**Root cause, confirmed by reading the generator (D-076).** This was originally
+inferred to be a defect in part *selection*. It is not — it is in *net
+construction*. In `ai_engine/agents/supervisor/nodes.py`, `_interface_pin_name()`
+maps an interface to pin names from a fixed table (`I2C -> (SCL, SDA)`,
+`SPI -> (SCK, MOSI, MISO, CS)`, `Power -> (VDD, VCC, 3V3)`), and
+`_build_nets_from_architecture()` emits one 2-member net per architecture edge —
+source takes pin index 0, target index 1 — while attaching `.GND`/`.VDD` to every
+reference unconditionally. The backing component dataset has **no pinout data at
+all: 0 of 490,894 rows carry `pins_json`/`pinout`/`symbol`.**
+
+**Scope is wider than this section originally claimed.** The same function also
+produces all four "known bugs" of `PROJECT_PLAN.md` §1: the SCK↔MOSI pairing
+(SPI edge → source `SCK`, target `MOSI`), the split I2C half-nets (I2C edge →
+source `SCL`, target `SDA`, so two edges never share a rail), and the redundant
+`POWER_1..N` nets (unconditional `.VDD` rail plus per-edge `Power` nets). Four
+"data bugs" and five "capability mismatches" are nine symptoms of one defect.
+
+**Therefore the fixture pin names are fabricated, and a clean pass on one of
+these designs would be a false pass** — see D-076 for what that bounds, including
+the 32/63 real-pin count.
 
 Now detected automatically and continuously by `PART_CAPABILITY_MISMATCH`
 (Phase 6.6), so future Hardware Agent output is checked on arrival rather than
@@ -535,9 +556,17 @@ our pin-name coverage for those parts is incomplete, so the check stays
 conservative and reports `PIN_NOT_FOUND`. They are listed here as human
 observations, not machine claims.
 
-**Recommended upstream fix:** validate a net's required function against the
-selected part's real pin set at selection time. One check upstream removes an
-entire class of defect that currently surfaces only downstream.
+**Recommended upstream fix (corrected).** "Validate a net's required function
+against the selected part's real pin set at selection time" is necessary but
+**insufficient on its own — with no pinout data in the dataset there is nothing
+to validate against.** The fix is ordered:
+
+1. Source real per-part pinouts into the component dataset (currently 0/490,894).
+2. Emit pin names from that data instead of from the interface table.
+3. Then add the selection-time validation above as the guard against regression.
+
+One fix at the root removes an entire class of defect that currently surfaces
+only downstream.
 
 ## UPSTREAM DATA ERRORS — not resolution gaps
 

@@ -183,7 +183,7 @@ error. When something is mocked, label it (`mocked: true` + `mockReason`).
 
 ## Test fixtures contain known bugs — on purpose
 
-`test-fixtures/` holds four real Hardware Agent outputs. Treat upstream nets as
+`test-fixtures/` holds four Hardware Agent outputs. Treat upstream nets as
 **claims to verify**, not ground truth. The validator must catch these:
 
 | File | Net(s) | Bug |
@@ -195,6 +195,23 @@ error. When something is mocked, label it (`mocked: true` + `mockReason`).
 
 These files **upload successfully in Phase 1** — that's correct, they're
 structurally valid. Catching them is Phase 3–5 work.
+
+**Their pin names are fabricated — see D-076 before trusting any of them.** The
+upstream net-builder derives pin names from interface type, not from the selected
+part (its dataset has zero pinout rows), so all four bugs above are deterministic
+outputs of one function rather than incidental data errors. Consequences:
+
+- These fixtures are valid for intake, de-duplication, error paths, and
+  determinism. They are **not** evidence of electrical correctness.
+- **A dunkai design reaching `compilable: true` is a false pass, not a
+  milestone** — same shape as the zero-pad case (D-009) and the false
+  `real:true` bug: the check passes because the input is meaningless.
+- The 32/63 real-pin count is an **upper bound**. A fabricated `SDA` that lands
+  on a footprint genuinely exposing `SDA` is indistinguishable here from a
+  correct mapping.
+- Do **not** relax `FOOTPRINT_NOT_FOUND`, `PIN_NOT_FOUND`, or `compilable:
+  false` to make dunkai output compile. That conservatism is what is currently
+  protecting this repo.
 
 `rc_car.json` is the simplest (3 components) — use it for the first POC.
 `noise_pollution_monitor.json` is the most complex — use it to prove the validator.

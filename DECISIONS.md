@@ -1785,3 +1785,83 @@ phases as evidence.
 Trading a verifiable history for ~2 MB is a bad trade. Revisit only if a real
 secret is ever committed, in which case rewriting is mandatory and the size
 question is irrelevant.
+
+## D-076 — `test-fixtures/*.json` are generator artifacts, not verified ground truth
+
+**Phase:** post-9 (upstream integration)
+**Status:** Accepted — **reframes the "known upstream bugs" of PROJECT_PLAN §1**
+
+The four files in `test-fixtures/` have been treated throughout this project as
+"four real Hardware Agent outputs" whose nets are *claims to verify*. That
+framing was right, but it understated the problem: **their pin names are
+fabricated by construction, and the four documented bugs are deterministic
+outputs of a single upstream function** — not incidental data-entry errors in
+otherwise-real designs.
+
+### Evidence 1 — the pin vocabulary is impossibly small
+
+Across all four fixtures the complete set of referenced pin names is eleven
+strings:
+
+```
+GND, VDD, SCL, SDA, ANT, GPIO1, AUDIO, SCK, MOSI, TX, RX
+```
+
+That set covers every component, including `MIMXRT1172CVM8A` — a **289-ball
+BGA**. No real pinout collapses to this vocabulary.
+
+### Evidence 2 — the upstream generator, read directly
+
+The upstream Hardware Agent (dunkai) builds nets in
+`ai_engine/agents/supervisor/nodes.py`:
+
+- `_interface_pin_name(interface, index)` maps an **interface type** to pin
+  names from a fixed table (`I2C -> (SCL, SDA)`, `SPI -> (SCK, MOSI, MISO, CS)`,
+  `Power -> (VDD, VCC, 3V3)`, …). It never consults the selected part.
+- `_build_nets_from_architecture` emits one 2-member net per architecture edge,
+  giving the **source** pin index 0 and the **target** pin index 1, and
+  additionally attaches `.GND` and `.VDD` to *every* reference unconditionally.
+
+Confirmed upstream: the component dataset backing this has **no `pins_json`,
+`pinout`, or `symbol` data at all — 0 of 490,894 rows.** There is no per-part
+pinout for the generator to have used.
+
+### Consequence — §1's four bugs are one root cause
+
+| PROJECT_PLAN §1 bug | Generator behaviour that produces it |
+|---|---|
+| `SPI_*`: `U7.SCK` tied to `U1.MOSI` | `SPI` edge → source gets index 0 (`SCK`), target index 1 (`MOSI`) |
+| `I2C_7`/`I2C_11`: both end at `SDA`, never join `SCL` | `I2C` edge → source `SCL`, target `SDA`; two edges never share a rail |
+| `POWER_1..N` redundant with `POWER_RAIL_3V3` | unconditional `.VDD` rail **plus** per-edge `Power` nets |
+| Class-typical nets on parts lacking the function (D-06x / Phase 6.6) | interface table + unconditional rails, applied without reading the part |
+
+These are four symptoms of one defect: **pin names are derived from interface
+type, never from the selected component.**
+
+### What this changes here
+
+1. **Fixture pin names carry no evidentiary weight.** They may not be treated as
+   ground truth in any test that asserts electrical correctness. They remain
+   perfectly valid for what they have always actually exercised: intake
+   structure, net de-duplication, error-path coverage, and determinism.
+2. **A clean validation of a dunkai design is a false pass, not a real one.**
+   Same shape as D-009 (`DFN-8-EP(2x3)`: zero errors, zero pads) and the false
+   `real:true` bug — a check passing because the input is meaningless, not
+   because the board is correct. If a design ever reaches `compilable: true`
+   with these pin names, that is a defect report, not a milestone.
+3. **The 32/63 "real pin" count is now bounded above, not asserted.** Those
+   mappings resolved *fabricated logical names* against real footprints. A
+   fabricated `SDA` landing on a footprint that genuinely exposes `SDA` is a
+   name collision that cannot be distinguished, by this pipeline, from a correct
+   mapping. `LP103SB6F.GND` (independently corroborated per Phase 6.5) is
+   unaffected; the unaudited remainder is not.
+
+The conservatism already built in is what has been protecting this repo:
+`FOOTPRINT_NOT_FOUND` over lookalike substitution (D-010), `PIN_NOT_FOUND` over
+invention, and `compilable: false` for `rc_car.json`. That posture is correct
+and must not be relaxed to make dunkai output compile.
+
+**Not fixed here.** The defect is upstream and out of this repo's scope. The
+correct fix is at the selection step — validate a net's required function
+against the selected part's real pin set — which is the same recommendation
+Phase 6.6 already reached from the opposite direction.
