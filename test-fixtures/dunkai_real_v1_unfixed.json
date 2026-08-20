@@ -1,0 +1,249 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, net-builder bug present, schema v1",
+    "captured": "2026-08-20",
+    "source": "dunkai @ 832a97c, ai_engine/agents/supervisor/run.py --requirements",
+    "generator": "_build_nets_from_architecture + _interface_pin_name (UNFIXED)",
+    "status": "NOT ground truth. Pin names are fabricated from an interface->name table, not from real per-part pinouts. See pcb-agent DECISIONS.md D-076.",
+    "hf_dataset_path": "EXERCISED AND SUCCEEDED - this had never run before. Private HF repo rayyanshk/dunkai streamed in-memory: 490,894 dataset rows, embeddings (490894, 384), FAISS index 490,894 vectors, model BAAI/bge-small-en-v1.5 on cpu. Retriever built a category index over 927 taxonomy labels and ranked candidates for all 11 refs.",
+    "known_caveats": [
+      "faiss/torch/sklearn each bundle their own libomp; capture required the OpenMP guard added to component_agent/config.py (SIGABRT 134 / SIGSEGV 139 without it).",
+      "eda.py parse_bom_csv calls the live EasyEDA API per BOM row, so component packages are not offline-reproducible.",
+      "dunkai self-reported validation.passed = TRUE despite 11x MISSING_PINS + 11x MISSING_SYMBOL, because those are severity 'warning' (nodes.py:521). MISSING_PINS->error is pending.",
+      "Architecture agent produced 11 subsystems, not the 8 of the spec's running example."
+    ],
+    "bugs_reproduced": {
+      "split_i2c_half_nets": [
+        "I2C_4",
+        "I2C_5",
+        "I2C_9"
+      ],
+      "sck_tied_to_mosi": [
+        "SPI_6",
+        "SPI_7"
+      ],
+      "redundant_power_nets": [
+        "POWER_1",
+        "POWER_2",
+        "POWER_3"
+      ],
+      "unconditional_rails": "GND and POWER_RAIL_3V3 attach to all 11 refs without checking the part"
+    },
+    "distinct_pin_names": [
+      "GND",
+      "GPIO1",
+      "MOSI",
+      "RX",
+      "SCK",
+      "SCL",
+      "SDA",
+      "TX",
+      "VDD"
+    ]
+  },
+  "schema_version": "1.0",
+  "design_name": "dunkai_design",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "FS32K116LFT0MLFT",
+      "package": "LQFP-48(7x7)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "sensor",
+      "part_number": "HDC1080DMBR",
+      "package": "WSON-6(3x3)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "clock",
+      "part_number": "PCF8563",
+      "package": "SOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "storage",
+      "part_number": "IS62WVS2568GBLL-45NLI-TR",
+      "package": "SOIC-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "output",
+      "part_number": "YD2310AR-7.3",
+      "package": "\u63d2\u4ef6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U6",
+      "part_class": "communication",
+      "part_number": "BT2S",
+      "package": "-",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U7",
+      "part_class": "power",
+      "part_number": "TP4336",
+      "package": "ESOP-8L",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U8",
+      "part_class": "power",
+      "part_number": "IP5310",
+      "package": "QFN-32-EP(5x5)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U9",
+      "part_class": "power",
+      "part_number": "LNK623DG-TL",
+      "package": "SOIC-7",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U10",
+      "part_class": "power",
+      "part_number": "TP4333",
+      "package": "SOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U11",
+      "part_class": "clock",
+      "part_number": "01.O.MC.GTFRIAF48000000",
+      "package": "SMD3225-4P",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "GND",
+      "connections": [
+        "U1.GND",
+        "U2.GND",
+        "U3.GND",
+        "U4.GND",
+        "U5.GND",
+        "U6.GND",
+        "U7.GND",
+        "U8.GND",
+        "U9.GND",
+        "U10.GND",
+        "U11.GND"
+      ],
+      "net_class": "ground"
+    },
+    {
+      "name": "POWER_RAIL_3V3",
+      "connections": [
+        "U1.VDD",
+        "U2.VDD",
+        "U3.VDD",
+        "U4.VDD",
+        "U5.VDD",
+        "U6.VDD",
+        "U7.VDD",
+        "U8.VDD",
+        "U9.VDD",
+        "U10.VDD",
+        "U11.VDD"
+      ],
+      "net_class": "power"
+    },
+    {
+      "name": "POWER_1",
+      "connections": [
+        "U10.VDD",
+        "U1.VDD"
+      ],
+      "net_class": "power"
+    },
+    {
+      "name": "POWER_2",
+      "connections": [
+        "U7.VDD",
+        "U10.VDD"
+      ],
+      "net_class": "power"
+    },
+    {
+      "name": "POWER_3",
+      "connections": [
+        "U10.VDD",
+        "U9.VDD"
+      ],
+      "net_class": "power"
+    },
+    {
+      "name": "I2C_4",
+      "connections": [
+        "U2.SCL",
+        "U1.SDA"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "I2C_5",
+      "connections": [
+        "U3.SCL",
+        "U1.SDA"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "SPI_6",
+      "connections": [
+        "U4.SCK",
+        "U1.MOSI"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "SPI_7",
+      "connections": [
+        "U5.SCK",
+        "U1.MOSI"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "UART_8",
+      "connections": [
+        "U6.TX",
+        "U1.RX"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "I2C_9",
+      "connections": [
+        "U8.SCL",
+        "U1.SDA"
+      ],
+      "net_class": "signal"
+    },
+    {
+      "name": "GPIO_10",
+      "connections": [
+        "U11.GPIO1",
+        "U1.GPIO1"
+      ],
+      "net_class": "signal"
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}
