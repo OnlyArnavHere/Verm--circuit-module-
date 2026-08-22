@@ -46,6 +46,15 @@
     "stock": 11090,
     "matchedOn": "part_number+package"
   },
+  "CHT20MEMS::SMD-6P,3x3mm": {
+    "ok": true,
+    "lcsc": "C26159166",
+    "footprint": "jlcpcb:C26159166",
+    "package": "SMD-6P,3x3mm",
+    "description": "-40℃~+85℃ 0%RH~100%RH 2.2V~5.5V 980uA I2C ±2%RH SMD-6P,3x3mm Temperature and Humidity Sensor ROHS",
+    "stock": 5883,
+    "matchedOn": "part_number+package"
+  },
   "ESPC2-12-N4::SMD,24x16mm": {
     "ok": true,
     "lcsc": "C19949080",
@@ -73,6 +82,15 @@
     "stock": 6503,
     "matchedOn": "part_number+package"
   },
+  "HDC2010YPAR::DSBGA-6": {
+    "ok": true,
+    "lcsc": "C477922",
+    "footprint": "jlcpcb:C477922",
+    "package": "DSBGA-6",
+    "description": "-40℃~+85℃ 0%RH~100%RH 1.62V~3.6V 11bit 550nA I2C ±0.2℃ ±2%RH DSBGA-6 Temperature and Humidity Sensor ROHS",
+    "stock": 14284,
+    "matchedOn": "part_number+package"
+  },
   "HDSP-521G::DIP-18": {
     "ok": true,
     "lcsc": "C5650089",
@@ -80,6 +98,15 @@
     "package": "DIP-18",
     "description": "0.56 105mW 18.6mmx25mmx8mm 2 7 Segment Common Anode Green DIP-18 LED Segment Displays ROHS",
     "stock": 10,
+    "matchedOn": "part_number+package"
+  },
+  "HTS221TR::HLGA-6(2x2)": {
+    "ok": true,
+    "lcsc": "C91142",
+    "footprint": "jlcpcb:C91142",
+    "package": "HLGA-6(2x2)",
+    "description": "-40℃~+120℃ 0%RH~100%RH 1.7V~3.6V 16bit 2uA I2C、SPI ±0.5℃ ±3.5%RH HLGA-6(2x2) Temperature and Humidity Sensor ROHS",
+    "stock": 402,
     "matchedOn": "part_number+package"
   },
   "HY2111-GB::SOT-23-6": {
@@ -191,6 +218,15 @@
     "stock": 10,
     "matchedOn": "part_number+package"
   },
+  "MC9S12DP512CPVE::LQFP-112(20x20)": {
+    "ok": true,
+    "lcsc": "C1338271",
+    "footprint": "jlcpcb:C1338271",
+    "package": "LQFP-112(20x20)",
+    "description": "10bit 2.35V~5.25V 25MHz 512KB 91 FLASH HCS12 LQFP-112(20x20) Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 7,
+    "matchedOn": "part_number+package"
+  },
   "MCP7940NT-I/SN::SOIC-8": {
     "ok": true,
     "lcsc": "C148052",
@@ -245,6 +281,15 @@
     "stock": 42,
     "matchedOn": "part_number+package"
   },
+  "SI7006-A20-IM1R::DFN-6(3x3)": {
+    "ok": true,
+    "lcsc": "C3664441",
+    "footprint": "jlcpcb:C3664441",
+    "package": "DFN-6(3x3)",
+    "description": "-40℃~+125℃ 0%RH~100%RH 1.9V~3.6V 150uA I2C ±1℃ ±5%RH DFN-6(3x3) Temperature and Humidity Sensor ROHS",
+    "stock": 32,
+    "matchedOn": "part_number+package"
+  },
   "STC15F104W-35I-SOP8::SOIC-8": {
     "ok": true,
     "lcsc": "C26928",
@@ -252,6 +297,33 @@
     "package": "SOIC-8",
     "description": "3.8V~5.5V 4KB 51 Family 6 FLASH SOIC-8 Microcontrollers (MCU/MPU/SOC) ROHS",
     "stock": 4407,
+    "matchedOn": "part_number+package"
+  },
+  "STC89C516RD+40I-PDIP40::DIP-40": {
+    "ok": true,
+    "lcsc": "C52225",
+    "footprint": "jlcpcb:C52225",
+    "package": "DIP-40",
+    "description": "3.5V~5.5V 35 51 Family 61KB FLASH DIP-40 Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 845,
+    "matchedOn": "part_number+package"
+  },
+  "STC89C52RC-40I-PDIP40::DIP-40": {
+    "ok": true,
+    "lcsc": "C14022",
+    "footprint": "jlcpcb:C14022",
+    "package": "DIP-40",
+    "description": "3.3V~5.5V 51 Family 8KB FLASH DIP-40 Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 1605,
+    "matchedOn": "part_number+package"
+  },
+  "STTS75M2F::SO-8": {
+    "ok": true,
+    "lcsc": "C283292",
+    "footprint": "jlcpcb:C283292",
+    "package": "SO-8",
+    "description": "-55℃~+125℃ 12bit 2.7V~5.5V 340ms I2C、SMBus ±2℃ SO-8 Temperature Sensors ROHS",
+    "stock": 50,
     "matchedOn": "part_number+package"
   },
   "SZYY0402O::SMD,1.1x0.5mm": {
