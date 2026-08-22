@@ -28,7 +28,27 @@
       "The architecture agent is non-deterministic. This run produced a DIFFERENT subsystem set from dunkai_real_v2_gpio.json on the same profile: it added an I2C bus between U1 and U2 and chose an 'LED Driver' subsystem where the earlier run chose 'Status LED Output'. Component/net counts are therefore not comparable one-to-one; see the fixture's own counts.",
       "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
       "U1 is MIMXRT1172CVM8A, a 289-ball BGA whose pads are named POSITIONALLY (A1, A2, ...). Full pad naming here carries no capability information -- capabilityCheck.js guard 2 exists precisely for this part."
-    ]
+    ],
+    "recount_2026_08_22_curated_padcount": {
+      "why": "resolver.js's curated branch built its pinout as `{ok, pins}` with no padCount. capabilityCheck needs padCount to assert completeness, so any unresolved pin on a part with a CURATED pinout degraded from PART_CAPABILITY_MISMATCH to PIN_NOT_FOUND. padCount is now taken from the real footprint (never from the curated pins themselves, which are not required to be exhaustive).",
+      "result_for_this_fixture": "UNCHANGED \u2014 every count below is identical before and after the fix.",
+      "reason_unchanged": "No component in this fixture has a curated pinout. The curated table holds exactly two parts (LP103SB6F, HY2111-GB) and neither appears here, so the defect could not have affected these numbers. An earlier report claimed this fix would 'change error codes across the fixture set'; that was an overstatement and is corrected here.",
+      "verified_counts": {
+        "phase3_buildValidatedDesign_errors": 8,
+        "phase5_resolveComponents_errors": 9,
+        "phase5_by_code": {
+          "PIN_NOT_FOUND": 6,
+          "PART_CAPABILITY_MISMATCH": 3
+        },
+        "why_each_pin_failed": {
+          "CATALOGUE_GAP": 2,
+          "NAMING_GAP": 0,
+          "PART_CAPABILITY_MISMATCH": 3,
+          "TABLE_GAP": 4
+        }
+      },
+      "measured_with": "pcb-agent @ the curated-padCount fix, scripts diag over resolveComponents(allowNetwork: true)"
+    }
   },
   "schema_version": "2.0",
   "design_name": "dunkai_gpio_design",

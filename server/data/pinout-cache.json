@@ -587,6 +587,12 @@
     },
     "padCount": 8
   },
+  "jlcpcb:C2803265": {
+    "ok": false,
+    "pins": {},
+    "padCount": 0,
+    "message": "footprint exposes no named pins"
+  },
   "jlcpcb:C2829462": {
     "ok": true,
     "pins": {

@@ -15,7 +15,26 @@
       "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
       "U5 (SZYY0402O, an LED) names its pads K/A -- positional, not functional -- so its GPIO request is also PIN_NOT_FOUND.",
       "Architecture agent is non-deterministic; this is one sample, not a guaranteed shape."
-    ]
+    ],
+    "recount_2026_08_22_curated_padcount": {
+      "why": "resolver.js's curated branch built its pinout as `{ok, pins}` with no padCount. capabilityCheck needs padCount to assert completeness, so any unresolved pin on a part with a CURATED pinout degraded from PART_CAPABILITY_MISMATCH to PIN_NOT_FOUND. padCount is now taken from the real footprint (never from the curated pins themselves, which are not required to be exhaustive).",
+      "result_for_this_fixture": "UNCHANGED \u2014 every count below is identical before and after the fix.",
+      "reason_unchanged": "No component in this fixture has a curated pinout. The curated table holds exactly two parts (LP103SB6F, HY2111-GB) and neither appears here, so the defect could not have affected these numbers. An earlier report claimed this fix would 'change error codes across the fixture set'; that was an overstatement and is corrected here.",
+      "verified_counts": {
+        "phase3_buildValidatedDesign_errors": 10,
+        "phase5_resolveComponents_errors": 6,
+        "phase5_by_code": {
+          "PIN_NOT_FOUND": 6
+        },
+        "why_each_pin_failed": {
+          "CATALOGUE_GAP": 2,
+          "NAMING_GAP": 2,
+          "PART_CAPABILITY_MISMATCH": 0,
+          "TABLE_GAP": 2
+        }
+      },
+      "measured_with": "pcb-agent @ the curated-padCount fix, scripts diag over resolveComponents(allowNetwork: true)"
+    }
   },
   "schema_version": "2.0",
   "design_name": "dunkai_gpio_design",

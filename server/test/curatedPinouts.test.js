@@ -53,7 +53,16 @@ test("a pin the part genuinely lacks still fails, rather than being invented", a
     "HY2111-GB is a battery protection IC with no SDA pin"
   );
   assert.equal(resolved.resolution.pins.real, false, "one unmatched pin makes the map unsafe");
-  assert.ok(resolved.errors.some((e) => e.code === "PIN_NOT_FOUND" && e.target === "U6.SDA"));
+
+  // Reclassified, deliberately. This asserted PIN_NOT_FOUND while the resolver's
+  // curated branch omitted padCount, which left capabilityConfirmed false and
+  // made a capability claim impossible for curated parts. With padCount now
+  // taken from the real footprint, HY2111-GB is 6 of 6 pads named and genuinely
+  // has no SDA — so the honest code is the stronger one. The test's intent is
+  // unchanged: the pin still fails rather than being invented.
+  const sda = resolved.errors.find((e) => e.target === "U6.SDA");
+  assert.equal(sda.code, "PART_CAPABILITY_MISMATCH");
+  assert.equal(sda.detail.capabilityConfirmed, true);
 });
 
 test("the package guard refuses a curated pinout for the wrong package", () => {

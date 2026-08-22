@@ -118,6 +118,15 @@
     "stock": 6048,
     "matchedOn": "part_number+package"
   },
+  "HY2112-BB::SOT-23-6": {
+    "ok": true,
+    "lcsc": "C161942",
+    "footprint": "jlcpcb:C161942",
+    "package": "SOT-23-6",
+    "description": "-40℃~+85℃ 1 1.5V~8V 1.8V 100nA 3.6V Protection IC Support SOT-23-6 Battery Management ROHS",
+    "stock": 1821,
+    "matchedOn": "part_number+package"
+  },
   "IP5310::QFN-32-EP(5x5)": {
     "ok": true,
     "lcsc": "C191176",

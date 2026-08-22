@@ -169,9 +169,32 @@ export async function resolveComponent(component, options = {}) {
     // catalogue extraction, is available for footprints that expose only
     // positional pins (e.g. footprinter's sot23_6).
     const curatedPins = curatedPinout(component.part_number, component.package);
+    const cataloguePins = await extractPinout(footprint.value, options);
+    // `padCount` comes from the REAL footprint even when curated names win.
+    //
+    // It was previously omitted on the curated branch, and capabilityCheck needs
+    // it to assert completeness — so the most trustworthy pin source was the one
+    // that could never support a capability claim, and every unresolved pin on a
+    // curated part silently degraded from PART_CAPABILITY_MISMATCH to
+    // PIN_NOT_FOUND ("no confirmed capability data for this part").
+    //
+    // It must NOT be derived from the curated pins themselves. The curated table
+    // is not required to be exhaustive: LP103SB6F's entry is a single pin (GND)
+    // on a 6-pad SOT-23-6, deliberately, so that its absent VDD stays
+    // PIN_NOT_FOUND instead of being mapped to something plausible. Counting its
+    // own pads would make it "1 of 1 named" — complete — and turn every other
+    // function on that part into a confident false mismatch.
+    //
+    // If the catalogue lookup fails we leave padCount undefined, which keeps
+    // capabilityConfirmed false: an unknown pad count must never read as a
+    // confirmed-complete part.
     const pinout = curatedPins.ok
-      ? { ok: true, pins: curatedPins.pins }
-      : await extractPinout(footprint.value, options);
+      ? {
+          ok: true,
+          pins: curatedPins.pins,
+          ...(cataloguePins.ok ? { padCount: cataloguePins.padCount } : {}),
+        }
+      : cataloguePins;
     const pinSource = curatedPins.ok ? SOURCE.CURATED : SOURCE.PARTS_ENGINE;
     pinsResolvedFrom = pinSource;
 

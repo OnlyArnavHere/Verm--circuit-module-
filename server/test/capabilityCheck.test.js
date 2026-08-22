@@ -21,6 +21,8 @@ import {
   capabilityConfirmed,
 } from "../src/design/capabilityCheck.js";
 import { resolveComponent } from "../src/design/resolver.js";
+import { curatedPinout } from "../src/design/curatedPinouts.js";
+import { extractPinout } from "../src/design/pinout.js";
 import { ERROR_CODES } from "../src/models/constants.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -190,6 +192,77 @@ test("a genuinely resolvable pin produces no error at all", async () => {
     false,
     "SDA exists on this part and resolves"
   );
+});
+
+// ---------------------------------------------------------------------------
+// Guard 4 — a curated pinout must be able to support a capability claim
+// ---------------------------------------------------------------------------
+
+test("curated-pinout-with-complete-pins produces MISMATCH, not PIN_NOT_FOUND", async () => {
+  // resolver.js built the curated branch as `{ ok: true, pins }` with no
+  // padCount. capabilityConfirmed needs padCount to assert completeness, so the
+  // most trustworthy pin source in the system — a human/dual-extraction verified
+  // table — was the ONLY one that could never support a capability claim. Every
+  // unresolved pin on a curated part silently degraded to PIN_NOT_FOUND
+  // ("no confirmed capability data for this part"), understating
+  // PART_CAPABILITY_MISMATCH wherever curated data was used.
+  //
+  // HY2111-GB is a battery-protection IC: OD/CS/OC/NC/VDD/VSS, 6 of 6 pads on a
+  // real SOT-23-6. It has no I2C. Asked for SCL it must say so outright.
+  const curated = curatedPinout("HY2111-GB", "SOT-23-6");
+  assert.ok(curated.ok, "using the REAL curated entry, not a stub");
+
+  const asBuiltBefore = { ok: true, pins: curated.pins };
+  assert.equal(
+    classifyUnresolvedPin("SCL", asBuiltBefore).code,
+    CAPABILITY_VERDICT.UNRESOLVED,
+    "documents the old behaviour: no padCount means no capability claim is possible"
+  );
+
+  const pinout = await extractPinout("jlcpcb:C82747", { allowNetwork: true });
+  assert.ok(pinout.ok && pinout.padCount === 6, "real footprint reports 6 pads");
+
+  const asBuiltNow = { ok: true, pins: curated.pins, padCount: pinout.padCount };
+  assert.equal(capabilityConfirmed(asBuiltNow), true, "6 curated names over 6 real pads");
+  const verdict = classifyUnresolvedPin("SCL", asBuiltNow);
+  assert.equal(verdict.code, CAPABILITY_VERDICT.MISMATCH);
+  assert.equal(verdict.capabilityConfirmed, true);
+  assert.ok(verdict.availablePins.includes("VDD"), "it does have a supply rail");
+});
+
+test("padCount must come from the FOOTPRINT, never from the curated pins", () => {
+  // The tempting one-liner — padCount = the curated entry's own pad count —
+  // would be a false hard negative, and this exact entry is why.
+  //
+  // LP103SB6F's curated entry is deliberately a SINGLE pin (GND -> pin2) on a
+  // 6-pad SOT-23-6, so that its genuinely-absent VDD stays PIN_NOT_FOUND rather
+  // than being mapped to something plausible. Self-derived, that reads as
+  // "1 of 1 pads named" — complete — and every other function on the part
+  // becomes a confident mismatch that no datasheet work could ever clear.
+  const curated = curatedPinout("LP103SB6F", "SOT-23-6");
+  assert.ok(curated.ok);
+  assert.equal(Object.keys(curated.pins).length, 1, "deliberately not exhaustive");
+
+  const selfDerived = { ok: true, pins: curated.pins, padCount: 1 };
+  assert.equal(
+    classifyUnresolvedPin("VDD", selfDerived).code,
+    CAPABILITY_VERDICT.MISMATCH,
+    "this is the WRONG answer the rejected approach produces"
+  );
+
+  const fromFootprint = { ok: true, pins: curated.pins, padCount: 6 };
+  assert.equal(capabilityConfirmed(fromFootprint), false, "1 of 6 pads named");
+  const verdict = classifyUnresolvedPin("VDD", fromFootprint);
+  assert.equal(verdict.code, CAPABILITY_VERDICT.UNRESOLVED, "the conservative call is preserved");
+  assert.match(verdict.reason, /only 1 of 6 pads are named/);
+});
+
+test("an unavailable catalogue lookup leaves padCount undefined, not guessed", () => {
+  // If the footprint cannot be read we cannot know the pad count. Omitting it
+  // keeps capabilityConfirmed false — an unknown must never read as complete.
+  const noPadCount = { ok: true, pins: { GND: "pin2", VDD: "pin5" } };
+  assert.equal(capabilityConfirmed(noPadCount), false);
+  assert.equal(classifyUnresolvedPin("SCL", noPadCount).code, CAPABILITY_VERDICT.UNRESOLVED);
 });
 
 test("pad aliases do not corrupt the completeness guard", () => {
