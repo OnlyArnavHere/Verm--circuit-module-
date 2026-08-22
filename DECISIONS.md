@@ -1947,3 +1947,38 @@ curated per-part table in the shape of `curatedPinouts.js`, or datasheet
 extraction. At that point the allocator should filter candidates by suitability
 before ordering them. Until then, do not present GPIO assignment as verified: it
 is a deterministic guess with a paper trail.
+
+## D-078 — Gate any future fab-facing route on `compilable` and mocked pins
+
+**Phase:** post-9
+**Status:** Accepted — **deferred by design, not overlooked**
+
+A guard preventing fabrication-facing actions from firing on an unverified design
+was scoped, then deliberately **not built**, because there is nothing to attach
+it to: `routes/jobs.js` exposes upload, list, get, upstream, and a presigned
+output URL. No gerber-export route and no order-PCB route exist. Writing the
+guard now would mean writing a guard around an imaginary call site.
+
+This entry exists so the requirement is not lost when that route is added.
+
+**When a gerber-export, order-PCB, or any other fabrication-facing route is
+added, it MUST refuse to proceed unless `compilable === true` and
+`mockedPinCount === 0`.** Not warn — refuse. Returning files for a design whose
+pins were positionally mocked is precisely the "looks complete, is not correct"
+failure this project exists to prevent (D-009, D-027).
+
+Two traps to avoid when that day comes:
+
+- **`hasAllOutputs` is not a correctness signal.** It counts whether four files
+  exist, nothing more, and it sits next to `outputs` in `toPublicJSON()` where it
+  reads like a green light. A design can have all four artifacts and still be
+  `compilable: false`.
+- **`artifact.mocked` is not sufficient either.** It is per-artifact and boolean,
+  while mocked-pin state is per-pin and lives in `resolution.pins.perPin`. A
+  board can carry a MOCK-sourced pin while every artifact reports
+  `mocked: false`.
+
+Note the prerequisite: as of this entry neither `compilable` nor
+`mockedPinCount` reaches the API at all, because the HTTP job flow never invokes
+the design layer (no job advances past `received`). Surfacing them is a
+precondition for this guard, not a separate nicety.

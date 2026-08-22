@@ -68,6 +68,9 @@ code and just run it — stop, and route it through validation first.
   the validator "fixes" upstream data (e.g. the SCK↔MOSI bug), record the original
   value, the correction, and the reason.
 - Field is **`validationErrors`**, not `errors` — Mongoose reserves `errors`.
+- **When a gerber-export or order-PCB route is added, gate it on
+  `compilable: true` and `mockedPinCount: 0` — see D-078.** `hasAllOutputs` counts
+  files, not correctness, and is not a substitute.
 
 ## tscircuit facts established in Phase 2 (verified, not assumed)
 
