@@ -330,6 +330,26 @@ This is wrap-up, not further building. The system is feature-complete against th
 **Definition of done:** uploading a fixture drives a job to `completed` without manual CLI steps; `mockedPinCount` is a real number on a finished job and `null` on an unprocessed one; the four outputs are populated from the async run; status events are emitted per transition.
 
 
+### Phase 11 — Upstream retrieval/architecture mismatch (UPSTREAM, dunkai's repo — logged here, NOT started)
+
+**This is not a ranking problem and ranking cannot solve it by construction.** Logged separately so it is never conflated with the `interface_match` aggregation fix, which is done and is a different defect at a different layer.
+
+**The observation.** In `test-fixtures/dunkai_real_v3_rankedcoverage.json`, the architecture agent wired an I2C bus between U1 (MCU) and U2 (Power Management). U2's component request correctly carried `interfaces: ["I2C"]`. The retriever then returned a 20-candidate shortlist for U2 in which **zero candidates have I2C at all** — the shortlist was battery-protection ICs and linear chargers (HY21xx, AD405x family). Ranking's job is to order a shortlist; when no member of the shortlist can satisfy a required interface, the best possible ordering still yields an unbuildable net. This surfaced downstream as two `PART_CAPABILITY_MISMATCH` errors on U2.
+
+**Why it is genuinely upstream.** Two candidate root causes, both above ranking:
+1. The architecture agent requested a bus from a subsystem that does not typically expose one ("Power Management" as a plain linear regulator / protection IC), i.e. the *requirement* is wrong.
+2. Retrieval resolved the subsystem to a taxonomy (`literal category match 'power'`) that structurally cannot contain an I2C-capable PMIC, i.e. the *candidate set* is wrong.
+
+Distinguishing these needs upstream instrumentation, not a scoring change.
+
+**Scope when picked up (all in dunkai, none in this repo):**
+1. Detect the condition rather than let it pass silently: if no candidate in a shortlist has positive evidence for a required interface, that is a reportable retrieval failure, not a ranking outcome. It currently produces a confident winner with no warning.
+2. Decide the correct response — re-query with an interface-constrained taxonomy, or feed the gap back to the architecture agent to drop the bus.
+3. Keep the three-state discipline: "no candidate confirms I2C" is only actionable where the shortlist has real coverage data. With a table at 44% complete-naming, absence of confirmation is mostly still *unknown*.
+
+**Explicitly NOT in scope:** anything in `ranking.py`. The aggregation defect (a verified absence being averaged away by a confirmed interface) is fixed and regression-tested as `verified-absence-outranking-unknown`; this item is what remains after that fix, and the open question is whether it dominates the Phase 5 error count regardless of ranking quality.
+
+
 The system fails **explicitly**, never silently and never by guessing:
 
 ```
