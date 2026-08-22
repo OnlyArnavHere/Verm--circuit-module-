@@ -15,7 +15,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { classifyUnresolvedPin, CAPABILITY_VERDICT } from "../src/design/capabilityCheck.js";
+import {
+  classifyUnresolvedPin,
+  CAPABILITY_VERDICT,
+  capabilityConfirmed,
+} from "../src/design/capabilityCheck.js";
 import { resolveComponent } from "../src/design/resolver.js";
 import { ERROR_CODES } from "../src/models/constants.js";
 
@@ -186,4 +190,39 @@ test("a genuinely resolvable pin produces no error at all", async () => {
     false,
     "SDA exists on this part and resolves"
   );
+});
+
+test("pad aliases do not corrupt the completeness guard", () => {
+  // port_hints can give ONE pad several names, so a fully-named part can expose
+  // more names than pads. Counting names instead of distinct pads made the two
+  // completeness checks disagree with each other on the same part:
+  //   classifyUnresolvedPin: names.length < padCount   -> 4 < 3 -> false -> COMPLETE
+  //   capabilityConfirmed:   names.length === padCount -> 4 === 3 -> NOT complete
+  // Real instance: jlcpcb:C22392413, 30 pads / 57 names.
+  const aliased = {
+    ok: true,
+    padCount: 3,
+    // pin1 carries two aliases; every pad is genuinely named.
+    pins: { VDD: "pin1", VCC: "pin1", GND: "pin2", SCL: "pin3" },
+  };
+  assert.equal(capabilityConfirmed(aliased), true, "3 of 3 pads are named");
+
+  // With every pad named and no SDA present, absence is now assertable.
+  const verdict = classifyUnresolvedPin("SDA", aliased);
+  assert.equal(verdict.code, CAPABILITY_VERDICT.MISMATCH);
+  assert.equal(verdict.capabilityConfirmed, true);
+});
+
+test("aliases never make a partially-named part look complete", () => {
+  // The dangerous direction: more names than pads, but pads still unnamed.
+  const partial = {
+    ok: true,
+    padCount: 8,
+    pins: { VDD: "pin1", VCC: "pin1", PWR: "pin1", GND: "pin2" }, // 4 names, 2 pads
+  };
+  assert.equal(capabilityConfirmed(partial), false, "only 2 of 8 pads named");
+  const verdict = classifyUnresolvedPin("SDA", partial);
+  assert.equal(verdict.code, CAPABILITY_VERDICT.UNRESOLVED);
+  assert.equal(verdict.capabilityConfirmed, false);
+  assert.match(verdict.reason, /only 2 of 8 pads are named/);
 });

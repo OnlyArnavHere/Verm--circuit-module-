@@ -14,7 +14,8 @@
  * ── Two guards keep this from over-claiming ─────────────────────────────────
  *
  * 1. **Complete name coverage required.** A negative claim is only sound if we
- *    know *every* pad's name. `HDSP-521G` names 16 of 18 pads, and the two
+ *    know *every* pad's name. Measured in distinct PADS named, not in name
+ *    count: one pad can expose several aliases. `HDSP-521G` names 16 of 18 pads, and the two
  *    unnamed ones (pin13/pin14) are exactly where a DIP-18 display's common
  *    pins sit — so "it has no GND" would be a false positive. Partial coverage
  *    stays `PIN_NOT_FOUND`.
@@ -66,6 +67,13 @@ export function classifyUnresolvedPin(logicalPin, pinout) {
   const wanted = String(logicalPin ?? "").trim();
   const names = pinout?.ok ? Object.keys(pinout.pins ?? {}) : [];
   const padCount = pinout?.padCount ?? 0;
+  // COUNT PADS, NOT NAMES. `pins` maps NAME -> pad, and port_hints can give one
+  // pad several aliases, so a part can carry MORE names than it has pads
+  // (observed: jlcpcb:C22392413, 30 pads / 57 names). Comparing name count to
+  // pad count could therefore satisfy the completeness guard while pads remain
+  // unnamed — turning an unknown into a confident PART_CAPABILITY_MISMATCH,
+  // which is the exact false claim this guard exists to prevent.
+  const namedPads = new Set(Object.values(pinout?.pins ?? {})).size;
 
   // No capability data at all — nothing has been confirmed, so no negative claim.
   if (!pinout?.ok || names.length === 0 || padCount === 0) {
@@ -77,15 +85,15 @@ export function classifyUnresolvedPin(logicalPin, pinout) {
   }
 
   // Guard 1: partial coverage cannot support a negative claim.
-  const coverage = names.length / padCount;
-  if (names.length < padCount) {
-    const unnamed = padCount - names.length;
+  const coverage = namedPads / padCount;
+  if (namedPads < padCount) {
+    const unnamed = padCount - namedPads;
     return {
       code: CAPABILITY_VERDICT.UNRESOLVED,
       capabilityConfirmed: false,
       availablePins: names.sort(),
       reason:
-        `only ${names.length} of ${padCount} pads are named (${unnamed} unnamed), so the ` +
+        `only ${namedPads} of ${padCount} pads are named (${unnamed} unnamed), so the ` +
         `absence of "${wanted}" is not confirmed — it could be one of the unnamed pads`,
       coverage: Number(coverage.toFixed(2)),
     };
@@ -120,7 +128,7 @@ export function classifyUnresolvedPin(logicalPin, pinout) {
     };
   }
 
-  // Every pad is named, the function is not among them, and it is not something
+  // Every PAD is named, the function is not among them, and it is not something
   // a GPIO could be assigned to. The part genuinely does not do this.
   return {
     code: CAPABILITY_VERDICT.MISMATCH,
@@ -137,4 +145,5 @@ export function classifyUnresolvedPin(logicalPin, pinout) {
 export const capabilityConfirmed = (pinout) =>
   Boolean(pinout?.ok) &&
   (pinout.padCount ?? 0) > 0 &&
-  Object.keys(pinout.pins ?? {}).length === pinout.padCount;
+  // Distinct PADS carrying a name, not name count — see classifyUnresolvedPin.
+  new Set(Object.values(pinout.pins ?? {})).size === pinout.padCount;
