@@ -13,7 +13,7 @@ import { resolvePart } from "./partsEngine.js";
 import { extractPinout, matchLogicalPin } from "./pinout.js";
 import { curatedPinout } from "./curatedPinouts.js";
 import { classifyUnresolvedPin, CAPABILITY_VERDICT } from "./capabilityCheck.js";
-import { resolveRole, allocateGpio } from "./roleMap.js";
+import { resolveRole, allocateGpio, ALLOCATED_ROLES } from "./roleMap.js";
 import { pinRequestsByRef } from "./normalizeUpstream.js";
 
 /**
@@ -143,7 +143,18 @@ export async function resolveComponent(component, options = {}) {
       .sort()
       .map((logicalPin) => ({ interface: null, role: null, logicalPin, roleIsDeclared: false }));
   // Label a request for the maps/messages: "I2C/CLOCK" (v2) or "SDA" (v1).
-  const labelOf = (r) => (r.roleIsDeclared ? `${r.interface}/${r.role}` : r.logicalPin);
+  // The label keys pinMap/pinDetail, so it must be UNIQUE per request. A
+  // per-net role (GPIO, chip select) legitimately appears more than once on one
+  // part -- two GPIO nets on the same MCU are two different pads -- so the net
+  // name is folded in. Without it both requests collapsed onto one key and the
+  // second silently overwrote the first, hiding a pad that was never assigned.
+  // Same defect class as the chip-select collision, one layer up.
+  const labelOf = (r) =>
+    r.roleIsDeclared
+      ? ALLOCATED_ROLES.has(r.role)
+        ? `${r.interface}/${r.role}@${r.net}`
+        : `${r.interface}/${r.role}`
+      : r.logicalPin;
   const logicalPins = requests.map(labelOf);
   const pinMap = {};
   const pinDetail = {};

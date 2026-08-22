@@ -158,6 +158,14 @@
     },
     "padCount": 17
   },
+  "jlcpcb:C26928": {
+    "ok": true,
+    "pins": {
+      "GND": "pin4",
+      "VCC": "pin2"
+    },
+    "padCount": 8
+  },
   "jlcpcb:C28326": {
     "ok": true,
     "pins": {
@@ -470,6 +478,20 @@
     },
     "padCount": 289
   },
+  "jlcpcb:C382128": {
+    "ok": true,
+    "pins": {
+      "OUT": "pin1",
+      "BAT": "pin2",
+      "SW": "pin3",
+      "GND": "pin4",
+      "LED1": "pin8",
+      "LED2": "pin7",
+      "VDD": "pin6",
+      "SWT": "pin5"
+    },
+    "padCount": 8
+  },
   "jlcpcb:C382136": {
     "ok": true,
     "pins": {
@@ -503,6 +525,14 @@
       "D_NEG": "pin6"
     },
     "padCount": 6
+  },
+  "jlcpcb:C434451": {
+    "ok": true,
+    "pins": {
+      "K": "pin1",
+      "A": "pin2"
+    },
+    "padCount": 2
   },
   "jlcpcb:C5155573": {
     "ok": false,
@@ -541,6 +571,21 @@
       "F1": "pin18"
     },
     "padCount": 18
+  },
+  "jlcpcb:C725790": {
+    "ok": true,
+    "pins": {
+      "TEMP": "pin1",
+      "PROG": "pin2",
+      "GND": "pin3",
+      "VCC": "pin4",
+      "BAT": "pin5",
+      "STDBY": "pin6",
+      "CHRG": "pin7",
+      "CE": "pin8",
+      "EP": "pin9"
+    },
+    "padCount": 9
   },
   "jlcpcb:C7587901": {
     "ok": true,

@@ -1,0 +1,145 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, schema v2 (role-based), GPIO coverage",
+    "captured": "2026-08-22",
+    "source": "dunkai @ 2da5dfc, run.py --requirements (panic-button profile: 2 push buttons, 3 status LEDs)",
+    "purpose": "Targets GPIO specifically. The earlier v2 fixture happened to produce no GPIO edge, leaving allocateGpio() covered only by unit tests. This profile (physical buttons + discrete LEDs) produced GPIO edges on the FIRST attempt -- the architecture prompt maps Buttons -> GPIO and LEDs -> GPIO, so GPIO coverage is reliably reachable this way.",
+    "gpio_finding": {
+      "edges_produced": "2 GPIO nets, BOTH terminating at U1 (the MCU) -- so U1 requires two DISTINCT pads.",
+      "allocation_outcome": "allocateGpio() fired and correctly allocated NOTHING. It did not collide with a reserved pad. The catalogue footprint for U1 (STC15F104W-35I-SOP8, jlcpcb:C26928) names only 2 of its 8 pads -- GND=pin4, VCC=pin2 -- and exposes no generic-IO pad to allocate from, so both GPIO requests correctly returned PIN_NOT_FOUND.",
+      "capability_guard": "Correctly reported PIN_NOT_FOUND rather than PART_CAPABILITY_MISMATCH: with only 2 of 8 pads named, the absence of a GPIO is NOT confirmed. capabilityCheck.js guard 1 (complete-coverage) working as designed.",
+      "bug_found": "This capture exposed a real defect, since fixed: pinMap/pinDetail were keyed `interface/role`, so both GPIO requests on U1 collapsed onto one key \"GPIO/GPIO\" and the second silently overwrote the first. Same defect class as the chip-select pad collision. Per-net roles (GPIO, CHIP_SELECT) now carry the net name in their key.",
+      "still_unproven": "GPIO allocation landing on a real pad remains UNPROVEN on real data. The blocker is catalogue coverage, not the allocator: small MCUs expose almost no functional pin names via extractPinout(). Same source-data limitation as D-054/Phase 6, not a pipeline defect."
+    },
+    "known_caveats": [
+      "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
+      "U5 (SZYY0402O, an LED) names its pads K/A -- positional, not functional -- so its GPIO request is also PIN_NOT_FOUND.",
+      "Architecture agent is non-deterministic; this is one sample, not a guaranteed shape."
+    ]
+  },
+  "schema_version": "2.0",
+  "design_name": "dunkai_gpio_design",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "STC15F104W-35I-SOP8",
+      "package": "SOIC-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "power",
+      "part_number": "TP4056",
+      "package": "ESOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "power",
+      "part_number": "TP4333",
+      "package": "SOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "input",
+      "part_number": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "output",
+      "part_number": "SZYY0402O",
+      "package": "SMD,1.1x0.5mm",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "POWER_RAIL",
+      "interface": "Power",
+      "net_class": "power",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U2",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U3",
+          "role": "SUPPLY"
+        }
+      ]
+    },
+    {
+      "name": "GND",
+      "interface": "Power",
+      "net_class": "ground",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U2",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U3",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U4",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GROUND"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_3_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U4",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_4_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U5",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}

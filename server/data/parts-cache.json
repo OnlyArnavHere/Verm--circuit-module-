@@ -162,6 +162,33 @@
     "stock": 42,
     "matchedOn": "part_number+package"
   },
+  "STC15F104W-35I-SOP8::SOIC-8": {
+    "ok": true,
+    "lcsc": "C26928",
+    "footprint": "jlcpcb:C26928",
+    "package": "SOIC-8",
+    "description": "3.8V~5.5V 4KB 51 Family 6 FLASH SOIC-8 Microcontrollers (MCU/MPU/SOC) ROHS",
+    "stock": 4407,
+    "matchedOn": "part_number+package"
+  },
+  "SZYY0402O::SMD,1.1x0.5mm": {
+    "ok": true,
+    "lcsc": "C434451",
+    "footprint": "jlcpcb:C434451",
+    "package": "SMD,1.1x0.5mm",
+    "description": "",
+    "stock": 5720,
+    "matchedOn": "part_number+package"
+  },
+  "TP4056::ESOP-8": {
+    "ok": true,
+    "lcsc": "C725790",
+    "footprint": "jlcpcb:C725790",
+    "package": "ESOP-8",
+    "description": "-40℃~+85℃ 1 1A 35uA 4.2V 4V~6.5V Charging IC Lithium Battery Support Support 恒流充电、恒压充电、涓流充电、自动再充电、充电终止、可编程充电电流、软启动、欠压锁定 ESOP-8 Battery Management ROHS",
+    "stock": 288672,
+    "matchedOn": "part_number+package"
+  },
   "TP4110::SOP-16": {
     "ok": true,
     "lcsc": "C382136",
@@ -169,6 +196,15 @@
     "package": "SOP-16",
     "description": "-20℃~+85℃ 1 2.9V 4.35V 4.5V~5.5V SOP-16 Power Management - Specialized ROHS",
     "stock": 3664,
+    "matchedOn": "part_number+package"
+  },
+  "TP4333::SOP-8": {
+    "ok": true,
+    "lcsc": "C382128",
+    "footprint": "jlcpcb:C382128",
+    "package": "SOP-8",
+    "description": "-20℃~+85℃ 1 2.85V 4.2V 4.5V~5.5V Lithium-ion/Polymer SOP-8 Power Management - Specialized ROHS",
+    "stock": 19258,
     "matchedOn": "part_number+package"
   }
 }

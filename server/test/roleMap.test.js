@@ -165,3 +165,19 @@ test("every role a fixture uses has candidates defined for its interface", () =>
     }
   }
 });
+
+test("two GPIO nets on one part are tracked separately, not collapsed", () => {
+  // Regression from the GPIO capture: the pinMap/pinDetail key was
+  // `interface/role`, so two GPIO nets on the same MCU both keyed to
+  // "GPIO/GPIO" and the second silently overwrote the first — hiding a pad that
+  // was never assigned. Per-net roles must carry the net in their key.
+  const nets = [
+    { name: "GPIO_3_GPIO", interface: "GPIO", net_class: "signal",
+      members: [{ ref_id: "U4", role: "GPIO" }, { ref_id: "U1", role: "GPIO" }] },
+    { name: "GPIO_4_GPIO", interface: "GPIO", net_class: "signal",
+      members: [{ ref_id: "U5", role: "GPIO" }, { ref_id: "U1", role: "GPIO" }] },
+  ];
+  const requests = pinRequestsByRef(normalizeUpstream({ schema_version: "2.0", nets }).nets);
+  assert.equal(requests.U1.length, 2, "U1 needs two distinct GPIO pads");
+  assert.notEqual(requests.U1[0].net, requests.U1[1].net);
+});
