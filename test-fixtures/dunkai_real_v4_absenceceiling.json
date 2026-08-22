@@ -1,0 +1,151 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, schema v2, ranked with the verified-absence ceiling in place",
+    "captured": "2026-08-22",
+    "source": "dunkai @ 4d4bf49, run.py --requirements (panic-button profile) -- third capture of this same profile",
+    "purpose": "Measures whether fixing the interface_match aggregation defect (verified absence as a ceiling, not a term in an average) reduces downstream Phase 5 errors, or whether the upstream retrieval/architecture gap dominates.",
+    "coverage_table": {
+      "parts": 156,
+      "path_taken_this_run": "LIVE HTTPS FETCH -- 'Pin coverage loaded: 156 part(s) from raw.githubusercontent.com'. The v3 capture used the cache fallback because the artefact had never been pushed (unanchored .gitignore rule, fixed in 7400438). This is the first capture on the real published URL.",
+      "source_commit": "pcb-agent e0e37ff, published 7400438"
+    },
+    "fixes_live_beyond_v3": {
+      "dunkai 4d4bf49": "interface_match returns the verified-absent tier outright when ANY required interface is proven absent, with no partial credit from the others"
+    },
+    "architecture_drift": {
+      "warning": "The architecture agent is non-deterministic and produced a THIRD distinct shape for the same profile. This run emitted NO I2C net at all (U2's request carries interfaces: []), so the AD4057-on-an-I2C-bus case that motivated the fix DOES NOT RECUR HERE. This capture therefore does not, and cannot, demonstrate the fix's effect on that specific case -- the requirement that exposed it was never generated. The fix is verified directly against U2's captured v3 shortlist instead, and by the verified-absence-outranking-unknown regression test.",
+      "shape_this_run": "5 components / 4 nets / 12 members -- same counts as dunkai_real_v2_gpio.json",
+      "shape_v3": "5 components / 6 nets / 16 members, including an I2C bus U1<->U2"
+    },
+    "known_caveats": [
+      "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
+      "U1 is MIMXRT1172CVM8A, a 289-ball BGA named POSITIONALLY (A1, B1, ...). Full pad naming carries no capability information; capabilityCheck.js guard 2 covers this.",
+      "Three captures of one profile is a small sample. Error counts move with architecture shape as much as with ranking quality."
+    ]
+  },
+  "schema_version": "2.0",
+  "design_name": "dunkai_gpio_design",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "MIMXRT1172CVM8A",
+      "package": "MAPBGA-289",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "power",
+      "part_number": "TP4056",
+      "package": "ESOP-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "power",
+      "part_number": "HY2112-BB",
+      "package": "SOT-23-6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "input",
+      "part_number": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "output",
+      "part_number": "MBI5124GP-B",
+      "package": "SSOP-24",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "POWER_RAIL",
+      "interface": "Power",
+      "net_class": "power",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U2",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U3",
+          "role": "SUPPLY"
+        }
+      ]
+    },
+    {
+      "name": "GND",
+      "interface": "Power",
+      "net_class": "ground",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U2",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U3",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U4",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GROUND"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_3_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U4",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_4_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U5",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}
