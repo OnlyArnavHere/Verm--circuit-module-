@@ -5,7 +5,11 @@ dist/
 build/
 *.log
 .DS_Store
-coverage/
+# Test-coverage output only. Anchored: an unanchored `coverage/` also
+# matched data/coverage/, silently excluding the published pin-coverage
+# table that dunkai fetches over HTTPS.
+/coverage/
+server/coverage/
 tmp/
 artifacts/
 
