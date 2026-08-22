@@ -1,4 +1,22 @@
 {
+  "01.O.MC.GTFRIAF48000000::SMD3225-4P": {
+    "ok": true,
+    "lcsc": "C7462568",
+    "footprint": "jlcpcb:C7462568",
+    "package": "SMD3225-4P",
+    "description": "",
+    "stock": 2475,
+    "matchedOn": "part_number+package"
+  },
+  "AD4057::SOT-23-6": {
+    "ok": true,
+    "lcsc": "C395461",
+    "footprint": "jlcpcb:C395461",
+    "package": "SOT-23-6",
+    "description": "-40℃~+85℃ 1 4.2V 4.5V~6V 45uA 600mA Charging IC Lithium Battery Support SOT-23-6 Battery Management ROHS",
+    "stock": 6468,
+    "matchedOn": "part_number+package"
+  },
   "BLE-SER-A-ANT::SMD,10.6x10.2mm": {
     "ok": false,
     "code": "COMPONENT_NOT_FOUND",
@@ -6,6 +24,16 @@
     "detail": {
       "partNumber": "BLE-SER-A-ANT",
       "package": "SMD,10.6x10.2mm",
+      "packageMismatches": []
+    }
+  },
+  "BT2S::-": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"BT2S\".",
+    "detail": {
+      "partNumber": "BT2S",
+      "package": "-",
       "packageMismatches": []
     }
   },
@@ -36,6 +64,15 @@
     "stock": 895,
     "matchedOn": "part_number+package"
   },
+  "HDC1080DMBR::WSON-6(3x3)": {
+    "ok": true,
+    "lcsc": "C82227",
+    "footprint": "jlcpcb:C82227",
+    "package": "WSON-6(3x3)",
+    "description": "-40℃~+125℃ 0%RH~100%RH 1.3uA 14bit 2.7V~5.5V I2C ±0.2℃ ±2%RH WSON-6(3x3) Temperature and Humidity Sensor ROHS",
+    "stock": 6503,
+    "matchedOn": "part_number+package"
+  },
   "HDSP-521G::DIP-18": {
     "ok": true,
     "lcsc": "C5650089",
@@ -54,6 +91,15 @@
     "stock": 6048,
     "matchedOn": "part_number+package"
   },
+  "IP5310::QFN-32-EP(5x5)": {
+    "ok": true,
+    "lcsc": "C191176",
+    "footprint": "jlcpcb:C191176",
+    "package": "QFN-32-EP(5x5)",
+    "description": "1 2.9V 3.2A 4.65V~5.5V 50uA Charging IC I2C Lithium Battery Support Support QFN-32-EP(5x5) Battery Management ROHS",
+    "stock": 2120,
+    "matchedOn": "part_number+package"
+  },
   "IS25LP080D-JNLE-TR::SOIC-8": {
     "ok": true,
     "lcsc": "C521286",
@@ -62,6 +108,16 @@
     "description": "-40℃~+105℃ 100,000 cycles 133MHz 2.3V~3.6V 20 Years 200us 8Mbit 8uA Hardware write protection、Software write protection、Write enable latch SPI SOIC-8 NOR FLASH ROHS",
     "stock": 290,
     "matchedOn": "part_number+package"
+  },
+  "IS62WVS2568GBLL-45NLI-TR::SOIC-8": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"IS62WVS2568GBLL-45NLI-TR\".",
+    "detail": {
+      "partNumber": "IS62WVS2568GBLL-45NLI-TR",
+      "package": "SOIC-8",
+      "packageMismatches": []
+    }
   },
   "LDC1314RGHR::QFN-16-EP(4x4)": {
     "ok": true,
@@ -79,6 +135,24 @@
     "package": "SMD-4P,2.8x1.9mm",
     "description": "-40℃~+100℃ -42dB 0.9mm 1.6V~3.6V 1.85mm 120uA 2.75mm 300Ω 55dB Omnidirectional SMD-4P,2.8x1.9mm MEMS Microphones ROHS",
     "stock": 33076,
+    "matchedOn": "part_number+package"
+  },
+  "LNK623DG-TL::SOIC-7": {
+    "ok": true,
+    "lcsc": "C68103",
+    "footprint": "jlcpcb:C68103",
+    "package": "SOIC-7",
+    "description": "-40℃~+150℃@(Tj) 54% 725V 93kHz CCM、DCM Flyback Non-Isolated Over Current Protection、Short Circuit Protection Primary-Side Feedback SOIC-7 AC-DC Controllers and Regulators ROHS",
+    "stock": 4917,
+    "matchedOn": "part_number+package"
+  },
+  "LNK623PG::DIP-8": {
+    "ok": true,
+    "lcsc": "C567854",
+    "footprint": "jlcpcb:C567854",
+    "package": "DIP-8",
+    "description": "-40℃~+150℃@(Tj) 100kHz 54% 725V CCM、DCM Flyback Isolation Over Voltage Protection、Under Voltage Protection、Over Current Protection、Short Circuit Protection、Over Temperature Protection、Constant Voltage (CV) Primary-Side Feedback DIP-8 AC-DC Controllers and Regulators ROHS",
+    "stock": 605,
     "matchedOn": "part_number+package"
   },
   "LP103SB6F::SOT-23-6": {
@@ -144,6 +218,15 @@
     "stock": 513,
     "matchedOn": "part_number+package"
   },
+  "PCF8563::SOP-8": {
+    "ok": true,
+    "lcsc": "C5795601",
+    "footprint": "jlcpcb:C5795601",
+    "package": "SOP-8",
+    "description": "-20℃~+85℃ 0.25uA 1.8V~5.5V I2C Programmable clock output、Alarm function、Countdown timer Yes SOP-8 Real Time Clocks ROHS",
+    "stock": 21057,
+    "matchedOn": "part_number+package"
+  },
   "PS-5850SVB-6PNW::SMD,5.8x5.8mm": {
     "ok": true,
     "lcsc": "C5155573",
@@ -205,6 +288,33 @@
     "package": "SOP-8",
     "description": "-20℃~+85℃ 1 2.85V 4.2V 4.5V~5.5V Lithium-ion/Polymer SOP-8 Power Management - Specialized ROHS",
     "stock": 19258,
+    "matchedOn": "part_number+package"
+  },
+  "TP4336::ESOP-8L": {
+    "ok": true,
+    "lcsc": "C29075510",
+    "footprint": "jlcpcb:C29075510",
+    "package": "ESOP-8L",
+    "description": "-20℃~+85℃ 1 1A 2.8V 4.2V 4.5V~5.5V Linear Charging IC Lithium-ion/Polymer ESOP-8L Power Management - Specialized ROHS",
+    "stock": 10613,
+    "matchedOn": "part_number+package"
+  },
+  "YD2310AR-7.3::插件": {
+    "ok": true,
+    "lcsc": "C46614052",
+    "footprint": "jlcpcb:C46614052",
+    "package": "插件",
+    "description": "",
+    "stock": 3194,
+    "matchedOn": "part_number+package"
+  },
+  "YSN8563S::SOP-8": {
+    "ok": true,
+    "lcsc": "C42930214",
+    "footprint": "jlcpcb:C42930214",
+    "package": "SOP-8",
+    "description": "-40℃~+85℃ 0.55uA 1.2V~5.5V 900nA Alarm function、Periodic interrupt output External I2C SOP-8 Real Time Clocks ROHS",
+    "stock": 778,
     "matchedOn": "part_number+package"
   }
 }

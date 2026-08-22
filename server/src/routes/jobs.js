@@ -4,6 +4,7 @@ import multer from "multer";
 import { Job } from "../models/Job.js";
 import { JOB_STATUS } from "../models/constants.js";
 import { checkIntakeShape } from "../upstream/intakeCheck.js";
+import { buildValidatedDesign } from "../design/validatedDesign.js";
 import { emitJobEvent } from "../services/events.js";
 import { presignedUrl } from "../services/storage.js";
 import { config } from "../config.js";
@@ -59,11 +60,38 @@ jobsRouter.post("/", upload.single("design"), async (req, res, next) => {
       });
     }
 
+    // Intake answered "is this shaped like a design?". This answers "is the
+    // design itself sound?" — a separate question, and the one a consumer needs
+    // before trusting any artifact. Safe to run synchronously: buildValidatedDesign
+    // is a pure function with no clock, randomness, network or I/O.
+    //
+    // Deliberately NOT calling resolveComponents() here. It is network-bound at
+    // seconds-to-minutes per part and would block the request, so mockedPinCount
+    // stays null ("not yet resolved") rather than being guessed at.
+    let compilable = null;
+    let validationErrors = [];
+    try {
+      const validated = buildValidatedDesign(payload);
+      compilable = validated.compilable;
+      validationErrors = validated.errors;
+    } catch (error) {
+      // A validator crash must not masquerade as a clean design. Leaving
+      // compilable null keeps it honestly unknown rather than defaulting to a
+      // pass, and the upload still succeeds so the payload is not lost.
+      compilable = null;
+      validationErrors = [];
+      console.error(`buildValidatedDesign threw for job intake: ${error.message}`);
+    }
+
     const jobId = crypto.randomUUID();
     const job = await Job.create({
       jobId,
       designName: check.designName,
       status: JOB_STATUS.RECEIVED,
+      compilable,
+      // Requires resolveComponents(); stays null until an async pipeline runs it.
+      mockedPinCount: null,
+      validationErrors,
       upstream: {
         schemaVersion: check.schemaVersion,
         sourceFilename,
@@ -73,7 +101,10 @@ jobsRouter.post("/", upload.single("design"), async (req, res, next) => {
       statusHistory: [
         {
           status: JOB_STATUS.RECEIVED,
-          message: `Accepted ${payload.components.length} components / ${payload.nets.length} nets. No generation performed (Phase 1).`,
+          message:
+            `Accepted ${payload.components.length} components / ${payload.nets.length} nets. ` +
+            `Design validated at intake (compilable=${compilable}, ${validationErrors.length} error(s)). ` +
+            `No generation performed.`,
         },
       ],
     });

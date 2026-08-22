@@ -314,6 +314,21 @@ This is wrap-up, not further building. The system is feature-complete against th
 **Definition of done:** fresh clean-state run passes; one clear entry-point doc exists; `POC_RESULTS.md` is current and honestly bounded; `.env.example` exists; the cache-history question is explicitly resolved one way or the other.
 
 
+### Phase 10 — Async job pipeline (scoped, NOT started)
+**Why this exists:** the HTTP job flow and the design pipeline are currently disconnected. `POST /api/jobs` runs `checkIntakeShape` → `buildValidatedDesign` → `Job.create` and stops. `buildValidatedDesign` and `resolveComponents` are otherwise called **only** from `scripts/` and tests, never from anything reachable by an HTTP request, and `scripts/run-poc.js` does not touch Mongo or the `Job` model at all. `JOB_STATUS` defines eight states; **only `received` is ever assigned** — there is no worker, queue, or service that advances a job.
+
+**Consequence, and the specific reason this is scoped:** `Job.mockedPinCount` is permanently `null` ("not yet resolved") because populating it requires `resolveComponents()`, which is network-bound at seconds-to-minutes per part and therefore must not run in the request path. `compilable` *is* populated at intake, because `buildValidatedDesign` is pure, offline and deterministic. Closing that asymmetry is this phase's job.
+
+**Scope:**
+1. An async runner that advances `received → validating → resolving → compiling → generating → uploading → completed` (or `failed`), emitting the Socket.IO events per state that section 2 already requires for other agents' visibility.
+2. Persist per-stage results onto the `Job`: resolution sources, `mockedPinCount` from `resolution.pins.perPin`, DRC summary, and the four output artifacts.
+3. `mockedPinCount` becomes a real number. **`null` must continue to mean "not yet resolved" and must never be coerced to `0`** — an unknown rendering as a clean pass is the defect fixed in `MISSING_PINS` and in the false `real: true` bug (D-027).
+4. Reuse `scripts/run-poc.js`'s existing pipeline rather than reimplementing it; the phases it runs are already proven end-to-end.
+
+**Explicitly out of scope here:** component-ranking / coverage scoring, and the fab-action guard (D-078) — the latter attaches to a gerber-export or order-PCB route that does not exist yet, and is gated on this phase producing a real `mockedPinCount`.
+
+**Definition of done:** uploading a fixture drives a job to `completed` without manual CLI steps; `mockedPinCount` is a real number on a finished job and `null` on an unprocessed one; the four outputs are populated from the async run; status events are emitted per transition.
+
 
 The system fails **explicitly**, never silently and never by guessing:
 
@@ -350,4 +365,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 6.5 — Catalogue/cache-completeness audit (done — 3D-model discard bug found/fixed, LP103SB6F cross-validated, systemic upstream capability-mismatch pattern discovered across 5 parts)
 - [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
+- [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))

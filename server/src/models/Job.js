@@ -107,6 +107,37 @@ const JobSchema = new Schema(
       model3d: { type: ArtifactRefSchema, default: null },
     },
 
+    /**
+     * Correctness of the design, as distinct from completeness of its outputs.
+     *
+     * `hasAllOutputs` counts files. These two say whether the board those files
+     * describe is trustworthy — which is not the same question, and conflating
+     * them is how "looks complete" and "is correct" came apart before (D-009,
+     * D-027). Both are surfaced next to `hasAllOutputs` in `toPublicJSON()` so a
+     * consumer cannot read completeness as correctness.
+     *
+     * `compilable` is computed from `buildValidatedDesign()` at intake: a pure,
+     * offline, deterministic function, safe to run synchronously in the request
+     * path. `null` only for records created before this field existed.
+     */
+    compilable: { type: Boolean, default: null },
+
+    /**
+     * Number of pins resolved from a MOCK source rather than a real one.
+     *
+     * **`null` means NOT YET RESOLVED — it must never be coerced to 0 or
+     * omitted.** 0 asserts "this design has no mocked pins"; null admits nobody
+     * has looked. Rendering the unknown as a clean pass is exactly the defect
+     * fixed in MISSING_PINS, and the same shape as the false `real: true` bug
+     * (D-027).
+     *
+     * Populating it requires `resolveComponents()`, which is network-bound and
+     * takes seconds-to-minutes per part, so it is deliberately NOT called in the
+     * request path. It stays null until an async pipeline exists (PROJECT_PLAN
+     * Phase 10).
+     */
+    mockedPinCount: { type: Number, default: null },
+
     modifications: { type: [ModificationSchema], default: [] },
     // Not `errors` — Mongoose reserves that path on documents for its own
     // validation state, and shadowing it breaks document behaviour.
@@ -207,6 +238,13 @@ JobSchema.methods.toPublicJSON = function toPublicJSON() {
     modificationAttempts: this.modificationAttempts,
     outputs: this.outputs,
     hasAllOutputs: this.hasAllOutputs(),
+    // Deliberately adjacent to hasAllOutputs: that field counts files and reads
+    // like a green light. These two are the correctness signal beside it.
+    // mockedPinCount === null means "not yet resolved", NOT "none" — see the
+    // schema comment. Use `?? null` rather than `|| 0` so a real 0 and an
+    // unresolved null stay distinguishable.
+    compilable: this.compilable ?? null,
+    mockedPinCount: this.mockedPinCount ?? null,
     modifications: this.modifications,
     validationErrors: this.validationErrors,
     statusHistory: this.statusHistory,
