@@ -1,0 +1,188 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, schema v2, ranked with verified-pin coverage live",
+    "captured": "2026-08-22",
+    "source": "dunkai @ 1849116, run.py --requirements (panic-button profile: 2 push buttons, 3 status LEDs) -- the SAME profile as dunkai_real_v2_gpio.json, which is the direct before/after pair",
+    "purpose": "First capture with the full ranking stack live. dunkai_real_v2_gpio.json is the same requirements profile captured BEFORE the interface_match rewrite and the pin-coverage dimension, so the two fixtures isolate what today's ranking work does to downstream buildability.",
+    "fixes_live_for_this_run": {
+      "dunkai f2bbaec": "interface_match requires structured evidence for full marks; free text capped at 0.60; silence scores 0.30 (no-evidence), never 0",
+      "dunkai 1849116": "interface_match consults the verified pin-coverage table first; Optional[float] so UNKNOWN falls through instead of scoring",
+      "dunkai 2da5dfc": "schema 2.0 net emission -- interface + role, never an asserted pin name",
+      "dunkai 1d3babf": "HF dataset fetch has timeout=(10,120) + retry",
+      "dunkai 60f0f23": "MISSING_SYMBOL/FOOTPRINT/PINS are errors, not warnings",
+      "dunkai config.py": "KMP_DUPLICATE_LIB_OK before faiss/torch import + faiss.omp_set_num_threads(1) after import torch",
+      "dunkai 342aebb": "shortlisted catalogue parts recorded to an append-only log (64 parts this run)"
+    },
+    "coverage_table": {
+      "parts": 156,
+      "source_commit": "pcb-agent e0e37ff (scripts/build-coverage.js), published by pcb-agent 7400438",
+      "path_taken_this_run": "CACHE FALLBACK, not the live HTTPS fetch. The published URL 404'd at capture time because an unanchored  rule in pcb-agent/.gitignore had been excluding data/coverage/ from git, so the artefact was never pushed. Fixed in pcb-agent 7400438; the table bytes used here are identical to the committed file. The 404 correctly broke out of the retry loop on the first attempt rather than retrying three times.",
+      "log_line": "WARNING | Pin coverage fetch failed (404 ...); using cached copy with 156 part(s)."
+    },
+    "handoff_validation": {
+      "well_formed": true,
+      "issue_count": 0,
+      "note": "well_formed is a claim about the handoff DOCUMENT only. Buildability is pcb-agent's to decide via compilable."
+    },
+    "known_caveats": [
+      "The architecture agent is non-deterministic. This run produced a DIFFERENT subsystem set from dunkai_real_v2_gpio.json on the same profile: it added an I2C bus between U1 and U2 and chose an 'LED Driver' subsystem where the earlier run chose 'Status LED Output'. Component/net counts are therefore not comparable one-to-one; see the fixture's own counts.",
+      "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
+      "U1 is MIMXRT1172CVM8A, a 289-ball BGA whose pads are named POSITIONALLY (A1, A2, ...). Full pad naming here carries no capability information -- capabilityCheck.js guard 2 exists precisely for this part."
+    ]
+  },
+  "schema_version": "2.0",
+  "design_name": "dunkai_gpio_design",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "MIMXRT1172CVM8A",
+      "package": "MAPBGA-289",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "power",
+      "part_number": "AD4057",
+      "package": "SOT-23-6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "power",
+      "part_number": "HY2112-BB",
+      "package": "SOT-23-6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "input",
+      "part_number": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "output",
+      "part_number": "MBI5124GP-B",
+      "package": "SSOP-24",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "POWER_RAIL",
+      "interface": "Power",
+      "net_class": "power",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U2",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U3",
+          "role": "SUPPLY"
+        }
+      ]
+    },
+    {
+      "name": "GND",
+      "interface": "Power",
+      "net_class": "ground",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U2",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U3",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U4",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GROUND"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_CLOCK",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U2",
+          "role": "CLOCK"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_DATA",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "DATA"
+        },
+        {
+          "ref_id": "U2",
+          "role": "DATA"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_5_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U4",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_6_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GPIO"
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}
