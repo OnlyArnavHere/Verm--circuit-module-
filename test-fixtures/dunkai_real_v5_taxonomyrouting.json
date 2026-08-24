@@ -1,0 +1,419 @@
+{
+  "_provenance": {
+    "label": "real dunkai output, schema v2, first capture with interface taxonomy routing",
+    "captured": "2026-08-25",
+    "source": "dunkai @ cba213c, run.py --requirements data/profiles/env-sensor-node.json",
+    "purpose": "New baseline for the comparison series. Measures downstream Phase 5 error counts with Power and the wireless interfaces no longer scored as part requirements, and each retained requirement tagged with its relationship type.",
+    "replaces_v1_v4_series": {
+      "decision": "This fixture, not dunkai_real_v1..v4, is the comparison point going forward.",
+      "why": [
+        "The v1-v4 captures were all built from a 'panic-button profile' that was never committed and did not survive a machine move. The fixtures record its OUTPUT and describe it in prose ('2 push buttons, 3 status LEDs'), but the requirements JSON that produced them is gone, so none of them can be re-run for a matched before/after comparison.",
+        "Their own provenance already caveats them: 'Three captures of one profile is a small sample. Error counts move with architecture shape as much as with ranking quality.' and 'Architecture agent is non-deterministic; this is one sample.'",
+        "v1 is schema 1.0 (nets carry `connections`, not `members`) and was already outside the comparable set.",
+        "This capture is generated from ai_engine/data/profiles/env-sensor-node.json, which IS committed, so it can be re-run. The profile deliberately spans I2C, SPI, UART and GPIO so more than one retrieval path is exercised."
+      ],
+      "cost_acknowledged": "Retiring v3/v4 loses the before/after pair that measured the verified-pin-coverage and verified-absence-ceiling changes. That pair was already unreproducible; the loss is of a weak baseline, not a trustworthy one."
+    },
+    "taxonomy_routing_this_run": {
+      "dropped_from_scoring": [
+        "Power"
+      ],
+      "relationships_present": {
+        "not_a_bus": [
+          "GPIO"
+        ],
+        "peer": [
+          "UART"
+        ],
+        "shared_bus": [
+          "I2C",
+          "SPI"
+        ]
+      },
+      "endpoint_role_states": {
+        "settled_null": "UART (peer) carries endpoint_role: null -- terminal, no controller concept exists",
+        "not_yet_computed": "I2C/SPI (shared_bus) and GPIO (not_a_bus) OMIT the key entirely",
+        "not_applicable": "Power dropped before retrieval; recorded in interfaces_not_applicable"
+      }
+    },
+    "architecture_drift": {
+      "warning": "The architecture agent remains non-deterministic. This run assigned U1=MCU, whereas the pre-change run of the SAME profile assigned U2=MCU, with different shortlist sizes per role. Error counts therefore move with architecture shape as well as with ranking behaviour, exactly as the v1-v4 provenance warned. A single capture on either side is not a controlled measurement of the taxonomy change.",
+      "shape_this_run": "9 components / 14 nets / 37 members"
+    },
+    "known_caveats": [
+      "eda.py parse_bom_csv calls the live EasyEDA API per BOM row; packages are not offline-reproducible.",
+      "One capture per side. The architecture agent is non-deterministic, so the before/after delta below is indicative, not a controlled measurement.",
+      "The published v4 by-code split (PIN_NOT_FOUND 4 / PART_CAPABILITY_MISMATCH 1) does NOT reproduce on pcb-agent c5fa8db: the totals still reproduce exactly (phase3=9, phase5=5) but the split is now PART_CAPABILITY_MISMATCH 3 / PIN_NOT_FOUND 2. pcb-agent has since changed how curated pinouts claim padCount, which moves errors between exactly these two codes. Compare totals across the v-series, not the split."
+    ],
+    "verified_counts": {
+      "phase3_buildValidatedDesign_errors": 18,
+      "phase5_resolveComponents_errors": 10,
+      "phase5_by_code": {
+        "FOOTPRINT_NOT_FOUND": 1,
+        "PART_CAPABILITY_MISMATCH": 3,
+        "PIN_NOT_FOUND": 6
+      },
+      "measured_with": "pcb-agent c5fa8db, server/scripts/phase5-breakdown.mjs"
+    },
+    "before_after_same_profile": {
+      "headline": "NO CHANGE. Taxonomy routing did not move any downstream Phase 5 count.",
+      "before": {
+        "source": "dunkai bd019dd (pre-change), same env-sensor-node.json profile",
+        "phase3": 18,
+        "phase5": 10,
+        "phase5_by_code": {
+          "FOOTPRINT_NOT_FOUND": 1,
+          "PART_CAPABILITY_MISMATCH": 3,
+          "PIN_NOT_FOUND": 6
+        }
+      },
+      "after": {
+        "source": "dunkai cba213c (taxonomy routing)",
+        "phase3": 18,
+        "phase5": 10,
+        "phase5_by_code": {
+          "FOOTPRINT_NOT_FOUND": 1,
+          "PART_CAPABILITY_MISMATCH": 3,
+          "PIN_NOT_FOUND": 6
+        }
+      },
+      "part_selection": {
+        "identical": [
+          "U4 HDC1080DMBR",
+          "U7 PS-5850SVB-6PNW",
+          "U8 MBI5124GP-B",
+          "U9 HDSP-521G"
+        ],
+        "renumbered_only": "CAP200DG-TL, MC9S08DZ32ACLC and ESP-M1 all appear in both runs, permuted across U1/U2/U3 by architecture node ordering -- not a selection change.",
+        "genuinely_changed": [
+          "U5 MCP9700T-E/LT -> MCP9700T-E/TT (same MPN, different package suffix)",
+          "U6 MA800GQ-Z -> GSAT11"
+        ]
+      },
+      "why_no_movement": "Consistent with the measured evidence scarcity: 97% of candidates carry no structured interface attribute and 89% are absent from the 156-part pin-coverage table, so interface_match returns the same no-evidence constant for nearly every candidate either way. Removing Power from the required set changes each score MAGNITUDE but rarely the ORDER, because Power scored identically across candidates within a pool. The change is correct and removes a whole class of meaningless work, but the leverage on downstream errors lies in the two deferred phases (quantity-aware matching for GPIO/PWM/ADC/CS) and in catalogue evidence coverage -- not here."
+    }
+  },
+  "schema_version": "2.0",
+  "design_name": "Environmental Sensor Node",
+  "components": [
+    {
+      "ref_id": "U1",
+      "part_class": "processing",
+      "part_number": "MC9S08DZ32ACLC",
+      "package": "LQFP-32(7x7)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U2",
+      "part_class": "communication",
+      "part_number": "ESP-M1",
+      "package": "SMD,15x12.3mm",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U3",
+      "part_class": "power",
+      "part_number": "CAP200DG-TL",
+      "package": "SO-8",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U4",
+      "part_class": "sensor",
+      "part_number": "HDC1080DMBR",
+      "package": "WSON-6(3x3)",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U5",
+      "part_class": "sensor",
+      "part_number": "MCP9700T-E/TT",
+      "package": "SOT-23",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U6",
+      "part_class": "sensor",
+      "part_number": "GSAT11",
+      "package": "\u63d2\u4ef6",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U7",
+      "part_class": "input",
+      "part_number": "PS-5850SVB-6PNW",
+      "package": "SMD,5.8x5.8mm",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U8",
+      "part_class": "output",
+      "part_number": "MBI5124GP-B",
+      "package": "SSOP-24",
+      "quantity": 1
+    },
+    {
+      "ref_id": "U9",
+      "part_class": "output",
+      "part_number": "HDSP-521G",
+      "package": "DIP-18",
+      "quantity": 1
+    }
+  ],
+  "nets": [
+    {
+      "name": "POWER_RAIL",
+      "interface": "Power",
+      "net_class": "power",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "SUPPLY"
+        },
+        {
+          "ref_id": "U3",
+          "role": "SUPPLY"
+        }
+      ]
+    },
+    {
+      "name": "GND",
+      "interface": "Power",
+      "net_class": "ground",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U2",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U3",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U4",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U5",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U6",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U7",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U8",
+          "role": "GROUND"
+        },
+        {
+          "ref_id": "U9",
+          "role": "GROUND"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_CLOCK",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U4",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U5",
+          "role": "CLOCK"
+        }
+      ]
+    },
+    {
+      "name": "I2C_1_DATA",
+      "interface": "I2C",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "DATA"
+        },
+        {
+          "ref_id": "U4",
+          "role": "DATA"
+        },
+        {
+          "ref_id": "U5",
+          "role": "DATA"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_CLOCK",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CLOCK"
+        },
+        {
+          "ref_id": "U9",
+          "role": "CLOCK"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_MOSI",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "MOSI"
+        },
+        {
+          "ref_id": "U9",
+          "role": "MOSI"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_MISO",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "MISO"
+        },
+        {
+          "ref_id": "U9",
+          "role": "MISO"
+        }
+      ]
+    },
+    {
+      "name": "SPI_1_CS_U9",
+      "interface": "SPI",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U1",
+          "role": "CHIP_SELECT"
+        },
+        {
+          "ref_id": "U9",
+          "role": "CHIP_SELECT"
+        }
+      ]
+    },
+    {
+      "name": "UART_9_TX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U2",
+          "role": "TX"
+        },
+        {
+          "ref_id": "U1",
+          "role": "RX"
+        }
+      ]
+    },
+    {
+      "name": "UART_10_RX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U2",
+          "role": "RX"
+        },
+        {
+          "ref_id": "U1",
+          "role": "TX"
+        }
+      ]
+    },
+    {
+      "name": "UART_11_TX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U6",
+          "role": "TX"
+        },
+        {
+          "ref_id": "U1",
+          "role": "RX"
+        }
+      ]
+    },
+    {
+      "name": "UART_12_RX",
+      "interface": "UART",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U6",
+          "role": "RX"
+        },
+        {
+          "ref_id": "U1",
+          "role": "TX"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_13_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U7",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    },
+    {
+      "name": "GPIO_14_GPIO",
+      "interface": "GPIO",
+      "net_class": "signal",
+      "members": [
+        {
+          "ref_id": "U8",
+          "role": "GPIO"
+        },
+        {
+          "ref_id": "U1",
+          "role": "GPIO"
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "layer_count": 4,
+    "board_outline": {
+      "shape": "rectangle",
+      "width_mm": 100.0,
+      "height_mm": 60.0
+    }
+  }
+}
