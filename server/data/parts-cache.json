@@ -37,6 +37,15 @@
       "packageMismatches": []
     }
   },
+  "CAP200DG-TL::SO-8": {
+    "ok": true,
+    "lcsc": "C566784",
+    "footprint": "jlcpcb:C566784",
+    "package": "SO-8",
+    "description": "SO-8 Power Management - Specialized ROHS",
+    "stock": 4495,
+    "matchedOn": "part_number+package"
+  },
   "CD4543BM96::SOIC-16": {
     "ok": true,
     "lcsc": "C28326",
@@ -55,6 +64,16 @@
     "stock": 5883,
     "matchedOn": "part_number+package"
   },
+  "ESP-M1::SMD,15x12.3mm": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"ESP-M1\".",
+    "detail": {
+      "partNumber": "ESP-M1",
+      "package": "SMD,15x12.3mm",
+      "packageMismatches": []
+    }
+  },
   "ESPC2-12-N4::SMD,24x16mm": {
     "ok": true,
     "lcsc": "C19949080",
@@ -71,6 +90,15 @@
     "package": "LQFP-48(7x7)",
     "description": "128KB 12bit 2.7V~5.5V 43 48MHz 8bit ARM Cortex-M0+ FLASH LQFP-48(7x7) Microcontrollers (MCU/MPU/SOC) ROHS",
     "stock": 895,
+    "matchedOn": "part_number+package"
+  },
+  "GSAT11::插件": {
+    "ok": true,
+    "lcsc": "C239024",
+    "footprint": "jlcpcb:C239024",
+    "package": "插件",
+    "description": "插件 Ultrasonic Receivers, Transmitters ROHS",
+    "stock": 29,
     "matchedOn": "part_number+package"
   },
   "HDC1080DMBR::WSON-6(3x3)": {
@@ -243,6 +271,15 @@
     "package": "SOIC-8",
     "description": "-40℃~+85℃ 1.2uA 1.8V~5.5V 925nA External I2C Temperature compensation、Backup power management and battery charging、InsideSRAM/NVRAM、Timestamp function、Programmable clock output、Alarm function、Power-off retention of registers、ESD/Overvoltage protection、Periodic interrupt output Yes SOIC-8 Real Time Clocks ROHS",
     "stock": 2595,
+    "matchedOn": "part_number+package"
+  },
+  "MCP9700T-E/TT::SOT-23": {
+    "ok": true,
+    "lcsc": "C42288",
+    "footprint": "jlcpcb:C42288",
+    "package": "SOT-23",
+    "description": "-40℃~+125℃ 2.3V~5.5V ±2℃ SOT-23 Temperature Sensors ROHS",
+    "stock": 3654,
     "matchedOn": "part_number+package"
   },
   "MCP9808T-E/MC::DFN-8-EP(2x3)": {

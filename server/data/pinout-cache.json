@@ -502,6 +502,12 @@
     },
     "padCount": 40
   },
+  "jlcpcb:C239024": {
+    "ok": false,
+    "pins": {},
+    "padCount": 0,
+    "message": "footprint exposes no named pins"
+  },
   "jlcpcb:C250807": {
     "ok": true,
     "pins": {
@@ -1808,6 +1814,15 @@
     },
     "padCount": 9
   },
+  "jlcpcb:C42288": {
+    "ok": true,
+    "pins": {
+      "VDD": "pin1",
+      "VOUT": "pin2",
+      "GND": "pin3"
+    },
+    "padCount": 3
+  },
   "jlcpcb:C42930214": {
     "ok": true,
     "pins": {
@@ -2338,6 +2353,20 @@
       "F1": "pin18"
     },
     "padCount": 18
+  },
+  "jlcpcb:C566784": {
+    "ok": true,
+    "pins": {
+      "D11": "pin3",
+      "NC1": "pin4",
+      "D12": "pin2",
+      "NC2": "pin1",
+      "NC3": "pin5",
+      "D21": "pin6",
+      "D22": "pin7",
+      "NC4": "pin8"
+    },
+    "padCount": 8
   },
   "jlcpcb:C567496": {
     "ok": true,
