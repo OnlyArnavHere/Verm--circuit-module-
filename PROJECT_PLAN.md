@@ -349,6 +349,47 @@ Distinguishing these needs upstream instrumentation, not a scoring change.
 
 **Explicitly NOT in scope:** anything in `ranking.py`. The aggregation defect (a verified absence being averaged away by a confirmed interface) is fixed and regression-tested as `verified-absence-outranking-unknown`; this item is what remains after that fix, and the open question is whether it dominates the Phase 5 error count regardless of ranking quality.
 
+---
+
+#### Phase 11 status — 2026-08-25
+
+**11a — interface taxonomy routing: DONE (dunkai `cba213c`). It moved NO Phase 5 numbers, and must not be read as "ranking is fixed".**
+
+Investigation confirmed root cause 2 above, and sharpened it: retrieval is *structurally blind* to interface. `_build_query` embeds `"Interfaces: I2C"` as prose, but `_search_index` takes the top 20 against the whole index and `_filter_candidates` keys **only on category**. Interface is never a hard filter at any stage — `ranking.interface_match` was doing all the interface-awareness, and it can only reorder the pool it is handed. The 20-candidate cutoff also happens *before* category filtering, which only shrinks it (one observed role went 20 -> 1), so a hard interface filter bolted onto retrieval would make the pool worse, not better.
+
+Also established: **edge direction carries no signal.** Two captures produced exactly opposite conventions for bus edges (`MCU -> peripheral` vs `peripheral -> MCU`), internally consistent within each run. Power direction was stable in both — the one interface whose direction the prompt states explicitly. `nodes.py::_check_power_wiring` already accepts either orientation, so the codebase had reached this conclusion before.
+
+What 11a changed: `Power` (15 of 27 observed edges, true of every catalogue row) and `BLE`/`WiFi`/`RF` (links through the air, already excluded from nets) no longer reach `interface_match`. Each retained requirement is tagged `shared_bus` / `peer` / `host_device` / `not_a_bus`, reusing the tables that already existed in `nodes.py` rather than a second copy of the classification.
+
+**Measured before/after, same committed profile, one capture each side — identical:**
+
+| | before (`bd019dd`) | after (`cba213c`) |
+|---|---|---|
+| phase3 errors | 18 | 18 |
+| phase5 errors | 10 | 10 |
+| `PIN_NOT_FOUND` | 6 | 6 |
+| `PART_CAPABILITY_MISMATCH` | 3 | 3 |
+| `FOOTPRINT_NOT_FOUND` | 1 | 1 |
+
+Not "roughly the same" — byte-identical. **Taxonomy routing was correctness groundwork, not the lever.** It removed a class of meaningless work and is what the next phase needs in place; it did not improve a single downstream error, and nobody should later read that merge as having fixed ranking.
+
+**Why it could not have moved them, measured:** across 141 candidates in one capture, **3%** carry a structured interface attribute and **11%** appear in the 156-part pin-coverage table. `interface_match` therefore returns the same no-evidence constant for ~90% of candidates. Dropping `Power` changes each score's magnitude but rarely the *order*, because `Power` scored identically across candidates within a pool. A 25-weight dimension that returns a constant for nine candidates in ten cannot discriminate, however cleanly it is routed.
+
+**11b — quantity-aware matching: NEXT, and the phase actually expected to move the Phase 5 numbers.**
+
+The dominant failure is **quantity, not capability**. `GPIO` (the most-used non-Power interface), `PWM`, `ADC`, and SPI's `CHIP_SELECT` are all "**>=N pins**" requirements, and `interface_match` only answers a yes/no/unknown capability question. It is answering a question nobody asked: in one capture, U7 Push-Button and U8 LED Driver returned 40 candidates between them, *every one* scoring the identical no-evidence constant.
+
+- `GPIO`: the controller end needs **>=N free general-purpose pins**; the other end needs only a pad. Two different checks, one interface string.
+- SPI: the controller needs one `CHIP_SELECT` **per target** — a count that scales with the bus, not a capability.
+- This is where `PIN_NOT_FOUND` (6 of 10 phase5 errors in the current baseline) is expected to move, because it is the same underlying question: does this part have the pins the design needs.
+
+Prerequisite worth stating plainly: **11b is partly a data problem, not only a code one.** Pin counts need catalogue coverage, and at 3% structured-attribute coverage the code will run out of evidence before it runs out of logic. Expect 11b to be bounded by evidence availability, and to need the coverage table to grow alongside it.
+
+**11c — upstream edge-schema field for host/device ambiguity: deferred, smallest lever.** `USB`/`PCIe`/`SDIO` are asymmetric but *not* along the Processing/peripheral axis, so node category cannot resolve them; nor can it resolve a bus with two `Processing` endpoints. None of those combinations has appeared in any captured profile yet, so there is nothing to measure against. Revisit when one does.
+
+**Baseline note.** `dunkai_real_v5_taxonomyrouting.json` replaces the v1-v4 series as the comparison point — those were generated from a profile that was never committed and did not survive a machine move, so they cannot be re-run for a matched comparison. v5 comes from the committed `ai_engine/data/profiles/env-sensor-node.json`, and the component-data caches it needs are banked. Compare **totals** across the series, not by-code splits: v4's recorded split no longer reproduces on `c5fa8db` (totals still do) because curated-pinout `padCount` handling has since moved errors between `PIN_NOT_FOUND` and `PART_CAPABILITY_MISMATCH`.
+
+
 
 The system fails **explicitly**, never silently and never by guessing:
 
@@ -385,5 +426,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 6.5 — Catalogue/cache-completeness audit (done — 3D-model discard bug found/fixed, LP103SB6F cross-validated, systemic upstream capability-mismatch pattern discovered across 5 parts)
 - [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
+- [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
+- [ ] Phase 11b — Quantity-aware interface matching (UPSTREAM/dunkai, NEXT — the phase expected to move the Phase 5 numbers; partly gated on catalogue coverage)
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
