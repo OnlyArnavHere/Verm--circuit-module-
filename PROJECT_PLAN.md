@@ -415,7 +415,9 @@ The MCU carries 32 pads with three named. Null-safety returns unknown for all th
 
 *The precondition, stated plainly.* The binding constraint is NOT coverage-table size — it is whether GPIO-named parts ever reach a shortlist. All ten of them are MCU/wireless-module class (25-39 generic-IO pads on the STM32s), and the MCU role's shortlist is starved to ONE candidate by the category filter. **This becomes buildable the moment 11e produces a real MCU shortlist, and not before.** Until then it cannot fire and cannot be measured. `U7`/`U8` request GPIO but are the peripheral ends — switches and LED drivers legitimately have no generic-IO pads, so the gate has nothing to say there either.
 
-**THE PATTERN, worth seeing as one thing rather than three footnotes: taxonomy routing (11a), the generic-naming guard, and this GPIO capacity design are three independently-verified-correct pieces of work that all share a single blocker — the MCU shortlist-of-one.** Two are merged and measured as moving zero Phase 5 errors; the third is not built for the same reason. Everything meaningful left in Phase 11 now funnels through that one open question.
+**THE PATTERN, worth seeing as one thing rather than three footnotes: taxonomy routing (11a), the generic-naming guard, and this GPIO capacity design are three independently-verified-correct pieces of work that all share a single blocker.** Two are merged and measured as moving zero Phase 5 errors; the third is not built for the same reason.
+
+**UPDATED 2026-08-29:** that blocker is no longer "the MCU shortlist-of-one" — the shortlist has been broken open (1 -> 12 by dedup `531049c`, -> 11-20 by the curated table `e6ddf14`). All three remain dormant anyway, and the reason is now measured rather than inferred: the pool WIDENED but its COMPOSITION did not. It is still 100% NXP/Freescale, with 0 GPIO-named and 0 naming-guard-flagged parts, because `retrieval.py:281` still injects vendor-specific labels into the query text and selects the pool before any filter runs. **The shared blocker is now `:281` specifically.** See the third-pass Phase 11e entry.
 
 **11c — upstream edge-schema field for host/device ambiguity: deferred, smallest lever.** `USB`/`PCIe`/`SDIO` are asymmetric but *not* along the Processing/peripheral axis, so node category cannot resolve them; nor can it resolve a bus with two `Processing` endpoints. None of those combinations has appeared in any captured profile yet, so there is nothing to measure against. Revisit when one does.
 
@@ -561,6 +563,47 @@ What is established: the depth requirement is **per-role and has no global value
 
 **Next direction: genuinely per-role depth derivation — not a global constant, and not a 2-3-bucket rule fit to this set. Untried. No design proposed.** After five closures this is a deliberate stopping point, not a pause before a sixth attempt.
 
+**Update 2026-08-29 (third pass) — the MCU shortlist-of-one is BROKEN OPEN. Re-attribution and a corrected dormancy claim.**
+
+*The curated taxonomy table (dunkai `e6ddf14`).* Re-measuring the literal-vs-embedding split across ALL twelve categories corrected an earlier claim: **seven of twelve fall through**, not one. Processing, Input, Output, Storage, Security, Expansion and Network have ZERO catalogue rows whose `category` contains their name, so the literal path can never fire for them. "Processing/MCU is the one that fails" was an artefact of which categories the captured profiles exercised. Six of the seven had not collapsed only because their candidates happened to carry a label inside an arbitrary top-5. Processing, Storage and Security are now resolved from a curated table; the other four stay on the embedding path, tagged `embedding`/low-confidence.
+
+*MCU shortlist, correctly attributed per stage:*
+
+```
+  1        as captured (pre-dedup)                  winner MC9S08DZ32ACLC, forced
+ 12        + case-variant dedup  531049c            <- RE-ATTRIBUTION, see below
+ 11-20     + curated table       e6ddf14            winner MIMXRT1172CVM8A, chosen
+```
+
+**RE-ATTRIBUTION: `531049c` (dedup) was NOT dormant.** It moved the shortlist from 1 to 12 on its own, by collapsing the `ARTERY Mcu`/`Artery Mcu` case-variant pair and freeing that top-5 slot for `Microcontrollers (MCU/MPU/SOC)` (617 rows), which 12 of the 20 candidates carry. The earlier "dormant" label was a SEQUENCING ERROR in measurement, not a property of the fix: every capture in hand predates the merge, so Phase 5 was measured before it landed and never re-measured after. The 12 -> 11-20 step, and real MCUs surfacing at the top, is the curated table's contribution.
+
+**The other two fixes remain genuinely dormant — tested directly this time, not inferred.** With a real 20-candidate MCU pool in hand:
+
+```
+MCU shortlist after curated filter : 20
+  present in coverage table        :  7
+  GPIO-named (capacity gate)       :  0
+  naming-guard flagged             :  0
+  vendor composition               : 100% NXP/Freescale
+```
+
+The pool WIDENED but its COMPOSITION never changed. Taxonomy interface_match (11a) and the generic-naming guard therefore still have nothing to act on, and the reason is now precise rather than inferred.
+
+**THE REMAINING BLOCKER IS `retrieval.py:281`, not "the MCU shortlist-of-one".** That framing is superseded. `:281` builds the embedded query text and runs UNCONDITIONALLY for every role, injecting the resolved labels as `"Likely taxonomy: ..."`. When those labels were vendor-specific (`NXP MCU`), the entire FAISS top-20 came back 20/20 NXP/Freescale. The curated change was deliberately scoped to `:382` (the filter), so it alters which candidates SURVIVE, never which are RETRIEVED — it cannot diversify a pool that was vendor-selected upstream. Until `:281` is addressed the pool stays vendor-locked, and the STM32s and RF-BM modules the two dormant fixes were built for can never appear. Note `:382` is literal-match-gated (sensor roles never reach it) while `:281` is not, so changing `:281` has a strictly wider blast radius.
+
+*Phase 5: no movement, normalised.*
+
+```
+v5      :  9 components, phase3 18 (2.00/comp), phase5 10 (1.11/comp)
+curated : 10 components, phase3 20 (2.00/comp), phase5 11 (1.10/comp)
+```
+
+Absolute counts rose only because the design is larger. Errors are spread one per component, the MCU contributing a single PIN_NOT_FOUND. Phase 5 scores PIN RESOLUTION, not whether the chosen part is the right KIND of component, so the improvement it does not capture is part appropriateness.
+
+**Progress in kind, not yet in outcome — with a caveat worth watching.** The winner is now `MIMXRT1172CVM8A`, a genuine MCU chosen from a real pool rather than a single forced candidate. But it is the same 289-ball BGA that `dunkai_real_v4_absenceceiling.json` already records as **positionally named (A1, B1, ...), carrying no capability information**. So: wider pool, same vendor lock, and a winner already known to be unresolvable for capability. Better part kind; not yet a better outcome.
+
+*A curation error caught by a real run, recorded so it is not repeated.* The first version of the table included `Pre-ordered MCUs` (1031 rows) in Processing — chosen on ROW COUNT despite the same file documenting ordering-state buckets as electrically meaningless. All five of its entries in a live shortlist were non-MCUs (a 3A LDO, a MOSFET, a power monitor, a power switch, a temperature sensor) and they took the top THREE scoring slots, handing the MCU role the regulator `MIC29302WU`. Removing the subcategory alone would not have fixed it: `_filter_candidates` matches category OR subcategory, and those parts also carry `Embedded Processors & Controllers`, so both had to go. Real MCUs carry a precise subcategory and survive on that. Sorting a curated list by row count is exactly the failure the surrounding text warns against.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
@@ -609,7 +652,8 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
-- [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged; independently correct)
+- [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged. RE-ATTRIBUTED 2026-08-29: NOT dormant — it moved the MCU shortlist from 1 to 12 on its own by freeing a top-5 slot for `Microcontrollers (MCU/MPU/SOC)`. The earlier "dormant" label was a measurement sequencing error: every capture predated the merge.)
+- [x] Phase 11f — Curated taxonomy for Processing/Storage/Security (UPSTREAM/dunkai, done — `e6ddf14`. 7 of 12 categories fall through the literal path, not 1. MCU shortlist 12 -> 11-20 with real MCUs surfacing. Phase 5 unchanged per-component; the remaining blocker is `retrieval.py:281`, query-text vendor lock.)
 - [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
 - [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
