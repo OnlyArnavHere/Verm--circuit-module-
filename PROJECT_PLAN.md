@@ -407,6 +407,36 @@ The taxonomy index deduped labels on the exact string, so the same concept survi
 
 *Next candidate direction, UNTRIED AND NOT EVIDENCE-TESTED:* make the cutoff **relative to each query's own similarity distribution** — rank-based, or gap-based (cut where the largest similarity drop occurs among the top-K). This would treat tightly-clustered roles (EEPROM) and diffuse ones (GNSS) on their own terms, and would make `top_n` meaningful again — under the band design `top_n ≥ 34` was inert, the band alone deciding, which is itself a warning sign. **No claim is made that this works. It has not been implemented or measured.**
 
+**Update 2026-08-28 — a THIRD mechanism family is now closed. Three have failed, not one attempt plus retries.**
+
+The per-query relative cutoff was built and run against the full 22-role set before any conclusion was drawn. Three families, sixteen configurations: `elbow` (cut at the largest consecutive similarity drop in the top-K), `ratio` (keep within a fraction of the best match), `spread` (cut at the first drop exceeding c x the mean drop).
+
+**Not one configuration passed.** Best was `ratio a=0.90` with 3 admit-failures. `elbow` produced 4 admit-failures and is **parameter-insensitive** — identical output at K=10/15/20/30, because the largest similarity cliff sits ABOVE the dominant labels, between the top vendor-specific label and everything else, which is exactly the wrong place to cut. `spread` was worst at 9-10.
+
+*The half that worked, and it is worth keeping:* **every mechanism scored ZERO exclude-failures across all 22 roles.** No configuration admitted `UNKNOWN`(185,244), `Capacitors` into Display, `Power Modules` into Wi-Fi, `Connectors`, `MOSFETs`, or `LED Drivers` into Motor Driver. The scale-incomparability diagnosis was right: relativising within each query's own distribution does fix false-friend admission. The family fails on the OTHER half — it is uniformly too aggressive and cuts dominant labels (`Power Management ICs` 14631, `Single Chip Microcomputer/Microcontroller` 3187, `LED Segment Displays` 185).
+
+*Feasibility proof for the ratio family (`keep iff sim >= best * a`), the same analysis that closed the additive weight:*
+
+```
+tightest ADMIT   : a <= 0.8732   Power Mgmt   : Power Management (PMIC)   3492 rows
+tightest EXCLUDE : a >  0.8945   Motor Driver : LED Drivers               1943 rows
+                                        INFEASIBLE - window empty, overlap +0.0213
+```
+
+Empty by 0.0213 — not knife-edge, and wider than the ~0.02 margin below which nothing should ship. The binding exclude is `Motor Driver : LED Drivers`, which is uncontentious; the one arguable constraint (`Buffers / Drivers` for Display, a > 0.8737) is NOT binding, so the result does not depend on that judgment call in either direction. The overlap is structural: a label that must be KEPT (`Power Management (PMIC)`, 87.3% of its role's best) is proportionally further from its best than a label that must be DROPPED (`LED Drivers` for Motor Driver, 89.5% of its best). Per-query relativisation cannot reconcile that, because the two roles have genuinely different distribution shapes.
+
+**Where this leaves 11e.** Three mechanism families are now closed by evidence, each on the full 22-role set:
+
+| family | how it failed |
+|---|---|
+| additive coverage weight | provably infeasible, scale-invariantly (w > 0.259 vs w < 0.232) |
+| fixed cosine band | 0.0013 margins, 73 labels within 0.01 of the cut, over-narrowed Power Mgmt to 2 labels |
+| single-parameter relative cutoff | provably infeasible (a <= 0.8732 vs a > 0.8945, overlap 0.0213) |
+
+The common cause is now sharper than "fixed global threshold": **any single parameter applied uniformly across roles fails**, whether absolute (weight, band) or relative (ratio). Roles differ in the SHAPE of their similarity distribution, not merely its scale, so one constant cannot express the cut for all of them.
+
+Anything attempted next must be per-role adaptive BY CONSTRUCTION — a cutoff derived from each role's own top-K distribution shape rather than any constant applied everywhere. **That is a direction, not a design. It has not been specified, implemented, or tested, and no claim is made that it works.** The 22-role set plus its explicit admit/exclude assertions is the harness any candidate must clear before being reported as working.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
@@ -456,7 +486,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
 - [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged; independently correct)
-- [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai, NOT started — diagnosis confirmed, but two evidence-derived threshold mechanisms failed 22-role validation; needs a per-query relative cutoff, untried)
+- [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai, NOT started — diagnosis confirmed; THREE mechanism families now failed 22-role validation (additive weight, fixed band, single-parameter relative cutoff), two of them provably infeasible; any next attempt must be per-role adaptive by construction)
 - [ ] Phase 11b — Quantity-aware interface matching (UPSTREAM/dunkai, NEXT — the phase expected to move the Phase 5 numbers; partly gated on catalogue coverage)
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
