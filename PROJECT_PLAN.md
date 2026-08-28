@@ -437,6 +437,51 @@ The common cause is now sharper than "fixed global threshold": **any single para
 
 Anything attempted next must be per-role adaptive BY CONSTRUCTION — a cutoff derived from each role's own top-K distribution shape rather than any constant applied everywhere. **That is a direction, not a design. It has not been specified, implemented, or tested, and no claim is made that it works.** The 22-role set plus its explicit admit/exclude assertions is the harness any candidate must clear before being reported as working.
 
+**Update 2026-08-29 — distribution-shape investigation. A fourth family probed; still no pass, but the failure mode is now characterised rather than just observed.**
+
+*Every role is INDIVIDUALLY feasible.* Computing each role's own ratio-family window `(max exclude ratio, min admit ratio]`:
+
+```
+MCU 0.0261 | Display 0.0648 | Push Button 0.1126 | Wi-Fi 0.1426
+Power Mgmt 0.1611 | LED Driver 0.1818 | Temp/Humidity 0.2704
+```
+
+All positive. No role is intrinsically unsolvable — only the INTERSECTION is empty (MCU needs a <= 0.8992 while Motor Driver needs a > 0.8945; Display needs a > 0.8737 while Power Mgmt needs a <= 0.8732). The problem was never "some roles are hard"; it is that one constant cannot serve all of them.
+
+*What separates wide-window from narrow-window roles* (n=7, suggestive not established):
+
+```
+corr(window, skew)        = +0.882      corr(window, std)         = +0.549
+corr(window, maxgap)      = +0.810      corr(window, maxgap_rank) = -0.519
+corr(window, drank)       = -0.723      corr(window, dratio)      = +0.003
+```
+
+The last line is the important one: `dratio` — how far the dominant label sits proportionally from the best match — is the quantity the closed ratio family thresholds on, and it correlates with difficulty at **+0.003, i.e. not at all**. `skew` and `maxgap` carry real signal and were never consulted by any of the three closed mechanisms. MCU's profile explains its specific resistance: lowest skew (0.966), smallest maxgap (0.0232), dominant label at rank 7, largest gap at rank 8 — the natural elbow sits just PAST the label that must be kept.
+
+*Fourth family probed: coverage-driven iterative admission* (path-dependent stopping on the cumulative row-count curve, structurally unlike a pointwise threshold). Full 22-role harness:
+
+```
+IA-knee (param-free)      admit-fail 2   excl-fail 4    sizes 2/14/29
+IA-drop (param-free)      admit-fail 1   excl-fail 5    sizes 2/12/21
+IA-dimret (param-free)    admit-fail 9   excl-fail 0    sizes 1/2/4
+IA-frac X=0.5 (const)     admit-fail 0   excl-fail 4    sizes 2/12/19
+IA-frac X=0.7 (const)     admit-fail 0   excl-fail 5    sizes 8/19/30
+IA-frac X=0.9 (const)     admit-fail 0   excl-fail 5    sizes 15/23/30
+```
+
+**`IA-frac X=0.5` is the best partial result to date: 18 of 22 roles pass**, including MCU (which broke all three closed families) and Power Mgmt with `Power Management ICs`(14,631) retained. Its four failures are all exclude-side: Push Button/`Interface ICs`, Wi-Fi/`Power Modules`, Display/`Buffers / Drivers`, Motor Driver/`LED Drivers`. **This is a partial result, NOT a candidate design** — it still carries one global constant and has no similarity gate at all.
+
+*THE COMPLEMENTARITY FINDING — the most useful thing this pass produced:*
+
+| mechanism class | admit-fail | excl-fail |
+|---|---|---|
+| similarity-relative (additive weight, fixed band, ratio) | many | **0** |
+| coverage-driven admission (IA-frac, all X) | **0** | 4-5 |
+
+Every similarity-thresholding mechanism achieves **zero exclude-failures across 22 roles** and fails by cutting dominant labels. Every coverage-driven admission rule achieves **zero admit-failures** and fails by admitting false friends. Each class solves exactly the half the other cannot. The three earlier closures looked like the same failure; they were one SIDE of a failure, and the complementary side is now measured.
+
+*Correction to a pre-registered claim.* Before running this, it was argued that the structural advance would be REMOVING the global constant — that a path-dependent, parameter-free rule could not fail the way one constant fails. **The data does not support that.** The three parameter-free variants (`knee`, `drop`, `dimret`) performed WORSE than the constant-bearing `IA-frac`. `IA-frac X=0.5` still carries a global constant; it does better because it thresholds on CUMULATIVE COVERAGE rather than on similarity, not because it is stateful. The prediction was wrong and is recorded as wrong.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
