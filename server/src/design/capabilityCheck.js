@@ -147,3 +147,41 @@ export const capabilityConfirmed = (pinout) =>
   (pinout.padCount ?? 0) > 0 &&
   // Distinct PADS carrying a name, not name count — see classifyUnresolvedPin.
   new Set(Object.values(pinout.pins ?? {})).size === pinout.padCount;
+
+/**
+ * Interfaces whose ABSENCE a part's pin naming cannot support.
+ *
+ * This is Guard 3's rule, lifted so it can be recorded in the coverage table at
+ * build time instead of being re-derived by every consumer. Guard 3 answers it
+ * per-pin at design time; the coverage table needs it per-part, ahead of time,
+ * because dunkai's ranking reads that table and has no access to this module.
+ *
+ * WHY IT IS NEEDED. `naming_complete` licenses a negative claim: every pad is
+ * named, so an interface not among them is genuinely absent. That inference
+ * holds only when names describe FUNCTION. It breaks on generic port naming:
+ * STM32WLE5CCU6 has all 49 pads named (PA0..PA15, PB2..PB12, ...) and confirms
+ * ZERO interfaces, because a port name says nothing about protocol. Read
+ * literally, a complete-but-generic part is "proven" to lack I2C, SPI and UART
+ * -- the strongest negative in the system, asserted about parts that plainly
+ * have them. PA0 is simultaneously GPIO, ADC1_IN5, TIM2_CH1 and USART2_CTS
+ * depending on the alternate-function registers; only the datasheet knows.
+ *
+ * BOUNDARY. Only MUX_ASSIGNABLE interfaces are guarded. Power is not
+ * mux-assignable -- generic I/O cannot conjure a supply rail -- so a
+ * complete-named part still genuinely lacks Power if no rail is named, and
+ * functionally-named parts (AD4057: BAT, CHRG, GND, PROG, STDBY, VCC) match no
+ * generic-IO pattern at all, so their negatives are untouched.
+ *
+ * @param {string[]} names every pad name on the part
+ * @returns {string[]} interface names that must be treated as UNKNOWN, not absent
+ */
+export function absenceUnclaimableInterfaces(names) {
+  const hasGenericIo = (names ?? []).some((name) => GENERIC_IO.test(name));
+  if (!hasGenericIo) return [];
+  // dunkai's ALLOWED_INTERFACES; MUX_ASSIGNABLE decides which are at risk.
+  const VOCAB = [
+    "GPIO", "UART", "SPI", "I2C", "USB", "CAN", "Ethernet", "PCIe", "SDIO",
+    "Power", "BLE", "WiFi", "RF", "Audio", "Analog", "ADC", "PWM", "I2S",
+  ];
+  return VOCAB.filter((iface) => MUX_ASSIGNABLE.test(iface));
+}

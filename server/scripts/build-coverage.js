@@ -36,6 +36,7 @@ import { fileURLToPath } from "node:url";
 
 import { extractPinout, matchLogicalPin } from "../src/design/pinout.js";
 import { resolveRole, candidatesFor } from "../src/design/roleMap.js";
+import { absenceUnclaimableInterfaces } from "../src/design/capabilityCheck.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = path.resolve(here, "../../data/coverage/pin-coverage.json");
@@ -176,6 +177,7 @@ async function main() {
         naming_complete: false,
         names: [],
         interfaces_confirmed: [],
+        absence_unclaimable_for: [],
         note: pinout.message ?? "footprint resolved but exposes no named pins",
         resolved_at: new Date().toISOString(),
       };
@@ -198,6 +200,11 @@ async function main() {
       naming_complete: namedPads === padCount,
       names: names.sort(),
       interfaces_confirmed: interfaces,
+      // Interfaces whose ABSENCE this part's naming cannot support, even when
+      // naming_complete is true. Computed here, next to the other naming
+      // guards, so consumers (including dunkai's Python ranking) never
+      // re-derive the rule -- they read the answer. See capabilityCheck.js.
+      absence_unclaimable_for: absenceUnclaimableInterfaces(names),
       resolved_at: new Date().toISOString(),
     };
     ok += 1;
@@ -219,6 +226,12 @@ async function main() {
         "Partial pin naming. An interface missing from interfaces_confirmed is UNKNOWN, not absent.",
       naming_complete_true:
         "Every pad is named. Only here may a missing interface be read as genuinely absent.",
+      absence_unclaimable_for:
+        "Interfaces listed here are UNKNOWN on this part even when naming_complete is true. " +
+        "The pads are named generically (PA0, DIO3, P02 — port names, not functions), and such a " +
+        "pin is mux-assignable: it may carry I2C/SPI/UART without ever saying so. Complete naming " +
+        "therefore proves nothing about these. Interfaces NOT listed here (e.g. Power) keep the " +
+        "normal naming_complete_true rule.",
     },
     parts: Object.fromEntries(Object.entries(parts).sort(([a], [b]) => a.localeCompare(b))),
   };
