@@ -387,6 +387,34 @@ Prerequisite worth stating plainly: **11b is partly a data problem, not only a c
 
 **11c — upstream edge-schema field for host/device ambiguity: deferred, smallest lever.** `USB`/`PCIe`/`SDIO` are asymmetric but *not* along the Processing/peripheral axis, so node category cannot resolve them; nor can it resolve a bus with two `Processing` endpoints. None of those combinations has appeared in any captured profile yet, so there is nothing to measure against. Revisit when one does.
 
+#### Phase 11 status — 2026-08-28: retrieval category filtering
+
+**11d — taxonomy case-variant dedup: DONE (dunkai `531049c`). Independently correct, merged on its own.**
+
+The taxonomy index deduped labels on the exact string, so the same concept survived under several casings — 46 groups across the 490,894-row catalogue, including `'Inductors/Coils/Transformers'`(24259) vs `'inductors/coils/transformers'`(1) and `'Pre-ordered MCUs'`(1029) vs `'Pre-Ordered MCUs'`(2). Because their embeddings are near-identical they rank *adjacently*, so one concept consumed **two slots** of a top-5 window. The MCU query lost four of its top ten slots that way; the Wi-Fi query's top-ranked label was `'WIFI Modules'` — the **one-row** typo variant of a 147-row label. Merging is safe because `_filter_candidates` already lowercases both sides, so canonical casing is cosmetic; it is picked by row count so logs name the label that actually describes the catalogue. Row counts are summed and returned, unused for now.
+
+**11e — coverage-aware re-ranking: NOT IMPLEMENTED. Diagnosis stands, mechanism does not.**
+
+*The diagnosis is confirmed and is not in question.* `_resolve_category` ranks purely on cosine similarity between the request text and the label string, with **no row-count or coverage term anywhere in the path**. That lets a niche or duplicate label beat a dominant one. For an MCU request the top five were vendor-specific (`NXP MCU` 320 rows, `TI MCU` 188, `ARTERY Mcu` 12) covering **608 of 6,069 MCU rows (10%)**, while the three dominant generic labels — 5,246 rows, **86%** — sat at ranks 6, 8 and 10 and were cut. `_filter_candidates` then demands exact equality against that list, so 19 of 20 genuine MCUs were discarded and the MCU role was left with a shortlist of one. This fires on every design with an MCU.
+
+*Two mechanisms were tried to fix it. Both were derived from measured evidence, and both failed under full 22-role validation.*
+
+1. **Additive coverage weight.** `score = sim + w·cov`, `cov = log10(1+rows)/log10(1+max_rows)`. `w = 0.28` derived as the midpoint of a window bounded by two real constraints. It fixed MCU and Power Mgmt — and regressed Display (`Capacitors`, 48,720 rows, promoted from rank 87 into the **top-5** of a *display* role) and Wi-Fi (`Power Modules` from rank 13 to rank 3). Not a tuning failure: MCU requires `w > 0.259`, Display requires `w < 0.232`, and **the contradiction is scale-invariant** — changing the normalisation moves both bounds together. No `w` exists.
+
+2. **Cosine similarity band.** Eligibility restricted to labels within a fixed cosine distance of the best match, so coverage could only reorder labels already relevant. Width `0.09`, again the midpoint of a measured window. Under 22-role validation the margins collapsed: MCU has a label **0.0013** outside the cut and another **0.0016** outside; **73 labels across 15 unseen roles sit within 0.01 of the boundary**, several on the visibly wrong side (`Motor Driver` excludes `LED Drivers`(1943) by 0.0018; `Secure Element` admits `Key/Switch`(3567) by 0.0009 while excluding `Tactile Switches`(9858) by 0.0024). It also **over-narrowed roles that already worked**: Power Mgmt dropped to 2 eligible labels, excluding `Power Management ICs` — 14,631 rows, the largest genuinely-relevant label for that role. Band size ranged from **1 (EEPROM) to 34 (GNSS)**, because a fixed cosine distance means something different for every query.
+
+**The generalisable finding: any FIXED GLOBAL THRESHOLD is the wrong mechanism here**, because similarity scale is not comparable across queries. Both attempts failed the same way — derived from two data points, no margin under wider testing.
+
+*Next candidate direction, UNTRIED AND NOT EVIDENCE-TESTED:* make the cutoff **relative to each query's own similarity distribution** — rank-based, or gap-based (cut where the largest similarity drop occurs among the top-K). This would treat tightly-clustered roles (EEPROM) and diffuse ones (GNSS) on their own terms, and would make `top_n` meaningful again — under the band design `top_n ≥ 34` was inert, the band alone deciding, which is itself a warning sign. **No claim is made that this works. It has not been implemented or measured.**
+
+**Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
+
+  * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
+  * `retrieval.py:281` in `_build_query` — **unconditional, for every role**, injecting `"Likely taxonomy: <top 3>"` into the embedded query text. Sensor roles DO reach this. Any change to resolution therefore alters sensor query text, and so their FAISS results, even though their filtering is untouched.
+
+Checked, not assumed: an earlier writeup asserted the sensor roles were structurally unaffected. That is true of the filter and false of the query.
+
+
 **Baseline note.** `dunkai_real_v5_taxonomyrouting.json` replaces the v1-v4 series as the comparison point — those were generated from a profile that was never committed and did not survive a machine move, so they cannot be re-run for a matched comparison. v5 comes from the committed `ai_engine/data/profiles/env-sensor-node.json`, and the component-data caches it needs are banked. Compare **totals** across the series, not by-code splits: v4's recorded split no longer reproduces on `c5fa8db` (totals still do) because curated-pinout `padCount` handling has since moved errors between `PIN_NOT_FOUND` and `PART_CAPABILITY_MISMATCH`.
 
 
@@ -427,6 +455,8 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 6.6 — Capability-mismatch validation (done — PART_CAPABILITY_MISMATCH implemented, 3 guards, 5 pins/4 parts reclassified, systemic upstream finding documented)
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
+- [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged; independently correct)
+- [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai, NOT started — diagnosis confirmed, but two evidence-derived threshold mechanisms failed 22-role validation; needs a per-query relative cutoff, untried)
 - [ ] Phase 11b — Quantity-aware interface matching (UPSTREAM/dunkai, NEXT — the phase expected to move the Phase 5 numbers; partly gated on catalogue coverage)
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
