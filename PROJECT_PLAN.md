@@ -385,6 +385,38 @@ The dominant failure is **quantity, not capability**. `GPIO` (the most-used non-
 
 Prerequisite worth stating plainly: **11b is partly a data problem, not only a code one.** Pin counts need catalogue coverage, and at 3% structured-attribute coverage the code will run out of evidence before it runs out of logic. Expect 11b to be bounded by evidence availability, and to need the coverage table to grow alongside it.
 
+#### 11b update 2026-08-29 — scope narrowed to GPIO, designed, DELIBERATELY NOT IMPLEMENTED
+
+The original 11b framing (GPIO/PWM/ADC/CHIP_SELECT) is narrowed. **PWM and ADC stay out permanently**: zero observed demand across every captured profile, and the catalogue cannot answer alternate-function capability at all (`PA0` is simultaneously GPIO, ADC1_IN5, TIM2_CH1 and USART2_CTS — only the datasheet knows). That is Phase 6 territory, not ranking.
+
+*What was designed.* A pre-selection GPIO capacity gate for ranking: N comes free from net structure (confirmed on v5 — `{U1: 2, U7: 1, U8: 1}`), and for a part in the coverage table WITH GPIO-style names, compare its generic-IO pad count against N. Everything else returns `None` — same three-state null-safety as `interface_confidence` and `absence_unclaimable_for`. Never a silent 0.
+
+*What it would prevent.* `allocateGpio()` already fails LOUDLY today — `"every general-purpose I/O pad on this part is already allocated"` or `"this part exposes no general-purpose I/O pads to allocate a GPIO from"`, routed through `classifyUnresolvedPin` to PIN_NOT_FOUND / PART_CAPABILITY_MISMATCH. Nothing is silent or guessed. The gate would move an already-correct failure EARLIER, to selection time. A real improvement in kind, not a correctness fix.
+
+*Why it is not implemented: it is provably dormant on every capture in hand.*
+
+```
+capture                    candidates  in-coverage  GPIO-named  roles needing GPIO
+dunkai_run2_state.json         141         70            0       U2, U7, U8
+guard_off_state.json           142         71            0       U1, U7, U8
+guard_on_state.json            142         71            0       U1, U7, U8
+post_taxonomy_state.json       144         87            0       U1, U7, U8
+```
+
+**0 GPIO-named candidates out of 569, across four independent captures.** The coverage lookup itself is live (~50% of candidates are in the table); none of those has generic-IO names. The three parts actually SELECTED for GPIO-requiring roles show why the gate correctly returns unknown for every one of them:
+
+```
+MC9S08DZ32ACLC  (U1, needs 2)  in coverage, naming_complete=False, 32 pads, generic-IO=0, names=[RESET, VDD, VSS]
+PS-5850SVB-6PNW (U7, needs 1)  in coverage, 6 pads, generic-IO=0, names=[]
+MBI5043GP-A     (U8, needs 1)  in coverage, 0 pads, generic-IO=0, names=[]
+```
+
+The MCU carries 32 pads with three named. Null-safety returns unknown for all three, which is correct and does nothing.
+
+*The precondition, stated plainly.* The binding constraint is NOT coverage-table size — it is whether GPIO-named parts ever reach a shortlist. All ten of them are MCU/wireless-module class (25-39 generic-IO pads on the STM32s), and the MCU role's shortlist is starved to ONE candidate by the category filter. **This becomes buildable the moment 11e produces a real MCU shortlist, and not before.** Until then it cannot fire and cannot be measured. `U7`/`U8` request GPIO but are the peripheral ends — switches and LED drivers legitimately have no generic-IO pads, so the gate has nothing to say there either.
+
+**THE PATTERN, worth seeing as one thing rather than three footnotes: taxonomy routing (11a), the generic-naming guard, and this GPIO capacity design are three independently-verified-correct pieces of work that all share a single blocker — the MCU shortlist-of-one.** Two are merged and measured as moving zero Phase 5 errors; the third is not built for the same reason. Everything meaningful left in Phase 11 now funnels through that one open question.
+
 **11c — upstream edge-schema field for host/device ambiguity: deferred, smallest lever.** `USB`/`PCIe`/`SDIO` are asymmetric but *not* along the Processing/peripheral axis, so node category cannot resolve them; nor can it resolve a bus with two `Processing` endpoints. None of those combinations has appeared in any captured profile yet, so there is nothing to measure against. Revisit when one does.
 
 #### Phase 11 status — 2026-08-28: retrieval category filtering
@@ -579,6 +611,6 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
 - [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged; independently correct)
 - [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
-- [ ] Phase 11b — Quantity-aware interface matching (UPSTREAM/dunkai, NEXT — the phase expected to move the Phase 5 numbers; partly gated on catalogue coverage)
+- [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
