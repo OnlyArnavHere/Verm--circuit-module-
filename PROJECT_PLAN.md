@@ -482,6 +482,53 @@ Every similarity-thresholding mechanism achieves **zero exclude-failures across 
 
 *Correction to a pre-registered claim.* Before running this, it was argued that the structural advance would be REMOVING the global constant — that a path-dependent, parameter-free rule could not fail the way one constant fails. **The data does not support that.** The three parameter-free variants (`knee`, `drop`, `dimret`) performed WORSE than the constant-bearing `IA-frac`. `IA-frac X=0.5` still carries a global constant; it does better because it thresholds on CUMULATIVE COVERAGE rather than on similarity, not because it is stateful. The prediction was wrong and is recorded as wrong.
 
+**Update 2026-08-29 (second pass) — FIFTH closure. Two-stage composition fails by reasoning, before implementation.**
+
+The scoped design was: coverage-driven admission first (solves the admit half per the complementarity finding), then a similarity-relative exclude gate whose cut is derived from the role's own skew/maxgap. It was reasoned through before any code, and the reasoning found a real problem.
+
+*The composition does not compose.* Both stages cut PREFIXES of the same total order. Stage A walks in similarity order and stops -> top-nA. Stage B keeps `sim >= threshold`, and since similarities are sorted descending that is also a prefix -> top-nB. So **A then B = top-min(nA, nB)**: the two-stage design cannot express anything a single prefix cut cannot, and stage A is redundant, contributing only a cap.
+
+This also corrects the complementarity framing recorded above. The two classes are NOT orthogonal filters on different properties; they are two DEPTH HEURISTICS on one axis. Coverage-driven admission picks deeper cuts (hence zero admit-failures), similarity-relative picks shallower ones (hence zero exclude-failures). Composing them merely picks a depth. The complementarity observation is real as a description of how each class fails, but it does NOT imply the halves can be combined.
+
+*Recast into depth space, every constraint becomes a per-role feasible prefix depth:*
+
+```
+all 22 windows non-empty: True
+global depth needed:  >= 9 (MCU)   and   <= 5 (Motor Driver)   -> NO single global depth
+
+MCU           [9, 11]   binding exclude: Buffers / Drivers @r12
+Motor Driver  [1,  5]   binding exclude: LED Drivers       @r6
+Push Button   [4,  7]   Interface ICs     @r8
+Display       [4,  8]   Buffers / Drivers @r9
+Wi-Fi         [3, 12]   Power Modules     @r13
+Power Mgmt    [4, 36]   Power Inductors   @r37
+```
+
+A per-role depth EXISTS for all 22 roles. No global one does. That localises the whole problem to depth selection.
+
+*The only rule that fits, and why it is not shippable:*
+
+```
+BEST 2-level rule: depth = 9 if skew < 1.141 else 4
+skew margin = 0.1430   (nearest below 0.998, nearest above 1.285)
+```
+
+All 22 pass and the skew margin clears the ~0.02 floor comfortably. But the DEPTH headroom does not: **four roles sit at zero slack on the low side** — MCU `[9,11]` at depth 9, Push Button `[4,7]`, Display `[4,8]`, Power Mgmt `[4,36]`, all `slack_low=0`. Any unseen role needing one more rank than its skew bucket provides fails immediately. It is also a **3-parameter fit (threshold plus two depths) tuned against the exact 22-role set that constitutes the test** — the pattern that produced two earlier false passes. Robust in the dimension searched, brittle in the dimension that decides admissions. Explicitly NOT shippable under the standing rule.
+
+**11e state at the end of this session — FIVE mechanism families closed**, by proof or by pre-implementation reasoning:
+
+| # | family | how it closed |
+|---|---|---|
+| 1 | additive coverage weight | provably infeasible, scale-invariantly (w > 0.259 vs w < 0.232) |
+| 2 | fixed cosine band | 0.0013 margins, 73 labels within 0.01 of the cut, over-narrowed Power Mgmt to 2 labels |
+| 3 | single-parameter relative cutoff | provably infeasible (a <= 0.8732 vs a > 0.8945, overlap 0.0213) |
+| 4 | coverage-driven iterative admission | best partial result, 18/22; 4 exclude-failures, no similarity gate |
+| 5 | two-stage composition | collapses to a single prefix depth by construction; only fitted rule has zero depth-slack on 4 roles |
+
+What is established: the depth requirement is **per-role and has no global value** (MCU >= 9, Motor Driver <= 5). `skew` is the strongest known correlate (+0.882); `dratio` — the quantity families 1-3 all thresholded on — is negligible (+0.003). The 22-role admit/exclude harness is the bar.
+
+**Next direction: genuinely per-role depth derivation — not a global constant, and not a 2-3-bucket rule fit to this set. Untried. No design proposed.** After five closures this is a deliberate stopping point, not a pause before a sixth attempt.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
@@ -531,7 +578,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 8 — Conversational modification workflow (done — real end-to-end success and DRC-block both proven; semantic target-mismatch check added and proven with a forced real misidentification; known limitation: fixed English vocabulary, correctly returns `unverifiable` rather than false-alarming on unusual phrasing)
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
 - [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged; independently correct)
-- [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — three mechanism families closed by proof (additive weight, fixed band, single-parameter relative cutoff) — not merely attempted. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
+- [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
 - [ ] Phase 11b — Quantity-aware interface matching (UPSTREAM/dunkai, NEXT — the phase expected to move the Phase 5 numbers; partly gated on catalogue coverage)
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
