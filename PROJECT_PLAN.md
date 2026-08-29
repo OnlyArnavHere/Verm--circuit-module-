@@ -591,7 +591,7 @@ The pool WIDENED but its COMPOSITION never changed. Taxonomy interface_match (11
 
 **THE REMAINING BLOCKER IS `retrieval.py:281`, not "the MCU shortlist-of-one".** That framing is superseded. `:281` builds the embedded query text and runs UNCONDITIONALLY for every role, injecting the resolved labels as `"Likely taxonomy: ..."`. When those labels were vendor-specific (`NXP MCU`), the entire FAISS top-20 came back 20/20 NXP/Freescale. The curated change was deliberately scoped to `:382` (the filter), so it alters which candidates SURVIVE, never which are RETRIEVED — it cannot diversify a pool that was vendor-selected upstream. Until `:281` is addressed the pool stays vendor-locked, and the STM32s and RF-BM modules the two dormant fixes were built for can never appear. Note `:382` is literal-match-gated (sensor roles never reach it) while `:281` is not, so changing `:281` has a strictly wider blast radius.
 
-*Phase 5: no movement, normalised.*
+*Phase 5: no movement, normalised.* **[RETRACTED 2026-08-29 — measured through a broken harness; see the RETRACTION section below.]**
 
 ```
 v5      :  9 components, phase3 18 (2.00/comp), phase5 10 (1.11/comp)
@@ -646,7 +646,7 @@ parts that WOULD activate them: NONE
 
 Zero, again. **Coverage-table presence FELL from 7 to 4** -- worth keeping visible alongside the zeros, because it means the diversified pool is LESS characterised than the vendor-locked one it replaced, not more. The ten GPIO-named parts are STM32/RF-BM/HLK class; diversification moved toward 8051-class parts (SinOne, STC, Atmel) and reached none of them. **Breaking the vendor lock was necessary but not sufficient.**
 
-*Phase 5: flat, for the FIFTH consecutive change.*
+*Phase 5: flat, for the FIFTH consecutive change.* **[RETRACTED 2026-08-29 — the metric was blind by construction; see the RETRACTION section below.]**
 
 ```
 run               comps  phase3   /comp   phase5   /comp
@@ -660,6 +660,45 @@ Absolute counts rise only with design size; per-component rates are unchanged.
 **What five correct changes now establish.** Taxonomy routing, the generic-naming guard, the case-variant dedup, the curated table and this query-text fix are all verified correct, all merged, and Phase 5 has not moved once. Only the dedup's "dormant" label proved wrong, and even that moved shortlist SIZE without moving errors. The retrieval/ranking path has now been substantially repaired -- shortlist 1 -> 20, single-vendor -> five vendors, resolution sources agreed -- with no downstream effect whatsoever. **That increasingly suggests the Phase 5 errors have a cause OUTSIDE the retrieval/ranking path, and that is the thing to investigate next rather than a sixth improvement to selection.**
 
 *One question deliberately left open, not tuned away.* The MCU winner is now `STC89C52RC-40I-PDIP40`, a through-hole 40-pin DIP 8051, where the vendor-locked pool produced NXP Cortex-M parts. No attempt was made to steer injection text toward Cortex-M -- the fix's job was to stop forcing single-vendor convergence, not to curate its way to a preferred architecture. Whether the diversified pool is actually BETTER for these designs is unresolved, and it is plausible it is worse even though the vendor lock was a genuine defect. Worth answering before diversification is treated as unambiguous progress.
+
+### RETRACTION 2026-08-29 — the Phase 5 measurement harness was broken. Three prior conclusions are now KNOWN FALSE.
+
+**The defect.** Every consumer of `resolveComponents()` flattened normalized nets back into v1-style strings:
+
+```js
+connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`)
+```
+
+Schema 2.0 asserts NO pin name (D-076): `validatedDesign.js:157` sets `pin: null` and carries the declared `role` alongside. The template therefore produced the literal string `"U1.null"` for EVERY member and discarded `role` entirely. The resolver then tried to resolve a pin named `"null"` on every part -- which no part in any catalogue has.
+
+**One guaranteed error per component on every schema-2.0 design, independent of which part was selected.** Which error CODE appeared was decided purely by the part's naming completeness -- `PART_CAPABILITY_MISMATCH` when the pin set was complete ("contains no null"), `PIN_NOT_FOUND` when it was not ("absence of null is not confirmed"). That correlation was 10/10 on the run that exposed it. Fixed in `329f3fc`; no production code changed, because `resolveComponents` already supported role-based nets and the consumers were destroying the `members` array before handing it over.
+
+**RETRACTION 1.** Claimed: *"Phase 5 is flat, for the FIFTH consecutive change"* and *"2.00 phase3 errors per component on both sides, 1.11 vs 1.10 phase5"*. **NOW KNOWN FALSE.** The rate sat at ~1.10/component because it was literally one error per component BY CONSTRUCTION. It could not have moved regardless of what the pipeline did. The metric was blind, not the pipeline inert.
+
+**RETRACTION 2.** Claimed: *"Five verified-correct merged changes have substantially repaired the retrieval/ranking path ... with no downstream effect at all."* **NOW KNOWN FALSE.** There was downstream effect; the instrument could not see it. See the corrected figures below.
+
+**RETRACTION 3.** Claimed: *"That increasingly suggests the Phase 5 errors have a cause OUTSIDE the retrieval/ranking path, and that is the thing to investigate next rather than a sixth improvement to selection."* **NOW KNOWN FALSE, and backwards.** The errors were an artefact of the harness, and once the metric could see, the movement came from exactly the retrieval/ranking path this claim proposed to abandon.
+
+**Provenance of the error.** `phase5-breakdown.mjs` was written during this thread and reproduced the defect faithfully by copying the consumption pattern from `run-poc.js` without checking it against the v2 schema. Every Phase 5 figure it produced was then used to argue, with increasing confidence, that the retrieval fixes were not working. The instrument was wrong and the conclusions drawn from it were wrong.
+
+**CORRECTED PHASE 5 FIGURES — every schema-2.0 fixture, re-measured with the fixed harness.** The old numbers UNDER-counted, because the broken harness made one null-pin request per component instead of one per net member.
+
+```
+fixture                          comps   p5 (old, INVALID)   p5 (real)   by code (real)
+dunkai_real_v2_rolebased           10           --              20       FOOTPRINT 2, PIN_NOT_FOUND 18
+dunkai_real_v2_gpio                 5           --               6       PIN_NOT_FOUND 6
+dunkai_real_v3_rankedcoverage       5            9               9       MISMATCH 3, PIN_NOT_FOUND 6
+dunkai_real_v4_absenceceiling       5            5               5       MISMATCH 1, PIN_NOT_FOUND 4
+dunkai_real_v5_taxonomyrouting      9           10              29       FOOTPRINT 1, MISMATCH 3, PIN_NOT_FOUND 25
+curated (:382) capture             10           11              29       FOOTPRINT 1, MISMATCH 6, PIN_NOT_FOUND 22
+hint (:281) capture                11           12              26       FOOTPRINT 1, MISMATCH 4, PIN_NOT_FOUND 21
+```
+
+v1 documents are unaffected -- they use `net.connections` and still resolve real pin names. Verified against `dunkai_real_v1_unfixed` (p3 22 / p5 22), `rc_car` (6/4) and `smart_dustbin` (13/7).
+
+**FOOTNOTE REQUIRED on the v1-vs-v2 comparison at the centre of the schema redesign.** The v1/v2 measurements that motivated schema 2.0 were taken honestly and BEFORE this defect could affect them -- v1 never used the `members` path. They have NOT been re-validated against it. They are **presumed sound but not re-confirmed**, and should be treated that way until someone re-runs them on the fixed harness.
+
+**Uncontrolled arc figures, recorded as uncontrolled.** Across taxonomy routing -> naming guard -> curated table -> query hint the per-component rate fell 3.22 -> 3.00 -> 2.90 -> 2.36 (a 27% reduction). **This is NOT a controlled comparison**: the four runs have 9/9/10/11 components with different subsystems, because the architecture agent is non-deterministic. Direction, not magnitude, is what these support. A controlled re-measurement on a fixed architecture follows.
 
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
