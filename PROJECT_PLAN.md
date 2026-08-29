@@ -604,6 +604,63 @@ Absolute counts rose only because the design is larger. Errors are spread one pe
 
 *A curation error caught by a real run, recorded so it is not repeated.* The first version of the table included `Pre-ordered MCUs` (1031 rows) in Processing — chosen on ROW COUNT despite the same file documenting ordering-state buckets as electrically meaningless. All five of its entries in a live shortlist were non-MCUs (a 3A LDO, a MOSFET, a power monitor, a power switch, a temperature sensor) and they took the top THREE scoring slots, handing the MCU role the regulator `MIC29302WU`. Removing the subcategory alone would not have fixed it: `_filter_candidates` matches category OR subcategory, and those parts also carry `Embedded Processors & Controllers`, so both had to go. Real MCUs carry a precise subcategory and survive on that. Sorting a curated list by row count is exactly the failure the surrounding text warns against.
 
+**Update 2026-08-29 (fourth pass) — `:281` fixed, vendor lock broken, dormant-fix hypothesis tested NEGATIVE.**
+
+`_build_query` (`:281`) called the RAW uncurated resolver while `_filter_candidates` (`:382`) used the curated table, so the two call sites disagreed about what a category IS. The MCU query was steered by `NXP MCU` while the filter admitted on generic labels. Fixed in dunkai `fe9e6e7`, scoped to ALL TWELVE categories because the data required it: `Communication` and `Memory` retain only 10/20 and 12/20 candidates when the injected line is removed -- as sensitive as any fall-through category, with healthy filters sitting on unexamined retrieval.
+
+*Per-category diversity, old hint vs new (manufacturer counts in the FAISS top-20):*
+
+```
+category       path   old vend  new vend  same/20   filter old      filter new
+Processing     fall       1         5      1/20     20 curated      20 curated
+Power          LIT        9         9     19/20     19 LITERAL      19 LITERAL
+Sensor         LIT        7         7     19/20     20 LITERAL      20 LITERAL
+Communication  LIT        5         6      9/20     20 LITERAL      20 LITERAL
+Memory         LIT        8         7     12/20     20 LITERAL      20 LITERAL
+Clock          LIT        5         5     19/20     20 LITERAL      20 LITERAL
+Input          fall       1         1     16/20     20 embedding    20 embedding
+Output         fall       5         5     11/20     20 embedding    20 embedding
+Storage        fall       2         1      7/20     19 curated      20 curated
+Security       fall       8         8     14/20     19 curated      19 curated
+Expansion      fall       6         6     16/20     20 embedding    20 embedding
+Network        fall       4         5     12/20     20 embedding    19 embedding
+```
+
+**The vendor lock is broken.** Processing went from `NXP Semicon: 20` -- a 100% single-vendor pool -- to `SinOne 11, Microchip 4, STC 3, STMicroelectronics 1, NXP 1`, with only 1 of 20 candidates in common. All five literal-match categories still pass their filter at 19-20; Power/Sensor/Clock are essentially untouched at 19/20 overlap.
+
+**TWO OPEN WRINKLES, recorded rather than absorbed into "no regressions":**
+  * **Storage narrowed from 2 vendors to 1** (its filter improved 19 -> 20, but the pool got less diverse, which is the opposite of this change's intent). Storage was also exercised for the FIRST time in this run -- the architecture agent finally emitted category `Storage` rather than `Memory` for Flash Storage -- so this is a single observation on a newly-live path.
+  * **Network's filter dropped 20 -> 19.** Small, unexplained, and not investigated.
+
+Neither is understood. Both should be checked before Storage/Network behaviour is relied on.
+
+**THE DORMANT-FIX HYPOTHESIS TESTED NEGATIVE.** With the vendor lock broken and a genuinely 5-manufacturer MCU pool:
+
+```
+after curated filter          : 20
+in coverage table             :  4   (was 7 under the vendor-locked pool)
+GPIO-named (capacity gate)    :  0
+naming-guard flagged          :  0
+parts that WOULD activate them: NONE
+```
+
+Zero, again. **Coverage-table presence FELL from 7 to 4** -- worth keeping visible alongside the zeros, because it means the diversified pool is LESS characterised than the vendor-locked one it replaced, not more. The ten GPIO-named parts are STM32/RF-BM/HLK class; diversification moved toward 8051-class parts (SinOne, STC, Atmel) and reached none of them. **Breaking the vendor lock was necessary but not sufficient.**
+
+*Phase 5: flat, for the FIFTH consecutive change.*
+
+```
+run               comps  phase3   /comp   phase5   /comp
+v5 baseline       9      18       2.00    10       1.11
+curated (:382)    10     20       2.00    11       1.10
+hint (:281)       11     22       2.00    12       1.09
+```
+
+Absolute counts rise only with design size; per-component rates are unchanged.
+
+**What five correct changes now establish.** Taxonomy routing, the generic-naming guard, the case-variant dedup, the curated table and this query-text fix are all verified correct, all merged, and Phase 5 has not moved once. Only the dedup's "dormant" label proved wrong, and even that moved shortlist SIZE without moving errors. The retrieval/ranking path has now been substantially repaired -- shortlist 1 -> 20, single-vendor -> five vendors, resolution sources agreed -- with no downstream effect whatsoever. **That increasingly suggests the Phase 5 errors have a cause OUTSIDE the retrieval/ranking path, and that is the thing to investigate next rather than a sixth improvement to selection.**
+
+*One question deliberately left open, not tuned away.* The MCU winner is now `STC89C52RC-40I-PDIP40`, a through-hole 40-pin DIP 8051, where the vendor-locked pool produced NXP Cortex-M parts. No attempt was made to steer injection text toward Cortex-M -- the fix's job was to stop forcing single-vendor convergence, not to curate its way to a preferred architecture. Whether the diversified pool is actually BETTER for these designs is unresolved, and it is plausible it is worse even though the vendor lock was a genuine defect. Worth answering before diversification is treated as unambiguous progress.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.
@@ -654,6 +711,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
 - [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged. RE-ATTRIBUTED 2026-08-29: NOT dormant — it moved the MCU shortlist from 1 to 12 on its own by freeing a top-5 slot for `Microcontrollers (MCU/MPU/SOC)`. The earlier "dormant" label was a measurement sequencing error: every capture predated the merge.)
 - [x] Phase 11f — Curated taxonomy for Processing/Storage/Security (UPSTREAM/dunkai, done — `e6ddf14`. 7 of 12 categories fall through the literal path, not 1. MCU shortlist 12 -> 11-20 with real MCUs surfacing. Phase 5 unchanged per-component; the remaining blocker is `retrieval.py:281`, query-text vendor lock.)
+- [x] Phase 11g — Query-text resolution source (UPSTREAM/dunkai, done — `fe9e6e7`. `:281` now uses the same source as `:382` across all 12 categories. MCU vendor lock broken: 1 manufacturer -> 5, 1/20 candidate overlap; all 5 literal-match categories non-regressed at 19-20 filter pass. DORMANT-FIX HYPOTHESIS TESTED NEGATIVE: still 0 GPIO-named, 0 naming-guard-flagged, and coverage-table presence FELL 7 -> 4. Phase 5 flat for the fifth consecutive change. Open wrinkles: Storage narrowed 2 vendors -> 1, Network filter 20 -> 19, neither understood.)
 - [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
 - [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
 - [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
