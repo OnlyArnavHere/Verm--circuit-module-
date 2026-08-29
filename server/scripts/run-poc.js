@@ -15,6 +15,8 @@ import { fileURLToPath } from "node:url";
 import { buildValidatedDesign } from "../src/design/validatedDesign.js";
 import { runElectricalChecks } from "../src/design/electricalChecks.js";
 import { resolveComponents, resolutionSummary, isReal } from "../src/design/resolver.js";
+import { resolverNets, compilerNets } from "./resolver-nets.js";
+import { isSchemaV2 } from "../src/design/normalizeUpstream.js";
 import { compileDesign } from "../src/compile/compile.js";
 import { putObject, artifactKey, STORAGE_BUCKET } from "../src/services/storage.js";
 import { installHttpCache, httpCacheStats } from "../src/services/httpCache.js";
@@ -77,16 +79,18 @@ async function runFixture(name) {
   // rather than deriving it, so omitting it emits a board with no components.
   const deduped = {
     ...upstream,
-    nets: validated.design.nets.map((net) => ({
-      name: net.name,
-      net_class: net.net_class,
-      connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`),
-    })),
+    nets: compilerNets(validated.design),
     placement: validated.design.placement,
   };
 
   // --- resolve (real first, mock per field) --------------------------------
-  const resolution = await resolveComponents(upstream.components, deduped.nets);
+  // Resolution needs the ROLE-BASED nets, not the compiler's "REF.PIN" strings.
+  // Passing the flattened form asked the resolver for a pin named "null" on
+  // every schema-2.0 member -- see scripts/resolver-nets.js.
+  const resolution = await resolveComponents(
+    upstream.components,
+    resolverNets(upstream, validated.design, isSchemaV2),
+  );
 
   console.log("\npre-compile resolution (model_3d is deliberately unresolved here —");
   console.log("it is only claimed after compilation, from actual cad_components):");

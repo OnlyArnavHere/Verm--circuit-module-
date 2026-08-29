@@ -22,6 +22,8 @@ import { fileURLToPath } from "node:url";
 import "../src/config.js";
 import { buildValidatedDesign } from "../src/design/validatedDesign.js";
 import { resolveComponents } from "../src/design/resolver.js";
+import { resolverNets } from "./resolver-nets.js";
+import { isSchemaV2 } from "../src/design/normalizeUpstream.js";
 import { resolveFootprint } from "../src/design/footprintMap.js";
 import { curatedPinout } from "../src/design/curatedPinouts.js";
 
@@ -40,9 +42,7 @@ const parts = new Map();
 for (const file of fs.readdirSync(fixturesDir).filter((f) => f.endsWith(".json"))) {
   const upstream = JSON.parse(fs.readFileSync(path.join(fixturesDir, file), "utf8"));
   const validated = buildValidatedDesign(upstream);
-  const nets = validated.design.nets.map((net) => ({
-    connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`),
-  }));
+  const nets = resolverNets(upstream, validated.design, isSchemaV2);
   const resolved = await resolveComponents(upstream.components, nets, { allowNetwork: false });
 
   for (const component of resolved.components) {

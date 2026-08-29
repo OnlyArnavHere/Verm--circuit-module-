@@ -15,6 +15,8 @@ import { fileURLToPath } from "node:url";
 import "../src/config.js";
 import { buildValidatedDesign } from "../src/design/validatedDesign.js";
 import { resolveComponents } from "../src/design/resolver.js";
+import { resolverNets, compilerNets } from "./resolver-nets.js";
+import { isSchemaV2 } from "../src/design/normalizeUpstream.js";
 import { compileDesign } from "../src/compile/compile.js";
 import { interpretRequest } from "../src/design/interpretRequest.js";
 import { applyModification, INSTRUCTION_TYPE } from "../src/design/modification.js";
@@ -45,12 +47,14 @@ const upstream = JSON.parse(fs.readFileSync(path.join(fixturesDir, `${fixture}.j
 
 /** Compile a ValidatedDesign into a version directory. Existing pipeline, unchanged. */
 async function buildVersion(design, versionDir) {
-  const nets = design.nets.map((net) => ({
-    name: net.name,
-    net_class: net.net_class,
-    connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`),
-  }));
-  const resolution = await resolveComponents(upstream.components, nets);
+  const nets = compilerNets(design);
+  // Resolution needs ROLE-BASED nets; the compiler below needs "REF.PIN"
+  // strings. See scripts/resolver-nets.js for why conflating them broke every
+  // schema-2.0 measurement.
+  const resolution = await resolveComponents(
+    upstream.components,
+    resolverNets(upstream, design, isSchemaV2),
+  );
   fs.rmSync(versionDir, { recursive: true, force: true });
 
   const compiled = await compileDesign({

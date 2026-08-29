@@ -12,6 +12,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildValidatedDesign } from "../src/design/validatedDesign.js";
 import { resolveComponents } from "../src/design/resolver.js";
+import { resolverNets } from "./resolver-nets.js";
+import { isSchemaV2 } from "../src/design/normalizeUpstream.js";
 import { installHttpCache } from "../src/services/httpCache.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -30,13 +32,14 @@ const upstream = JSON.parse(
 
 const validated = buildValidatedDesign(upstream);
 
-const deduped = validated.design.nets.map((net) => ({
-  name: net.name,
-  net_class: net.net_class,
-  connections: net.members.map((m) => `${m.ref_id}.${m.logicalPin}`),
-}));
+// Role-based nets, NOT the flattened "REF.PIN" strings. This script previously
+// copied that pattern from run-poc.js, so every Phase 5 number it produced for a
+// schema-2.0 fixture measured a resolver lookup for a pin literally named
+// "null" -- one guaranteed error per component, independent of part selection.
+// See scripts/resolver-nets.js.
+const nets = resolverNets(upstream, validated.design, isSchemaV2);
 
-const resolution = await resolveComponents(upstream.components, deduped);
+const resolution = await resolveComponents(upstream.components, nets);
 
 const tally = (list, key) => {
   const out = {};
