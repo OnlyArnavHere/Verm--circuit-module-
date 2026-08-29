@@ -677,7 +677,9 @@ Schema 2.0 asserts NO pin name (D-076): `validatedDesign.js:157` sets `pin: null
 
 **RETRACTION 2.** Claimed: *"Five verified-correct merged changes have substantially repaired the retrieval/ranking path ... with no downstream effect at all."* **NOW KNOWN FALSE.** There was downstream effect; the instrument could not see it. See the corrected figures below.
 
-**RETRACTION 3.** Claimed: *"That increasingly suggests the Phase 5 errors have a cause OUTSIDE the retrieval/ranking path, and that is the thing to investigate next rather than a sixth improvement to selection."* **NOW KNOWN FALSE, and backwards.** The errors were an artefact of the harness, and once the metric could see, the movement came from exactly the retrieval/ranking path this claim proposed to abandon.
+**RETRACTION 3.** Claimed: *"That increasingly suggests the Phase 5 errors have a cause OUTSIDE the retrieval/ranking path, and that is the thing to investigate next rather than a sixth improvement to selection."* **NOW KNOWN FALSE.** The errors were an artefact of the harness, so the reasoning that produced this claim rested on an invalid measurement.
+
+> **CORRECTION TO RETRACTION 3, same day, after controlled re-measurement.** Retraction 3 was first written with the added implication that *"once the metric could see, the movement came from exactly the retrieval/ranking path this claim proposed to abandon."* **That implication is itself now known false.** It was based on the UNCONTROLLED arc figures below, and a controlled re-measurement showed that movement was entirely architecture drift. Retraction 3 stands only in its narrow form -- the original claim rested on a broken metric -- and NOT as evidence that the retrieval work was paying off underneath. See "CONTROLLED RE-MEASUREMENT" below.
 
 **Provenance of the error.** `phase5-breakdown.mjs` was written during this thread and reproduced the defect faithfully by copying the consumption pattern from `run-poc.js` without checking it against the v2 schema. Every Phase 5 figure it produced was then used to argue, with increasing confidence, that the retrieval fixes were not working. The instrument was wrong and the conclusions drawn from it were wrong.
 
@@ -698,7 +700,42 @@ v1 documents are unaffected -- they use `net.connections` and still resolve real
 
 **FOOTNOTE REQUIRED on the v1-vs-v2 comparison at the centre of the schema redesign.** The v1/v2 measurements that motivated schema 2.0 were taken honestly and BEFORE this defect could affect them -- v1 never used the `members` path. They have NOT been re-validated against it. They are **presumed sound but not re-confirmed**, and should be treated that way until someone re-runs them on the fixed harness.
 
-**Uncontrolled arc figures, recorded as uncontrolled.** Across taxonomy routing -> naming guard -> curated table -> query hint the per-component rate fell 3.22 -> 3.00 -> 2.90 -> 2.36 (a 27% reduction). **This is NOT a controlled comparison**: the four runs have 9/9/10/11 components with different subsystems, because the architecture agent is non-deterministic. Direction, not magnitude, is what these support. A controlled re-measurement on a fixed architecture follows.
+**Uncontrolled arc figures, recorded as uncontrolled.** Across taxonomy routing -> naming guard -> curated table -> query hint the per-component rate fell 3.22 -> 3.00 -> 2.90 -> 2.36 (a 27% reduction). **This is NOT a controlled comparison**: the four runs have 9/9/10/11 components with different subsystems, because the architecture agent is non-deterministic. **These figures were subsequently shown to be entirely architecture drift -- see below. They support nothing, not even direction.**
+
+### CONTROLLED RE-MEASUREMENT 2026-08-29 — the arc's apparent improvement was architecture drift. Result: ZERO.
+
+The architecture agent does not accept a pre-supplied graph (`architecture_node` always calls `build_architecture`), so rather than pin a seed, `build_architecture` was monkeypatched to return ONE captured architecture. That is a genuinely fixed design, not an approximation.
+
+All four trials produced **the same 11 components and 13 nets**, and both trials within each config were byte-identical -- the pipeline is deterministic given a fixed architecture, so there was no variance to characterise.
+
+```
+config   p3    p5    p5/comp   by code
+pre      22    26     2.36     PART_CAPABILITY_MISMATCH 6, PIN_NOT_FOUND 20
+post     22    26     2.36     FOOTPRINT_NOT_FOUND 1, PART_CAPABILITY_MISMATCH 4, PIN_NOT_FOUND 21
+```
+
+**Phase 3: 22 = 22. Phase 5: 26 = 26. Identical.** Only the code composition shifts. `pre` has the naming guard, curated table and query hint DISABLED; `post` has them enabled. (The case-variant dedup is held constant in both -- it is baked into category-index construction and is not cleanly togglable -- so this isolates guard + curated + hint, not the arc back to taxonomy routing.)
+
+**Part SELECTION did change substantially -- 5 of 11 roles:**
+
+```
+        pre                    post
+U1      AT32F423RCT7-7         STC89C52RC-40I-PDIP40    Cortex-M4 -> 8051 in through-hole DIP-40
+U2      ESPC3-12-N4            ESP-F                    resolvable -> FOOTPRINT_NOT_FOUND
+U6      MCP9700T-E/TT          MCP9808T-E/MC
+U9      MBI5124GP-B            MBI5043GP-A
+U10     PS-5850SVB-6PNW        TUSB320IRWBR
+```
+
+The single `FOOTPRINT_NOT_FOUND` in `post` is `ESP-F`, which has no catalogue entry; `pre` selected a Wi-Fi module that resolves.
+
+### FINAL HONEST POSITION on the retrieval/ranking arc
+
+**Five individually-correct, individually-tested changes to retrieval and ranking -- taxonomy routing, the generic-naming guard, the case-variant dedup, the curated table, and the query-text hint -- measured on a properly fixed architecture, produced ZERO net change to Phase 5 totals.**
+
+Part selection changed substantially (5 of 11 roles), so the changes are not inert; they are simply not improving this outcome. And the one concrete before/after available -- `ESPC3-12-N4` resolving where `ESP-F` does not -- suggests the diversified pool may be trading resolvable parts for unresolvable ones in at least some cases, rather than purely correcting a defect.
+
+Each change remains defensible on its own terms: the vendor lock, the `"REF.null"` harness bug, the case-variant duplicates and the `Pre-ordered MCUs` contamination were all real defects with real evidence. None of them has yet been shown to improve Phase 5.
 
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
@@ -750,6 +787,7 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 11a — Interface taxonomy routing (UPSTREAM/dunkai, done — correctness groundwork; moved NO Phase 5 numbers, see Phase 11 status)
 - [x] Phase 11d — Taxonomy case-variant dedup (UPSTREAM/dunkai, done — 46 duplicate label groups merged. RE-ATTRIBUTED 2026-08-29: NOT dormant — it moved the MCU shortlist from 1 to 12 on its own by freeing a top-5 slot for `Microcontrollers (MCU/MPU/SOC)`. The earlier "dormant" label was a measurement sequencing error: every capture predated the merge.)
 - [x] Phase 11f — Curated taxonomy for Processing/Storage/Security (UPSTREAM/dunkai, done — `e6ddf14`. 7 of 12 categories fall through the literal path, not 1. MCU shortlist 12 -> 11-20 with real MCUs surfacing. Phase 5 unchanged per-component; the remaining blocker is `retrieval.py:281`, query-text vendor lock.)
+- [!] Phase 11 retrieval/ranking arc — MEASURED ZERO. On a properly fixed architecture (monkeypatched `build_architecture`, 11 components, 13 nets, deterministic), the guard + curated table + query hint give Phase 3 22 = 22 and Phase 5 26 = 26. The earlier 27% improvement was entirely architecture drift. Part SELECTION changed in 5 of 11 roles, and one before/after (ESPC3-12-N4 resolving vs ESP-F not) suggests the diversified pool may trade resolvable parts for unresolvable ones. Each change remains individually correct; none has been shown to improve Phase 5.
 - [x] Phase 11g — Query-text resolution source (UPSTREAM/dunkai, done — `fe9e6e7`. `:281` now uses the same source as `:382` across all 12 categories. MCU vendor lock broken: 1 manufacturer -> 5, 1/20 candidate overlap; all 5 literal-match categories non-regressed at 19-20 filter pass. DORMANT-FIX HYPOTHESIS TESTED NEGATIVE: still 0 GPIO-named, 0 naming-guard-flagged, and coverage-table presence FELL 7 -> 4. Phase 5 flat for the fifth consecutive change. Open wrinkles: Storage narrowed 2 vendors -> 1, Network filter 20 -> 19, neither understood.)
 - [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
 - [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
