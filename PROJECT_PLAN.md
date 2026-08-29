@@ -6,6 +6,14 @@
 
 ---
 
+### Reading any before/after measurement in this document
+
+**Any before/after comparison in this project drawn from separate architecture-agent runs (not a monkeypatched/fixed architecture) should be read as uncontrolled and unreliable for both direction and magnitude.** This was established by the retrieval/ranking arc's two reversals in one day -- first "the fixes did nothing" (wrong; the measurement harness was broken), then "the fixes moved 27%" (wrong; the movement was entirely architecture drift). The only figure that survived was the controlled one, taken with `build_architecture` monkeypatched to a fixed graph, and it was zero.
+
+It applies retroactively to every earlier uncontrolled comparison in this plan too, **including the v3/v4 pair**. **None of those are being retroactively marked wrong here** -- they are being marked as needing the same caveat this arc just proved necessary.
+
+---
+
 ## 0. What this system is
 
 Downstream of an **already-built Hardware Agent** (do not touch it, do not rebuild it), this module takes its JSON output and produces exactly these four outputs, **each as a real exportable file, not just an in-session render**:
