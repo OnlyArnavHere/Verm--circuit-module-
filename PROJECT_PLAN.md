@@ -745,6 +745,50 @@ Part selection changed substantially (5 of 11 roles), so the changes are not ine
 
 Each change remains defensible on its own terms: the vendor lock, the `"REF.null"` harness bug, the case-variant duplicates and the `Pre-ordered MCUs` contamination were all real defects with real evidence. None of them has yet been shown to improve Phase 5.
 
+### Phase 6.5 sweep result 2026-09-16 — parts-engine matching gap, answered
+
+The open audit question at section 3 ("any fixture parts unresolved via `jlcsearch` where the actual LCSC entry exists but a fixable matching gap is blocking it?") is now answered with real counts. Across all 40 distinct `(part_number, package)` pairs in the fixture set:
+
+```
+RESOLVES        36
+FIXABLE          2   lcsc known, catalogue entry EXISTS
+CATALOGUE_GAP    2   confirmed absent by BOTH lcsc and MPN lookup
+```
+
+**FIXABLE** (2 in fixtures; 3 counting `ESP-F`, which lives only in transient captures):
+
+```
+ESP-M1          C19949056   pkg SMD,15x12.3mm     stock 982
+BLE-SER-A-ANT   C2829462    pkg SMD,10.6x10.2mm   stock 347
+ESP-F           C19949062   pkg SMD,24x16mm       stock 853
+```
+
+**CATALOGUE_GAP**, confirmed by both routes rather than assumed: `IS62WVS2568GBLL-45NLI-TR` (C5803538) and `BT2S` (C3034204) return 0 hits by LCSC **and** 0 by MPN. Genuinely absent; nothing to fix.
+
+The pattern is sharp: every fixable case is a **short hyphenated wireless-module MPN**; both genuine gaps are conventional parts.
+
+**Root cause.** `partsEngine.js` queried `?q=<part_number>` and required an exact MPN match among the results. jlcsearch's free-text index does not retrieve these names: `ESP-F` returns `LM393DR2G`, `LM2903DR2G` and other comparators. Meanwhile the pcb_ir handoff carried `{ref_id, part_class, part_number, package, quantity}` and **no LCSC**, so pcb-agent discarded an identifier dunkai already had (it is in the shortlist log) and re-derived it by fuzzy string search.
+
+**Fix (a), implemented.** The catalogue number is threaded through: `bom.py` adds an `lcsc` column populated from the candidate's `extra_params.number`; `eda.py` reads and forwards it as an OPTIONAL component field (additive, no schema version bump -- a BOM without the column yields exactly the previous record shape); `partsEngine.js` queries by LCSC when present. Package is still enforced, so a catalogue number does not license accepting a different physical part. All three cases now resolve; all three still fail without an lcsc, confirming the MPN path is unchanged rather than replaced.
+
+Measured Phase 5, injecting the known LCSC into fixture copies to simulate the new handoff (committed fixtures predate the change):
+
+```
+dunkai_real_v5_taxonomyrouting   p5 29 -> 27   FOOTPRINT_NOT_FOUND 1 -> 0, PIN_NOT_FOUND 25 -> 24
+noise_pollution_monitor          p5 13 -> 12   FOOTPRINT_NOT_FOUND 1 -> 0
+```
+
+**Fix (b) — INVESTIGATED AND SHELVED.** The narrower option was to repair the MPN search itself. Measured, raising the result limit recovers only **1 of 3**:
+
+```
+                limit=5    limit=20    limit=100
+ESP-F           absent     absent      absent
+ESP-M1          absent     rank 8      rank 8
+BLE-SER-A-ANT   absent     absent      absent
+```
+
+Two of the three **never appear in the free-text index by name at any limit**, so this is not a ranking or truncation problem and no limit fixes it. "Better matching for short/hyphenated names" cannot be built on a result set that never contains the target, and **no field-specific or package-constrained query capability has been confirmed to exist** on jlcsearch. Shelved. **Revisit only if a real case appears with no LCSC available AND a bad MPN match** -- that combination occurred nowhere in the sweep, since every fixable case already had its number recorded upstream.
+
 **Two call sites that must not be conflated when this is picked up.** `_resolve_category` is invoked twice, and only one of them is guarded by the literal-match path:
 
   * `retrieval.py:382` in `_filter_candidates` — reached **only when the literal substring match fails**. The sensor roles (U4/U5/U6) match literally on `'sensor'` and return before this line, so the FILTER path is genuinely sensor-safe.

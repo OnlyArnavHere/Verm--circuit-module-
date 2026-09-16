@@ -44,7 +44,11 @@ function saveCache(cache) {
   fs.writeFileSync(CACHE_PATH, `${JSON.stringify(sorted, null, 2)}\n`);
 }
 
-const cacheKey = (partNumber, pkg) => `${partNumber}::${pkg}`;
+// The lcsc is part of the key: the same MPN+package resolved WITH a catalogue
+// number and WITHOUT one are different lookups with different failure modes,
+// and must not share a cache entry.
+const cacheKey = (partNumber, pkg, lcsc) =>
+  lcsc ? `${partNumber}::${pkg}::${lcsc}` : `${partNumber}::${pkg}`;
 
 /** Normalize for comparison without being lenient about real differences. */
 const normalizePackage = (pkg) => String(pkg ?? "").trim().replace(/\s+/g, "").toUpperCase();
@@ -72,8 +76,9 @@ export async function resolvePart(component, { allowNetwork = true } = {}) {
     };
   }
 
+  const lcscKey = String(component.lcsc ?? "").trim();
   const cache = loadCache();
-  const key = cacheKey(partNumber, pkg);
+  const key = cacheKey(partNumber, pkg, lcscKey);
 
   if (Object.prototype.hasOwnProperty.call(cache, key)) {
     const hit = cache[key];
@@ -92,10 +97,28 @@ export async function resolvePart(component, { allowNetwork = true } = {}) {
     };
   }
 
+  // Prefer a KNOWN-GOOD identifier over re-deriving one from the MPN string.
+  //
+  // Upstream already knows the catalogue number -- dunkai records it on every
+  // shortlisted candidate -- and since the pcb_ir handoff now forwards it, the
+  // MPN->LCSC re-derivation is unnecessary whenever `lcsc` is present. That
+  // re-derivation goes through jlcsearch's free-text index, which does NOT
+  // retrieve short hyphenated module names by their own name: "ESP-F"
+  // (C19949062, 853 in stock) returns LM393DR2G and other comparators at
+  // result limits of 5, 20 AND 100, so the part resolved COMPONENT_NOT_FOUND
+  // despite existing. ESP-M1 and BLE-SER-A-ANT failed the same way. Raising
+  // the limit rescues only ESP-M1; the other two never appear at all.
+  //
+  // The MPN path below is KEPT, not replaced: a component may legitimately
+  // arrive with no lcsc (any upstream that does not run dunkai's shortlist
+  // step), and that case must resolve exactly as it did before.
+  const lcsc = String(component.lcsc ?? "").trim();
+  const query = lcsc || partNumber;
+
   let payload;
   try {
     const response = await fetch(
-      `${API}?q=${encodeURIComponent(partNumber)}&limit=5`,
+      `${API}?q=${encodeURIComponent(query)}&limit=5`,
       { signal: AbortSignal.timeout(20000) }
     );
     if (!response.ok) {
@@ -120,12 +143,19 @@ export async function resolvePart(component, { allowNetwork = true } = {}) {
 
   const candidates = payload?.components ?? [];
 
-  // Exact MPN match first, then exact package match. Both must hold.
-  const exactMpn = candidates.filter(
-    (c) => String(c.mfr ?? "").trim().toUpperCase() === partNumber.toUpperCase()
-  );
+  // With an lcsc, match on the CATALOGUE NUMBER -- the identifier the query was
+  // built from. Package is still checked, so a mismatched package is still
+  // reported rather than silently accepted; the number does not license
+  // skipping that.
+  //
+  // Without one, the original behaviour: exact MPN, then exact package.
+  const exact = lcsc
+    ? candidates.filter((c) => `C${c.lcsc}`.toUpperCase() === lcsc.toUpperCase())
+    : candidates.filter(
+        (c) => String(c.mfr ?? "").trim().toUpperCase() === partNumber.toUpperCase()
+      );
 
-  const matched = exactMpn.find(
+  const matched = exact.find(
     (c) => normalizePackage(c.package) === normalizePackage(pkg)
   );
 
@@ -142,21 +172,25 @@ export async function resolvePart(component, { allowNetwork = true } = {}) {
     };
   } else {
     // Record *why* it failed, including near misses, so the agent layer can explain.
-    const packageMismatches = exactMpn.map((c) => ({
+    const packageMismatches = exact.map((c) => ({
       lcsc: `C${c.lcsc}`,
       package: c.package,
       blocker: `package "${c.package}" does not match upstream "${pkg}"`,
     }));
 
+    // Name what was actually looked up, so a failure is diagnosable: "no entry
+    // for LCSC C123" and "no entry for part number FOO" are different problems.
+    const what = lcsc ? `LCSC ${lcsc}` : `part number "${partNumber}"`;
+
     result = {
       ok: false,
       code: "COMPONENT_NOT_FOUND",
       message:
-        exactMpn.length === 0
-          ? `No catalogue entry for part number "${partNumber}".`
-          : `Found "${partNumber}" in the catalogue but no entry matches package "${pkg}". ` +
+        exact.length === 0
+          ? `No catalogue entry for ${what}.`
+          : `Found ${what} in the catalogue but no entry matches package "${pkg}". ` +
             `Not substituted — a different package is a different physical part.`,
-      detail: { partNumber, package: pkg, packageMismatches },
+      detail: { partNumber, lcsc: lcsc || null, package: pkg, packageMismatches },
     };
   }
 
