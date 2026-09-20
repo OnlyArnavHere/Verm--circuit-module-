@@ -35,12 +35,18 @@ export function initEvents(httpServer) {
  * Emit a job lifecycle event. Fans out to both the per-job room and the firehose
  * so live UIs and background agents see the same payload.
  * Socket delivery is best-effort — MongoDB remains the durable record.
+ *
+ * The rooms are CHAINED, not emitted to separately. Two `io.to(x).emit()` calls
+ * deliver twice to any socket in both rooms, which is the normal case: every
+ * connection auto-joins "jobs" on connect, and a UI watching one job also joins
+ * "job:<id>". Chaining makes Socket.IO compute the union and deliver once.
+ * Observed as doubled status events during Phase 10 end-to-end testing.
  */
 export function emitJobEvent(event, payload) {
   if (!io) return;
   const envelope = { event, at: new Date().toISOString(), ...payload };
-  io.to("jobs").emit(event, envelope);
-  if (payload?.jobId) io.to(`job:${payload.jobId}`).emit(event, envelope);
+  const target = payload?.jobId ? io.to("jobs").to(`job:${payload.jobId}`) : io.to("jobs");
+  target.emit(event, envelope);
 }
 
 export function getIo() {
