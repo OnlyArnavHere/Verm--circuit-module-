@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
+import { JOB_EVENTS, STAGES, applyJobEvent, deriveQuality, stageIndex } from "./jobState.js";
+
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const OUTPUT_KINDS = ["circuit", "schematic", "pcb", "model3d"];
 
@@ -11,6 +13,7 @@ export default function App() {
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
   const [events, setEvents] = useState([]);
+  const [links, setLinks] = useState({});
 
   useEffect(() => {
     const load = () =>
@@ -26,17 +29,51 @@ export default function App() {
   // Join the firehose so events show up regardless of which job produced them.
   useEffect(() => {
     const socket = io(API, { transports: ["websocket", "polling"] });
-    const record = (name) => (payload) =>
-      setEvents((prev) => [{ name, payload, at: new Date() }, ...prev].slice(0, 50));
 
-    socket.on("connect", () => record("socket:connected")({ id: socket.id }));
-    socket.on("job:received", record("job:received"));
-    socket.on("job:status", record("job:status"));
-    socket.on("job:failed", record("job:failed"));
-    socket.on("job:completed", record("job:completed"));
+    socket.on("connect", () =>
+      setEvents((prev) => [{ name: "socket:connected", payload: { id: socket.id }, at: new Date() }, ...prev].slice(0, 50)),
+    );
+
+    // Every event the server ACTUALLY emits. The previous code listened for
+    // `job:status`, which nothing has ever emitted, so the five per-stage
+    // events went unheard and the panel never moved off `received`.
+    for (const name of JOB_EVENTS) {
+      socket.on(name, (payload) => {
+        setEvents((prev) => [{ name, payload, at: new Date() }, ...prev].slice(0, 50));
+        // The panel must track the job, not just log that something happened.
+        // Functional form: this effect runs once, so a handler reading `job`
+        // from the closure would see the first render's value forever.
+        setJob((current) => applyJobEvent(current, name, payload));
+      });
+    }
 
     return () => socket.close();
   }, []);
+
+  // On a terminal job, resolve a real presigned link per artifact. The API has
+  // provided this all along at /outputs/:kind/url; the panel simply never used
+  // it and showed only the format.
+  useEffect(() => {
+    if (!job || job.status !== "completed") return;
+    let cancelled = false;
+    (async () => {
+      const found = {};
+      for (const kind of OUTPUT_KINDS) {
+        if (!job.outputs?.[kind]) continue;
+        try {
+          const res = await fetch(`${API}/api/jobs/${job.jobId}/outputs/${kind}/url`);
+          if (!res.ok) continue;
+          const body = await res.json();
+          if (body.url) found[kind] = body.url;
+        } catch {
+          // A link that will not resolve is simply not offered. Better no link
+          // than one that 404s.
+        }
+      }
+      if (!cancelled) setLinks(found);
+    })();
+    return () => { cancelled = true; };
+  }, [job?.status, job?.jobId]);
 
   async function submit(event) {
     event.preventDefault();
@@ -45,6 +82,7 @@ export default function App() {
     setBusy(true);
     setError(null);
     setJob(null);
+    setLinks({});
 
     try {
       const body = new FormData();
@@ -60,13 +98,18 @@ export default function App() {
     }
   }
 
+  const quality = deriveQuality(job);
+  const current = stageIndex(job?.status);
+
   return (
     <div className="wrap">
       <header>
         <h1>PCB &amp; Circuit Design Agent — dev upload</h1>
         <p>
-          Phase 1: plumbing only. Uploads create a job record and emit a socket
-          event. No design generation runs yet.
+          Uploading a Hardware Agent JSON creates a job and runs the full
+          pipeline: validate → resolve → compile → generate → upload. Status
+          updates live over Socket.IO; finished artifacts are downloadable
+          below.
         </p>
       </header>
 
@@ -98,7 +141,8 @@ export default function App() {
           </button>
         </form>
         <p className="muted" style={{ marginBottom: 0, marginTop: 10 }}>
-          Try any file from <code>test-fixtures/</code>.
+          Try any file from <code>test-fixtures/</code>. A typical design takes
+          about a minute.
         </p>
       </section>
 
@@ -116,12 +160,47 @@ export default function App() {
 
       {job && (
         <section className="panel">
-          <h2>Job created</h2>
+          <h2>
+            Job — {quality.headline}
+          </h2>
           <p className="muted" style={{ marginTop: 0 }}>
-            <strong>{job.designName}</strong> · {job.jobId} · status{" "}
-            <strong>{job.status}</strong> · {job.upstream.componentCount}{" "}
-            components / {job.upstream.netCount} nets
+            <strong>{job.designName}</strong> · {job.jobId} ·{" "}
+            {job.upstream?.componentCount} components / {job.upstream?.netCount} nets
           </p>
+
+          <ol className="stages">
+            {STAGES.map((stage, i) => {
+              const state =
+                job.status === "failed"
+                  ? i <= current || current === -1 ? "failed" : "todo"
+                  : i < current ? "done" : i === current ? "active" : "todo";
+              return (
+                <li key={stage} className={`stage ${state}`}>
+                  {stage}
+                </li>
+              );
+            })}
+            {job.status === "failed" && <li className="stage failed">failed</li>}
+          </ol>
+
+          {job.lastMessage && <p className="muted">{job.lastMessage}</p>}
+
+          {/*
+            Design quality, kept VISUALLY SEPARATE from pipeline status. A job
+            that finished is not thereby a good board, and the two must never
+            read the same.
+          */}
+          <div className={`quality ${quality.worst}`}>
+            <h3>Design findings</h3>
+            <ul>
+              {quality.findings.map((f) => (
+                <li key={f.label} className={f.level}>
+                  <strong>{f.label}:</strong> {f.detail}
+                </li>
+              ))}
+            </ul>
+            {quality.caveat && <p className="caveat">{quality.caveat}</p>}
+          </div>
 
           {job.intakeWarnings?.length > 0 && (
             <p className="warn">
@@ -131,16 +210,26 @@ export default function App() {
           )}
 
           <div className="outputs">
-            {OUTPUT_KINDS.map((kind) => (
-              <div className="output" key={kind}>
-                <div className="k">{kind}</div>
-                <div className="v">
-                  {job.outputs?.[kind]
-                    ? `${job.outputs[kind].format}${job.outputs[kind].mocked ? " (mocked)" : ""}`
-                    : "not generated"}
+            {OUTPUT_KINDS.map((kind) => {
+              const artifact = job.outputs?.[kind];
+              return (
+                <div className="output" key={kind}>
+                  <div className="k">{kind}</div>
+                  <div className="v">
+                    {!artifact ? (
+                      job.status === "completed" ? "not produced" : "pending"
+                    ) : links[kind] ? (
+                      <a href={links[kind]} target="_blank" rel="noreferrer">
+                        {artifact.format}
+                        {artifact.mocked ? " (mocked)" : ""} ↓
+                      </a>
+                    ) : (
+                      `${artifact.format}${artifact.mocked ? " (mocked)" : ""}`
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -148,9 +237,7 @@ export default function App() {
       <section className="panel">
         <h2>Socket events</h2>
         <ul className="events">
-          {events.length === 0 && (
-            <li className="empty">Waiting for events…</li>
-          )}
+          {events.length === 0 && <li className="empty">Waiting for events…</li>}
           {events.map((e, i) => (
             <li key={i}>
               <span className="t">{e.at.toLocaleTimeString()}</span>

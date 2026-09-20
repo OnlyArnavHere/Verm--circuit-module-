@@ -839,6 +839,65 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 
 ---
 
+### Phase 12 - HTTP route for Phase 8's modification workflow (scoped, NOT started)
+
+**Why this exists:** Phase 8 is marked done and its end-to-end proof is real - a natural-language repositioning request produced a genuine v2, and a deliberately-bad one was blocked by DRC. But **that workflow is reachable only from a CLI.** `server/src/routes/jobs.js` declares exactly five routes:
+
+```
+POST /api/jobs                            create + validate + enqueue
+GET  /api/jobs                            list
+GET  /api/jobs/:jobId                     read
+GET  /api/jobs/:jobId/upstream            read the upstream payload
+GET  /api/jobs/:jobId/outputs/:kind/url   presigned artifact URL
+```
+
+None of them modify a design. `interpretRequest`, `applyModification`, `verifyTarget` and `componentSizesFrom` are called **only** from `scripts/run-modification.js` and from tests - the same shape of disconnect Phase 10 existed to close for the pipeline, one layer up.
+
+**Consequence, stated precisely:** `Job` already carries the full version lineage - `version`, `designId`, `isCurrent`, `provenance`, `modificationAttempts` and a per-version `ValidatedDesign` snapshot. Those fields were designed in Phase 8 and they are **never written**, because `scripts/run-modification.js` imports neither `mongoose` nor the `Job` model; it writes v2 to `artifacts/` on local disk and exits. So a v2 exists as files with no database record, no `designId` lineage, no S3 artifacts and no socket event - invisible to every other agent, which is the exact visibility requirement section 2 states. Phase 8's decision 3 (backfill existing jobs to `designId = jobId`, `v1`, `isCurrent: true`) was approved and has not been executed, because nothing yet reads those fields.
+
+**Scope:**
+1. `POST /api/jobs/:jobId/modifications` - accepts a natural-language request (and the `--instruction` escape hatch `run-modification.js` already supports, for skipping the LLM in tests). Returns immediately with a modification id; **does not run the work in the request path** - a modification re-runs `compileDesign`, which Phase 10 measured at 25-91s.
+2. Route the work through the **existing** `jobRunner` serial chain, not a second worker. The contention Phase 10 identified (two tscircuit compiles in one Node process) is the same contention here; a parallel path would reintroduce it.
+3. Persist the outcome onto a **new version document**, never an overwrite: `version = parent + 1`, `designId` inherited, parent flipped to `isCurrent: false`. A rejected attempt is written to the parent's `modificationAttempts`, never as a version - Phase 8's decision 2.
+4. Upload the regenerated artifacts to S3 under `jobs/<designId>/v<n>/`, reusing Phase 10's `buildArtifactRefs`. Phase 8's selective regeneration (the circuit diagram is a logical view and is byte-identical across a repositioning) must be preserved, not flattened into "regenerate everything".
+5. Emit per-stage socket events for the modification run, reusing `advance()` so the durable record and the live event cannot drift - the invariant `jobRunner.js` already enforces.
+6. Execute the decision-3 backfill as a one-time deterministic migration, once something actually reads the lineage fields.
+
+**Definition of done:** a natural-language repositioning submitted over HTTP (no CLI step) produces a v2 **Job document** in Mongo with correct `designId`/`version`/`isCurrent` lineage, four artifacts in S3, and a v1 document confirmed unchanged and still readable through `GET /api/jobs/:jobId`; a DRC-blocked request records a `modificationAttempts` entry and commits **no** version; existing jobs are backfilled to v1.
+
+**Explicitly out of scope here:** any widening of Phase 8's bounded instruction vocabulary (component swaps, net changes, board-constraint changes stay deferred, same reasoning as before), and a UI for submitting modifications.
+
+### Dev UI (`web/`) - reconnected to the real backend 2026-09-20
+
+Recorded because the plan had never mentioned `web/` and its state was misleading. The UI was **not** plumbing-only as its own header claimed; the backend behind it was complete and correct, and the client was the only broken part. No backend change was needed or made.
+
+Three defects, all client-side:
+
+1. **It listened for an event that does not exist.** `App.jsx` registered `job:received`, `job:status`, `job:failed`, `job:completed`. The server emits one event **per stage** - `job:validating`, `job:resolving`, `job:compiling`, `job:generating`, `job:uploading` - because `advance()` derives the name from the status. Nothing has ever emitted `job:status`, so all five per-stage events went unheard.
+2. **The panel was dead.** Every socket handler called `setEvents` only. `setJob` was called exactly once, from the POST response, and never again - so the rendered job was frozen at intake for the life of the run.
+3. **A partial result read as a clean success.** `compilable` and `mockedPinCount` were never rendered at all, and the outputs panel showed only `format`. A completed job with positional pins looked identical to a good board.
+
+**Measured, one live job, one event stream, two readers** (`web/scripts/verify-panel.mjs` drives the same `web/src/jobState.js` module the component renders from):
+
+```
+                  BEFORE (committed App.jsx)      AFTER
+job:validating    JOB CREATED / status received   [x]received [>]validating
+job:resolving     JOB CREATED / status received   WARN Positional pins: 2 component(s)
+job:compiling     JOB CREATED / status received   Compiled: 1662 elements, 322 pads
+job:uploading     JOB CREATED / status received   Uploaded 19 file(s) to <bucket>
+job:completed     JOB CREATED / status received   JOB - Completed with findings
+outputs           "not generated" x4              svg / svg / kicad_pcb / glb, all linked
+server truth      status=completed  compilable=false  mockedPinCount=2  hasAllOutputs=true
+```
+
+The four presigned links were fetched for real: `circuit` 8,584 B, `schematic` 397,334 B, `pcb` 111,496 B, `model3d` 16,648,784 B, all HTTP 200.
+
+The headline is deliberately never just "Completed": it is `Completed - no findings` or `Completed with findings`, the findings block carries its own warn styling, and the caveat *"Completed means the pipeline ran to the end, not that the board is manufacturable"* is rendered on every terminal job - the same distinction `jobRunner.js`'s FAILURE POLICY already enforces server-side. `mockedPinCount: null` renders as **"not yet resolved"**, never as "0 mocked pins".
+
+**KNOWN LIMITATION.** The DOM was not rendered - no browser automation (Playwright, Puppeteer, jsdom) is installed in this repo, so the before/after above is the real state object and the JSX's own text for it, driven by real socket events against the live server, not a screenshot. The reducer and the quality read-out were extracted to `web/src/jobState.js` **so that this is the component's actual code rather than a hand-replayed imitation**; the JSX wrapping it is verified only by `vite build` passing.
+
+---
+
 ## 5. Working rules for this repo
 
 - Commit to git after each phase, with a message referencing the phase.
@@ -871,3 +930,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
 - [x] Phase 10 — Async job pipeline (DONE — `dd3900e`/`ce573ff`/`bfb47f7`. POST /api/jobs enqueues into an in-process serial worker and runs to completed or failed; both paths demonstrated against live Mongo and live S3; mockedPinCount is a real number on a finished job. LIMITATION: the queue is in-memory, does not survive a restart, and in-flight work is neither resumed nor reaped — Mongo is the durable record, the queue is not.)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
+- [ ] Phase 12 — HTTP route for Phase 8's modification workflow (scoped, NOT started — the workflow is real and proven but CLI-only; `Job`'s `version`/`designId`/`isCurrent`/`modificationAttempts` fields exist and are never written, because `run-modification.js` imports neither mongoose nor the Job model. Same shape of disconnect Phase 10 closed for the pipeline, one layer up.)
+- [x] Dev UI (`web/`) — reconnected to the real backend (done — listened for a `job:status` event the server never emits, so all five per-stage events went unheard; socket handlers never called `setJob`, so the panel was frozen at the POST response; `compilable`/`mockedPinCount` were never rendered, so a board with positional pins read as a clean success. All three fixed and measured on one live job. LIMITATION: the DOM was not rendered — no browser automation is installed — so the proof drives `web/src/jobState.js`, the component's own state module, over real socket events.)
