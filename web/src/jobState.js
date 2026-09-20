@@ -49,6 +49,12 @@ export function applyJobEvent(job, eventName, payload) {
 
   const next = { ...job, status: payload.status ?? job.status };
 
+  // Remember WHERE it failed -- the stage that was running when the failure
+  // landed. "failed" is not itself a position in STAGES, so without this the
+  // strip has nothing to redden and paints all seven pills, asserting among
+  // other things that `completed` failed, which never happened.
+  if (next.status === "failed" && job.status !== "failed") next.failedAt = job.status;
+
   // Carried on the transitions that compute them. Guarded with `!== undefined`
   // because `mockedPinCount: 0` and `compilable: false` are both meaningful
   // values that `??` or a truthiness check would silently drop.
@@ -142,7 +148,29 @@ export function deriveQuality(job) {
   };
 }
 
-/** Index of a stage, for the progress strip. -1 when failed or unknown. */
+/** Index of a stage. -1 for `failed`, which is not a position in STAGES. */
 export function stageIndex(status) {
   return STAGES.indexOf(status);
+}
+
+/**
+ * The progress strip, one state per stage: done | active | failed | todo.
+ *
+ * Lives here rather than in the JSX so it is covered by the same driver as the
+ * rest of the panel. A failed job reddens ONLY the stage it died at; the stages
+ * it genuinely finished stay `done` and the ones it never reached stay `todo`.
+ * If `failedAt` is unknown -- a page opened after the failure, with no
+ * transition observed -- nothing is claimed about any stage.
+ */
+export function stageStates(job) {
+  if (!job) return STAGES.map(() => "todo");
+
+  if (job.status === "failed") {
+    const at = stageIndex(job.failedAt);
+    if (at === -1) return STAGES.map(() => "todo");
+    return STAGES.map((_, i) => (i < at ? "done" : i === at ? "failed" : "todo"));
+  }
+
+  const cur = stageIndex(job.status);
+  return STAGES.map((_, i) => (i < cur ? "done" : i === cur ? "active" : "todo"));
 }

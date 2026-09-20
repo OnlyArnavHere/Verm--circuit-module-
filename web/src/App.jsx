@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-import { JOB_EVENTS, STAGES, applyJobEvent, deriveQuality, stageIndex } from "./jobState.js";
+import { JOB_EVENTS, STAGES, applyJobEvent, deriveQuality, stageStates } from "./jobState.js";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const OUTPUT_KINDS = ["circuit", "schematic", "pcb", "model3d"];
@@ -99,7 +99,7 @@ export default function App() {
   }
 
   const quality = deriveQuality(job);
-  const current = stageIndex(job?.status);
+  const states = stageStates(job);
 
   return (
     <div className="wrap">
@@ -169,17 +169,11 @@ export default function App() {
           </p>
 
           <ol className="stages">
-            {STAGES.map((stage, i) => {
-              const state =
-                job.status === "failed"
-                  ? i <= current || current === -1 ? "failed" : "todo"
-                  : i < current ? "done" : i === current ? "active" : "todo";
-              return (
-                <li key={stage} className={`stage ${state}`}>
-                  {stage}
-                </li>
-              );
-            })}
+            {STAGES.map((stage, i) => (
+              <li key={stage} className={`stage ${states[i]}`}>
+                {stage}
+              </li>
+            ))}
             {job.status === "failed" && <li className="stage failed">failed</li>}
           </ol>
 

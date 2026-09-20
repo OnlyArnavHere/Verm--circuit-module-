@@ -24,10 +24,13 @@ import {
   STAGES,
   applyJobEvent,
   deriveQuality,
-  stageIndex,
+  stageStates,
 } from "../src/jobState.js";
 
-const API = "http://localhost:4000";
+// API_URL lets this run against a fault-injected instance (Phase 10's recipe:
+// a second server with S3_BUCKET pointing at a bucket that does not exist) to
+// exercise the FAILED panel for real rather than by reasoning about it.
+const API = process.env.API_URL ?? "http://localhost:4000";
 const OUTPUT_KINDS = ["circuit", "schematic", "pcb", "model3d"];
 const FIXTURE = "C:/Users/ARNAV/workspace/pcb-agent/test-fixtures/rc_car.json";
 
@@ -56,14 +59,10 @@ function renderBefore(job) {
 function renderAfter(job, links) {
   if (!job) return "  (no panel)";
   const q = deriveQuality(job);
-  const current = stageIndex(job.status);
+  const states = stageStates(job);
 
   const strip = STAGES.map((stage, i) => {
-    const state =
-      job.status === "failed"
-        ? i <= current || current === -1 ? "failed" : "todo"
-        : i < current ? "done" : i === current ? "active" : "todo";
-    const mark = { done: "[x]", active: "[>]", failed: "[!]", todo: "[ ]" }[state];
+    const mark = { done: "[x]", active: "[>]", failed: "[!]", todo: "[ ]" }[states[i]];
     return `${mark}${stage}`;
   }).join(" ");
 
