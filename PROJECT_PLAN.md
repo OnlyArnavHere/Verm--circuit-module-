@@ -322,16 +322,42 @@ This is wrap-up, not further building. The system is feature-complete against th
 **Definition of done:** fresh clean-state run passes; one clear entry-point doc exists; `POC_RESULTS.md` is current and honestly bounded; `.env.example` exists; the cache-history question is explicitly resolved one way or the other.
 
 
-### Phase 10 — Async job pipeline (scoped, NOT started)
+### Phase 10 — Async job pipeline (DONE 2026-09-20 — with one stated limitation, see below)
 **Why this exists:** the HTTP job flow and the design pipeline are currently disconnected. `POST /api/jobs` runs `checkIntakeShape` → `buildValidatedDesign` → `Job.create` and stops. `buildValidatedDesign` and `resolveComponents` are otherwise called **only** from `scripts/` and tests, never from anything reachable by an HTTP request, and `scripts/run-poc.js` does not touch Mongo or the `Job` model at all. `JOB_STATUS` defines eight states; **only `received` is ever assigned** — there is no worker, queue, or service that advances a job.
 
-**Consequence, and the specific reason this is scoped:** `Job.mockedPinCount` is permanently `null` ("not yet resolved") because populating it requires `resolveComponents()`, which is network-bound at seconds-to-minutes per part and therefore must not run in the request path. `compilable` *is* populated at intake, because `buildValidatedDesign` is pure, offline and deterministic. Closing that asymmetry is this phase's job.
+**Consequence, and the specific reason this was scoped** *(SUPERSEDED — see DELIVERED below; `mockedPinCount` is now a real number, and the per-part cost claim is stale)*: `Job.mockedPinCount` is permanently `null` ("not yet resolved") because populating it requires `resolveComponents()`, which is network-bound at seconds-to-minutes per part and therefore must not run in the request path. **That last clause was measured and is wrong in the warm case**: `resolveComponents` is 0.04–0.12s, and the real reason for deferring work is the 25–91s `compileDesign`, not resolution. The same stale wording was corrected in `routes/jobs.js` where it had nearly misled an investigation into blaming the wrong stage. `compilable` *is* populated at intake, because `buildValidatedDesign` is pure, offline and deterministic. Closing that asymmetry is this phase's job.
 
 **Scope:**
 1. An async runner that advances `received → validating → resolving → compiling → generating → uploading → completed` (or `failed`), emitting the Socket.IO events per state that section 2 already requires for other agents' visibility.
 2. Persist per-stage results onto the `Job`: resolution sources, `mockedPinCount` from `resolution.pins.perPin`, DRC summary, and the four output artifacts.
 3. `mockedPinCount` becomes a real number. **`null` must continue to mean "not yet resolved" and must never be coerced to `0`** — an unknown rendering as a clean pass is the defect fixed in `MISSING_PINS` and in the false `real: true` bug (D-027).
 4. Reuse `scripts/run-poc.js`'s existing pipeline rather than reimplementing it; the phases it runs are already proven end-to-end.
+
+**DELIVERED 2026-09-20.** `dd3900e` (pipeline extraction, serial worker, 8-state machine), `ce573ff` (fault injection + failed-path guard), `bfb47f7` (double-emit fix + delivery-once guard). 225 tests pass.
+
+`run-poc.js`'s core moved to `src/design/pipeline.js` so the worker and the CLI run the SAME code; `run-poc.js` remains a thin CLI wrapper rather than a second implementation. Three CLI couplings were severed: fixture-path input became an upstream object, the hardcoded `outDir` became `artifacts/<jobId>/v<n>`, and ~40 `console.log` calls became an `onStage` callback — those calls each marked a real pipeline boundary and mapped one-to-one onto the status transitions.
+
+*No queue library, and the measurement behind that decision is recorded in `jobRunner.js`.* Warm: `buildValidatedDesign` 0.03s, `resolveComponents` 0.04–0.12s, `compileDesign` 25–91s. The pipeline is ~100% compile. The constraint is CONCURRENCY, not duration — two 90-second tscircuit compiles in one Node process contend for the same event loop — so a serial promise chain addresses it and Redis would add a broker and a worker process to manage one-to-few designs a minute.
+
+*Both terminal paths demonstrated against live Mongo and live S3, not described.*
+
+```
+COMPLETED  status=completed  compilable=false  mockedPinCount=2  hasAllOutputs=true
+           4/4 artifacts in pcb-circuit-agent-dev-storage, 12 statusHistory entries,
+           received -> validating -> resolving -> compiling -> generating -> uploading -> completed
+
+FAILED     fault-injected by pointing S3 at a nonexistent bucket
+           "Failed at uploading: Upload failed for \"circuit-diagram.svg\": The specified
+            bucket does not exist. Artifacts exist locally but are not durable..."
+           outputs all null, hasAllOutputs=false, compilable/mockedPinCount keep their
+           real values, job:failed fired, nothing stuck mid-pipeline
+```
+
+**`mockedPinCount` is now a real number on a finished job**, closing the asymmetry this phase existed for. `null` still means "not yet resolved" and is never coerced to `0`.
+
+**FAILURE POLICY.** Only a validator throw, a tscircuit throw and an upload failure produce `failed`. A non-compilable design, unresolved parts, mocked pins and a missing artifact all CONTINUE — `resolver.js` models partial resolution explicitly, and `compilable` / `mockedPinCount` / `hasAllOutputs()` already express quality. **`completed` means the pipeline ran to the end, never that the board is manufacturable.**
+
+**KNOWN LIMITATION — "done" does not mean "no known limitations".** The queue is **in-process and in-memory**. A server restart loses everything still queued, and a job that was mid-run stays at its last persisted status in MongoDB rather than being resumed or retried. **Mongo is the durable record of what happened; the queue is not durable and does not pretend to be.** Nothing detects or reaps a job stranded this way — a crash mid-compile leaves it sitting at `compiling` indefinitely, indistinguishable from one still working. Revisit when either of two things becomes true: multiple concurrent users (the serial chain becomes the bottleneck), or a requirement that in-flight work survive a restart (which needs a durable queue and a resume-or-fail sweep on boot, neither of which exists).
 
 **Explicitly out of scope here:** component-ranking / coverage scoring, and the fab-action guard (D-078) — the latter attaches to a gerber-export or order-PCB route that does not exist yet, and is gated on this phase producing a real `mockedPinCount`.
 
@@ -843,5 +869,5 @@ Never claim a design is valid when critical validation failed. Never hallucinate
 - [x] Phase 11g — Query-text resolution source (UPSTREAM/dunkai, done — `fe9e6e7`. `:281` now uses the same source as `:382` across all 12 categories. MCU vendor lock broken: 1 manufacturer -> 5, 1/20 candidate overlap; all 5 literal-match categories non-regressed at 19-20 filter pass. DORMANT-FIX HYPOTHESIS TESTED NEGATIVE: still 0 GPIO-named, 0 naming-guard-flagged, and coverage-table presence FELL 7 -> 4. Phase 5 flat for the fifth consecutive change. Open wrinkles: Storage narrowed 2 vendors -> 1, Network filter 20 -> 19, neither understood.)
 - [ ] Phase 11e — Coverage-aware category re-ranking (UPSTREAM/dunkai) — FIVE mechanism families closed by proof or by pre-implementation reasoning (additive weight, fixed band, single-parameter relative cutoff, iterative admission, two-stage composition) — not merely attempted. The depth requirement is per-role and has no global value (MCU needs >=9, Motor Driver needs <=5). skew is the strongest known correlate (+0.882); dratio, the quantity the first three families thresholded on, is negligible (+0.003). The only fitted rule passing all 22 roles has zero depth-slack on four of them and is a 3-parameter fit against the exact test set — explicitly not shippable. Next direction: genuinely per-role depth derivation, not a global constant or a 2-3-bucket rule fit to this set — untried, no design proposed. Diagnosis (coverage-awareness needed, dominant labels losing to niche ones) fully confirmed. Every mechanism tried achieves zero exclude-failures — false-friend admission is solved by per-query relativization and should carry forward into any future design. What's unsolved: any single parameter, absolute or relative, is uniformly too aggressive on dominant labels because roles differ in distribution shape. Next direction, untried: per-role-adaptive parameter derivation. The 22-role admit/exclude harness is the bar any future candidate must clear before being reported as working.
 - [ ] Phase 11b — GPIO capacity gate (UPSTREAM/dunkai) — scope narrowed from GPIO/PWM/ADC/CS to GPIO alone (PWM/ADC permanently out: zero observed demand, catalogue cannot answer alternate-function capability). DESIGNED, deliberately NOT IMPLEMENTED: provably dormant at 0 GPIO-named candidates out of 569 across four captures, and all three parts actually selected for GPIO roles have zero generic-IO pads recorded. Buildable the moment 11e produces a real MCU shortlist, not before.
-- [ ] Phase 10 — Async job pipeline (scoped, not started — job flow and design pipeline are disconnected; only `received` is ever assigned)
+- [x] Phase 10 — Async job pipeline (DONE — `dd3900e`/`ce573ff`/`bfb47f7`. POST /api/jobs enqueues into an in-process serial worker and runs to completed or failed; both paths demonstrated against live Mongo and live S3; mockedPinCount is a real number on a finished job. LIMITATION: the queue is in-memory, does not survive a restart, and in-flight work is neither resumed nor reaped — Mongo is the durable record, the queue is not.)
 - [x] Phase 9 — Consolidation for handoff/demo (done — cold-state verification run surfaced two previously-unseen defects in `noise_pollution_monitor` (U4 catalogue gap → 16/19 routed; through-hole gerber export failure) and corrected an overclaimed determinism guarantee (D-074); README rewritten as entry point, POC_RESULTS.md now the definitive current-state summary with an explicit "does NOT claim" boundary, `.env.example` added, cache-history rewrite explicitly declined (D-075))
