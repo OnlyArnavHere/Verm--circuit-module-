@@ -6,6 +6,7 @@ import { JOB_STATUS } from "../models/constants.js";
 import { checkIntakeShape } from "../upstream/intakeCheck.js";
 import { buildValidatedDesign } from "../design/validatedDesign.js";
 import { emitJobEvent } from "../services/events.js";
+import { enqueueJob } from "../services/jobRunner.js";
 import { presignedUrl } from "../services/storage.js";
 import { config } from "../config.js";
 
@@ -65,9 +66,23 @@ jobsRouter.post("/", upload.single("design"), async (req, res, next) => {
     // before trusting any artifact. Safe to run synchronously: buildValidatedDesign
     // is a pure function with no clock, randomness, network or I/O.
     //
-    // Deliberately NOT calling resolveComponents() here. It is network-bound at
-    // seconds-to-minutes per part and would block the request, so mockedPinCount
-    // stays null ("not yet resolved") rather than being guessed at.
+    // Deliberately NOT running the rest of the pipeline here -- it is handed to
+    // the serial worker below, and mockedPinCount stays null ("not yet resolved")
+    // until that worker fills it in.
+    //
+    // The real reason is RESPONSE TIME, not per-part cost. Measured with warm
+    // caches, resolveComponents is 0.04-0.12s -- effectively free. The pipeline
+    // is ~100% compileDesign: 25-91s, of which tscircuit eval is 23-26s and
+    // artifact generation 2-65s. Cold, resolveComponents adds roughly 5.1s per
+    // uncached part, so a fully-cold design is ~70-135s end to end. Any of those
+    // numbers is far too long to hold an HTTP connection open, which is why this
+    // returns 201 immediately and the work continues in the background.
+    //
+    // (An earlier version of this comment said resolveComponents was
+    // "network-bound at seconds-to-minutes per part" and gave that as the sole
+    // justification. That was true against a cold cache and is now misleading:
+    // it points at the wrong stage, and an investigation nearly concluded from
+    // it that resolution was the bottleneck.)
     let compilable = null;
     let validationErrors = [];
     try {
@@ -118,9 +133,15 @@ jobsRouter.post("/", upload.single("design"), async (req, res, next) => {
       warnings: check.warnings,
     });
 
+    // Hand off to the in-process serial worker and respond immediately. The
+    // queue is in memory: a restart loses anything still queued, and Mongo stays
+    // the durable record of what actually happened.
+    const { queued } = enqueueJob(job.jobId);
+
     return res.status(201).json({
       ...job.toPublicJSON(),
       intakeWarnings: check.warnings,
+      queuePosition: queued,
     });
   } catch (error) {
     return next(error);
