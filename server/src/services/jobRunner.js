@@ -46,7 +46,7 @@ let running = null;
  * envelope reuse the `job:received` shape already established in routes/jobs.js;
  * this adds statuses to that pattern rather than inventing a second one.
  */
-async function advance(job, status, message, extra = {}) {
+export async function advance(job, status, message, extra = {}) {
   job.status = status;
   job.statusHistory.push({ status, message });
   for (const [k, v] of Object.entries(extra)) job[k] = v;
@@ -59,6 +59,58 @@ async function advance(job, status, message, extra = {}) {
     message,
     ...extra,
   });
+}
+
+/**
+ * Map pipeline uploads onto Job's ArtifactRefSchema.
+ *
+ * The manifest's output shape is NOT this shape. Assigning it straight through
+ * fails schema validation (`kind`, `format`, `storageKey` and `bucket` are all
+ * required) AFTER a successful upload, which is exactly how this was found.
+ *
+ * `mocked` is deliberately false: it labels placeholder FILE CONTENT, and these
+ * are real derived files. That the board is not manufacturable is a separate
+ * fact carried by compilable / mockedPinCount / manufacturableReason.
+ */
+export function buildArtifactRefs(uploads, bucket) {
+  const outputs = {};
+  for (const up of uploads ?? []) {
+    if (!up.primary) continue;
+    outputs[up.kind] = {
+      kind: up.kind,
+      format: up.format,
+      storageKey: up.key,
+      bucket,
+      bytes: up.bytes,
+      contentType: up.contentType,
+      checksumSha256: up.sha256,
+      mocked: false,
+    };
+  }
+  return outputs;
+}
+
+/**
+ * Write FAILED for a job, from a FRESH document.
+ *
+ * Never reuses the in-flight document. If the failure came from a bad field
+ * assignment, that document still carries it in memory and saving FAILED would
+ * fail validation too -- leaving the job stuck at its last good status with no
+ * record of why. That happened on the first real end-to-end run: an unmapped
+ * `outputs` shape was assigned, the save threw, the FAILED write inherited the
+ * same document and threw again, and the job sat at `uploading` forever.
+ *
+ * @param {string} jobId
+ * @param {string} stage    pipeline stage that failed
+ * @param {string} reason   the real error message, not a generic one
+ * @param {(jobId: string) => Promise<object|null>} findFresh  injectable for tests
+ * @param {object|null} fallback  used only if the re-read itself fails
+ */
+export async function markFailed(jobId, stage, reason, findFresh, fallback = null) {
+  const fresh = (await findFresh(jobId).catch(() => null)) ?? fallback;
+  if (!fresh) return null;
+  await advance(fresh, JOB_STATUS.FAILED, `Failed at ${stage}: ${reason}`);
+  return fresh;
 }
 
 /**
@@ -159,20 +211,7 @@ async function processJob(jobId) {
     // these are real derived files. That the board is not manufacturable is a
     // separate fact, carried by compilable / mockedPinCount / the manifest's
     // manufacturableReason -- conflating the two would mislabel real artifacts.
-    const outputs = {};
-    for (const up of result.uploads) {
-      if (!up.primary) continue;
-      outputs[up.kind] = {
-        kind: up.kind,
-        format: up.format,
-        storageKey: up.key,
-        bucket: STORAGE_BUCKET,
-        bytes: up.bytes,
-        contentType: up.contentType,
-        checksumSha256: up.sha256,
-        mocked: false,
-      };
-    }
+    const outputs = buildArtifactRefs(result.uploads, STORAGE_BUCKET);
 
     await advance(
       job,
@@ -190,11 +229,12 @@ async function processJob(jobId) {
     // FAILED would fail validation too -- leaving the job stuck at its last
     // good status with no record of why. That is precisely what happened when
     // an unmapped `outputs` shape was assigned before save.
-    const fresh = (await Job.findOne({ jobId }).catch(() => null)) ?? job;
-    await advance(
-      fresh,
-      JOB_STATUS.FAILED,
-      `Failed at ${stage}: ${error.message}`,
+    await markFailed(
+      jobId,
+      stage,
+      error.message,
+      (id) => Job.findOne({ jobId: id }),
+      job,
     ).catch((persistError) => {
       console.error(`[jobRunner] could not persist FAILED for ${jobId}: ${persistError.message}`);
     });
