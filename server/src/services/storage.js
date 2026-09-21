@@ -62,6 +62,17 @@ export async function getObject(key) {
   return Buffer.concat(chunks);
 }
 
+/**
+ * The raw S3 response, Body left as a stream.
+ *
+ * Separate from getObject() on purpose: that one buffers the whole object into
+ * memory, which is fine for an 8KB SVG and wrong for a 16MB GLB. Callers that
+ * are piping to a response want the stream and the content metadata.
+ */
+export async function getObjectStream(key) {
+  return s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+}
+
 export async function deleteObject(key) {
   await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }

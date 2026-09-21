@@ -6,6 +6,158 @@ import { JOB_EVENTS, STAGES, applyJobEvent, deriveQuality, stageStates } from ".
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const OUTPUT_KINDS = ["circuit", "schematic", "pcb", "model3d"];
 
+/**
+ * The outputs that can actually be LOOKED at. `pcb` is a KiCad board file --
+ * there is no browser-native renderer for it, so it stays download-only rather
+ * than getting a pane that would never paint anything.
+ */
+const PREVIEWABLE = [
+  { kind: "circuit", label: "Circuit diagram" },
+  { kind: "schematic", label: "Schematic" },
+  { kind: "model3d", label: "3D model" },
+];
+
+/**
+ * Pinned, not floating: an unpinned CDN URL can change under a build that was
+ * never re-verified. Google's own host, as the component's docs publish it.
+ */
+const MODEL_VIEWER_CDN =
+  "https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js";
+
+/**
+ * Load <model-viewer> once, on demand.
+ *
+ * Module-level so a remount does not re-inject the tag, and a promise so two
+ * near-simultaneous activations share the one load instead of racing. Nothing
+ * here runs until someone actually opens the 3D tab -- the script is ~950KB
+ * before the GLB itself is even requested.
+ */
+let modelViewerLoad = null;
+function loadModelViewer() {
+  if (modelViewerLoad) return modelViewerLoad;
+  modelViewerLoad = new Promise((resolve, reject) => {
+    if (customElements.get("model-viewer")) return resolve();
+    const tag = document.createElement("script");
+    tag.type = "module";
+    tag.src = MODEL_VIEWER_CDN;
+    tag.onload = () => resolve();
+    tag.onerror = () => {
+      // Let a later attempt retry rather than caching the failure forever.
+      modelViewerLoad = null;
+      reject(new Error("model-viewer failed to load from the CDN"));
+    };
+    document.head.appendChild(tag);
+  });
+  return modelViewerLoad;
+}
+
+/**
+ * Inline previews for the three viewable outputs.
+ *
+ * Deliberately rendered BELOW the findings block, never in place of it. A board
+ * that looks plausible in a preview can still be one that must not be
+ * fabricated, so the preview is allowed to show what happened -- it is not
+ * allowed to be the only thing the eye lands on. `hasFindings` restates that in
+ * the pane itself, for anyone who scrolled past the block above.
+ */
+function OutputPreviews({ job, links, hasFindings }) {
+  const available = PREVIEWABLE.filter(({ kind }) => job.outputs?.[kind] && links[kind]);
+  // Default to the first CHEAP artifact. Never the GLB: selecting a tab is what
+  // triggers its fetch, so defaulting to it would pull 16MB on render.
+  const [tab, setTab] = useState(available[0]?.kind ?? null);
+  const [viewer, setViewer] = useState("idle"); // idle | loading | ready | error
+
+  useEffect(() => {
+    // Only now -- on a real activation of the 3D tab -- does anything 3D load.
+    if (tab !== "model3d" || viewer !== "idle") return;
+    let cancelled = false;
+    setViewer("loading");
+    loadModelViewer().then(
+      () => !cancelled && setViewer("ready"),
+      () => !cancelled && setViewer("error"),
+    );
+    return () => { cancelled = true; };
+  }, [tab, viewer]);
+
+  if (available.length === 0) return null;
+  const active = available.find((a) => a.kind === tab) ?? available[0];
+  const url = links[active.kind];
+  const artifact = job.outputs[active.kind];
+
+  return (
+    <div className="previews">
+      <div className="tabs">
+        {available.map(({ kind, label }) => (
+          <button
+            key={kind}
+            type="button"
+            className={`tab ${kind === active.kind ? "on" : ""}`}
+            onClick={() => setTab(kind)}
+          >
+            {label}
+            {kind === "model3d" && viewer === "idle" ? " ·" : ""}
+          </button>
+        ))}
+      </div>
+
+      {hasFindings && (
+        <p className="preview-note">
+          This renders a design that has findings above — seeing it does not
+          make it manufacturable.
+        </p>
+      )}
+
+      <div className="stage-view">
+        {active.kind === "model3d" ? (
+          viewer === "ready" ? (
+            // src is set ONLY once the script is ready and this tab is active,
+            // so the GLB is never fetched on a page that no one opened it on.
+            <model-viewer
+              // NOT the presigned S3 URL. model-viewer fetches with fetch(),
+              // and the bucket sends no Access-Control-Allow-Origin, so S3
+              // directly is blocked by the browser. This route streams the same
+              // bytes through the API, which the web origin is allowed to call.
+              src={`${API}/api/jobs/${job.jobId}/outputs/model3d/raw`}
+              alt={`3D model of ${job.designName}`}
+              camera-controls=""
+              auto-rotate=""
+              shadow-intensity="1"
+              style={{ width: "100%", height: "420px", background: "#0b0d11" }}
+            />
+          ) : (
+            <p className="muted preview-status">
+              {viewer === "error"
+                ? "3D viewer could not load from the CDN. The download link below still works."
+                : `Loading the 3D viewer, then ${(artifact.bytes / 1048576).toFixed(1)}MB of model…`}
+            </p>
+          )
+        ) : (
+          // <img>, NOT <object>, and the reason is measured rather than stylistic:
+          // the schematic SVG ships with width/height but NO viewBox. <object>
+          // embeds it as a document, which then renders at its fixed 1200x600
+          // and clips in any narrower pane. <img> treats it as a replaced
+          // element and scales it by its intrinsic aspect ratio, so it fits in
+          // both cases -- circuit (has a viewBox) and schematic (does not).
+          // <img> also needs no CORS to display, unlike the GLB below.
+          <img
+            src={url}
+            alt={`${active.label} for ${job.designName}`}
+            className="svg-view"
+          />
+        )}
+      </div>
+
+      <p className="muted preview-meta">
+        {active.label} · {artifact.format} ·{" "}
+        {artifact.bytes?.toLocaleString()} bytes ·{" "}
+        <a href={url} target="_blank" rel="noreferrer">
+          download ↓
+        </a>
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   const [health, setHealth] = useState(null);
   const [file, setFile] = useState(null);
@@ -225,6 +377,13 @@ export default function App() {
               );
             })}
           </div>
+
+          {/*
+            Below the findings block by construction. The download grid above is
+            kept as-is -- previews are in ADDITION to the links, not a
+            replacement for them.
+          */}
+          <OutputPreviews job={job} links={links} hasFindings={quality.worst === "warn"} />
         </section>
       )}
 

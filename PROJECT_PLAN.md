@@ -903,6 +903,33 @@ Failed at uploading: Upload failed for "circuit-diagram.svg": The specified buck
 server truth: status=failed compilable=false mockedPinCount=2 hasAllOutputs=false
 ```
 
+### Inline output previews (`web/`) - added 2026-09-21
+
+The three viewable outputs render in-page instead of being download-only: circuit and schematic as `<img>`, the GLB through Google's `<model-viewer>` (pinned CDN script, no new npm dependency). `pcb` stays download-only - a KiCad board file has no browser-native renderer, so a pane for it would never paint. Download links are kept alongside every preview, not replaced.
+
+**Two defects found by verifying, both of which `vite build` passed clean over.** Recorded because both are invisible to compilation and neither would have been caught by the reducer-level testing that covers the rest of the panel:
+
+1. **The bucket sends no `Access-Control-Allow-Origin`.** `<img>` and a download link are not CORS-restricted, so the SVG previews and every existing link were fine. `<model-viewer>` fetches the GLB with `fetch()`, which IS - so the 3D pane was blocked by the browser on a build that compiled perfectly. Closed by `GET /api/jobs/:jobId/outputs/:kind/raw`, which streams the artifact through the API, already CORS-configured for the web origin. It pipes rather than buffers: `getObject()` holds the whole object in memory, which is fine for an 8KB SVG and wrong for a 16MB GLB. **The better production fix is a CORS policy on the bucket itself**; that was not done because it mutates shared infrastructure, and this keeps the fix in-repo and reversible. The route is a pure addition - no existing response changed shape.
+2. **The schematic SVG carries `width`/`height` but no `viewBox`.** `<object>` embeds an SVG as a document, which then renders at its fixed 1200x600 and clips in any narrower pane; `<img>` scales it by intrinsic aspect ratio and works with or without a viewBox. A third, smaller one in the new CSS: `width:100%` plus `max-height` clamps the height while the width stays fixed, which stretches the image - fixed with `object-fit: contain`.
+
+**Verified on a real completed job** (`2d08a5c3`, `compilable=false`, `mockedPinCount=2` - deliberately the findings case, not a clean one):
+
+```
+circuit    200 image/svg+xml      8,582 B  viewBox 0 0 930 712  ratio 1.306  scales
+schematic  200 image/svg+xml    397,334 B  no viewBox, 1200x600 ratio 2.000  scales
+model3d    200 model/gltf-binary  16,648,784 B received = 16,648,784 declared (whole file)
+           glTF v2 valid, JSON 15,376B + BIN, 4 meshes / 4 nodes / 14 materials
+           Access-Control-Allow-Origin: http://localhost:5173  -> can fetch
+```
+
+Neither SVG is a blank canvas - circuit has 26 paths / 20 text / 18 lines, schematic has 636 circles / 656 text / 330 rects.
+
+**Lazy-loading.** Nothing 3D is requested until the 3D tab is actually clicked. The default tab is `circuit`, deliberately never the GLB, since selecting a tab is what triggers its fetch; the ~950KB CDN script loads inside a `useEffect` gated on `tab === "model3d"`, and `src` is set only once the script is ready.
+
+**Honest-findings discipline holds.** The preview is NOT gated on the design being clean - it renders regardless, so a partial result can be looked at - but the findings block renders above it by construction, and the pane carries its own restatement that seeing the board does not make it manufacturable.
+
+**Same limitation as the panel itself: the render is not browser-verified.** The checks above establish that the bytes are valid, complete, non-blank, correctly typed and reachable under the browser's own CORS rules - which is what decides whether a pane CAN paint. It is not the same as having looked at one. No human has viewed these panes.
+
 **KNOWN LIMITATION - "verified" here does not mean "seen".** The panel's LOGIC is verified live: real socket events, real server, both terminal paths, driving `web/src/jobState.js`, which is the component's own state module and not a hand-replayed imitation. **The RENDER is not.** No browser automation (Playwright, Puppeteer, jsdom) is installed in this repo and none was added - an accepted constraint, recorded here so it is not mistaken for a closed gap. The JSX wrapping the verified logic is covered only by `vite build` passing, which proves it compiles and says nothing about whether it paints. The class-name audit (every class the JSX can emit has a matching rule in `styles.css`; `todo` deliberately has none, since `.stage`'s base style *is* the todo look) narrows that gap mechanically but does not close it: **layout, overflow, contrast and stacking are unverified, and a human has not looked at the page.** The `failedAt` defect above is the proof that this class of error is reachable - it compiled clean and would have rendered a lie. Revisit when either becomes true: the UI stops being a dev-only upload harness, or a rendering defect is actually observed - at which point the cost of adding a headless browser is justified by something concrete rather than paid speculatively.
 
 ---

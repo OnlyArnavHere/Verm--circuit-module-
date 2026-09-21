@@ -7,7 +7,7 @@ import { checkIntakeShape } from "../upstream/intakeCheck.js";
 import { buildValidatedDesign } from "../design/validatedDesign.js";
 import { emitJobEvent } from "../services/events.js";
 import { enqueueJob } from "../services/jobRunner.js";
-import { presignedUrl } from "../services/storage.js";
+import { presignedUrl, getObjectStream } from "../services/storage.js";
 import { config } from "../config.js";
 
 export const jobsRouter = express.Router();
@@ -193,9 +193,55 @@ jobsRouter.get("/:jobId/upstream", async (req, res, next) => {
 });
 
 /**
+ * GET /api/jobs/:jobId/outputs/:kind/raw
+ * Stream an artifact through this origin instead of redirecting to S3.
+ *
+ * WHY THIS EXISTS, measured not assumed: the bucket sends no
+ * `Access-Control-Allow-Origin`. A presigned URL is fine for a download link
+ * and fine for <img>, because neither is CORS-restricted -- but <model-viewer>
+ * fetches the GLB with fetch(), which is. Pointed straight at S3 the 3D preview
+ * is blocked by the browser on a build that compiled perfectly.
+ *
+ * Serving it from here puts it behind the cors() middleware the API already
+ * configures for the web origin. The alternative is a CORS policy on the
+ * bucket itself, which is the better production answer but mutates shared
+ * infrastructure; this keeps the fix in the repo and reversible.
+ */
+jobsRouter.get("/:jobId/outputs/:kind/raw", async (req, res, next) => {
+  try {
+    const job = await Job.findOne({ jobId: req.params.jobId });
+    if (!job) {
+      return res
+        .status(404)
+        .json({ code: "NOT_FOUND", message: `No job ${req.params.jobId}` });
+    }
+
+    const artifact = job.outputs?.[req.params.kind];
+    if (!artifact) {
+      return res.status(409).json({
+        code: "OUTPUT_NOT_READY",
+        message: `Output "${req.params.kind}" has not been generated for job ${job.jobId}.`,
+      });
+    }
+
+    const object = await getObjectStream(artifact.storageKey);
+    res.setHeader("Content-Type", artifact.contentType ?? object.ContentType ?? "application/octet-stream");
+    if (object.ContentLength) res.setHeader("Content-Length", String(object.ContentLength));
+    // Immutable: an artifact is written once under a versioned key.
+    res.setHeader("Cache-Control", "private, max-age=3600, immutable");
+
+    // Pipe rather than buffer -- a 16MB GLB must not be held in memory whole.
+    object.Body.on("error", next);
+    return object.Body.pipe(res);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
  * GET /api/jobs/:jobId/outputs/:kind/url
- * Presigned download link for a generated artifact. Returns 409 until Phase 5
- * actually populates outputs.
+ * Presigned download link for a generated artifact. Used for the download
+ * links and for <img> previews, neither of which is CORS-restricted.
  */
 jobsRouter.get("/:jobId/outputs/:kind/url", async (req, res, next) => {
   try {

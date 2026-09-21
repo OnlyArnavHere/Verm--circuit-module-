@@ -150,3 +150,53 @@ pre {
 
 .output .v a { color: var(--accent); text-decoration: none; }
 .output .v a:hover { text-decoration: underline; }
+
+/* Inline previews -- below the findings block, never instead of it. */
+.previews { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.tab:hover { color: var(--text); }
+.tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.preview-note {
+  font-size: 12px;
+  color: var(--warn);
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--warn);
+  background: rgba(224, 166, 58, 0.09);
+  border-radius: 0 4px 4px 0;
+}
+
+.stage-view {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  /* SVGs are dark-on-light; a white plate keeps them legible in this theme. */
+  background: #fff;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/*
+  object-fit is load-bearing, not decoration: width:100% + max-height means the
+  clamp shortens the height while the width stays fixed, which STRETCHES the
+  image. `contain` letterboxes it instead, preserving the aspect ratio for both
+  the circuit (1.306, has a viewBox) and the schematic (2.000, width/height only).
+*/
+.svg-view { width: 100%; height: auto; max-height: 560px; object-fit: contain; display: block; }
+.preview-status { padding: 40px 16px; text-align: center; }
+.stage-view .preview-status { color: #6b7280; }
+.preview-meta { margin: 8px 0 0; }
+.preview-meta a { color: var(--accent); text-decoration: none; }
+.preview-meta a:hover { text-decoration: underline; }
