@@ -8,6 +8,128 @@
     "stock": 2475,
     "matchedOn": "part_number+package"
   },
+  "0603WAF100KT5E::0603": {
+    "ok": true,
+    "lcsc": "C22936",
+    "footprint": "jlcpcb:C22936",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 1Ω 75V Thick Film Resistor ±1% ±400ppm/℃ 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 156523,
+    "matchedOn": "part_number+package"
+  },
+  "0603WAF1303T5E::0603": {
+    "ok": true,
+    "lcsc": "C22795",
+    "footprint": "jlcpcb:C22795",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 130kΩ 75V Thick Film Resistor ±1% ±100ppm/℃ 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 43940,
+    "matchedOn": "part_number+package"
+  },
+  "0603WAF4702T5E::0603": {
+    "ok": true,
+    "lcsc": "C25819",
+    "footprint": "jlcpcb:C25819",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 47kΩ 75V Thick Film Resistor ±1% ±100ppm/℃ 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 1803082,
+    "matchedOn": "part_number+package"
+  },
+  "0603WAF5102T5E::0603": {
+    "ok": true,
+    "lcsc": "C23196",
+    "footprint": "jlcpcb:C23196",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 51kΩ 75V Thick Film Resistor ±1% ±100ppm/℃ 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 868696,
+    "matchedOn": "part_number+package"
+  },
+  "0603WAF9102T5E::0603": {
+    "ok": true,
+    "lcsc": "C23265",
+    "footprint": "jlcpcb:C23265",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 75V 91kΩ Thick Film Resistor ±1% ±100ppm/℃ 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 43043,
+    "matchedOn": "part_number+package"
+  },
+  "0R_LINK::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"0R_LINK\".",
+    "detail": {
+      "partNumber": "0R_LINK",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
+  "100K::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"100K\".",
+    "detail": {
+      "partNumber": "100K",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
+  "100nF_0603::0603": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"100nF_0603\".",
+    "detail": {
+      "partNumber": "100nF_0603",
+      "lcsc": null,
+      "package": "0603",
+      "packageMismatches": []
+    }
+  },
+  "10uF_0805::0805": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"10uF_0805\".",
+    "detail": {
+      "partNumber": "10uF_0805",
+      "lcsc": null,
+      "package": "0805",
+      "packageMismatches": []
+    }
+  },
+  "330R_0603::0603": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"330R_0603\".",
+    "detail": {
+      "partNumber": "330R_0603",
+      "lcsc": null,
+      "package": "0603",
+      "packageMismatches": []
+    }
+  },
+  "4.7K_0603::0603": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"4.7K_0603\".",
+    "detail": {
+      "partNumber": "4.7K_0603",
+      "lcsc": null,
+      "package": "0603",
+      "packageMismatches": []
+    }
+  },
+  "91931-31125LF::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"91931-31125LF\".",
+    "detail": {
+      "partNumber": "91931-31125LF",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
   "AD4057::SOT-23-6": {
     "ok": true,
     "lcsc": "C395461",
@@ -15,6 +137,15 @@
     "package": "SOT-23-6",
     "description": "-40℃~+85℃ 1 4.2V 4.5V~6V 45uA 600mA Charging IC Lithium Battery Support SOT-23-6 Battery Management ROHS",
     "stock": 6468,
+    "matchedOn": "part_number+package"
+  },
+  "AMS1117-3.3::SOT-223": {
+    "ok": true,
+    "lcsc": "C6186",
+    "footprint": "jlcpcb:C6186",
+    "package": "SOT-223",
+    "description": "-40℃~+125℃ 0.003%Vout 1 1.1V@(800mA) 15V 1A 3.3V 5mA 72dB@(120Hz) Fixed Over Current Protection、Short Circuit Protection、Thermal shutdown Positive SOT-223 Voltage Regulators - Linear, Low Drop Out (LDO) Regulators ROHS",
+    "stock": 2007447,
     "matchedOn": "part_number+package"
   },
   "BLE-SER-A-ANT::SMD,10.6x10.2mm": {
@@ -34,6 +165,127 @@
     "detail": {
       "partNumber": "BT2S",
       "package": "-",
+      "packageMismatches": []
+    }
+  },
+  "C22795::jlcpcb:C22795": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C22795\".",
+    "detail": {
+      "partNumber": "C22795",
+      "lcsc": null,
+      "package": "jlcpcb:C22795",
+      "packageMismatches": []
+    }
+  },
+  "C22936::jlcpcb:C22936": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C22936\".",
+    "detail": {
+      "partNumber": "C22936",
+      "lcsc": null,
+      "package": "jlcpcb:C22936",
+      "packageMismatches": []
+    }
+  },
+  "C23196::jlcpcb:C23196": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C23196\".",
+    "detail": {
+      "partNumber": "C23196",
+      "lcsc": null,
+      "package": "jlcpcb:C23196",
+      "packageMismatches": []
+    }
+  },
+  "C23265::jlcpcb:C23265": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C23265\".",
+    "detail": {
+      "partNumber": "C23265",
+      "lcsc": null,
+      "package": "jlcpcb:C23265",
+      "packageMismatches": []
+    }
+  },
+  "C25819::jlcpcb:C25819": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C25819\".",
+    "detail": {
+      "partNumber": "C25819",
+      "lcsc": null,
+      "package": "jlcpcb:C25819",
+      "packageMismatches": []
+    }
+  },
+  "C2835121::jlcpcb:C2835121": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C2835121\".",
+    "detail": {
+      "partNumber": "C2835121",
+      "lcsc": null,
+      "package": "jlcpcb:C2835121",
+      "packageMismatches": []
+    }
+  },
+  "C3017736::jlcpcb:C3017736": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C3017736\".",
+    "detail": {
+      "partNumber": "C3017736",
+      "lcsc": null,
+      "package": "jlcpcb:C3017736",
+      "packageMismatches": []
+    }
+  },
+  "C385252::jlcpcb:C385252": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C385252\".",
+    "detail": {
+      "partNumber": "C385252",
+      "lcsc": null,
+      "package": "jlcpcb:C385252",
+      "packageMismatches": []
+    }
+  },
+  "C59461::jlcpcb:C59461": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C59461\".",
+    "detail": {
+      "partNumber": "C59461",
+      "lcsc": null,
+      "package": "jlcpcb:C59461",
+      "packageMismatches": []
+    }
+  },
+  "C605433::jlcpcb:C605433": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C605433\".",
+    "detail": {
+      "partNumber": "C605433",
+      "lcsc": null,
+      "package": "jlcpcb:C605433",
+      "packageMismatches": []
+    }
+  },
+  "C96446::jlcpcb:C96446": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"C96446\".",
+    "detail": {
+      "partNumber": "C96446",
+      "lcsc": null,
+      "package": "jlcpcb:C96446",
       "packageMismatches": []
     }
   },
@@ -64,6 +316,41 @@
     "stock": 5883,
     "matchedOn": "part_number+package"
   },
+  "CL10A106MA8NRNC::0603": {
+    "ok": true,
+    "lcsc": "C96446",
+    "footprint": "jlcpcb:C96446",
+    "package": "0603",
+    "description": "10uF 25V X5R ±20% 0603 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+    "stock": 2798959,
+    "matchedOn": "part_number+package"
+  },
+  "CL10A226MQ8NRNC::0603": {
+    "ok": true,
+    "lcsc": "C59461",
+    "footprint": "jlcpcb:C59461",
+    "package": "0603",
+    "description": "22uF 6.3V X5R ±20% 0603 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS",
+    "stock": 1354022,
+    "matchedOn": "part_number+package"
+  },
+  "ESDA24P140-1U3M::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "Found part number \"ESDA24P140-1U3M\" in the catalogue but no entry matches package \"UNVERIFIED\". Not substituted — a different package is a different physical part.",
+    "detail": {
+      "partNumber": "ESDA24P140-1U3M",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": [
+        {
+          "lcsc": "C3702408",
+          "package": "QFN-3(2x2)",
+          "blocker": "package \"QFN-3(2x2)\" does not match upstream \"UNVERIFIED\""
+        }
+      ]
+    }
+  },
   "ESP-M1::SMD,15x12.3mm": {
     "ok": false,
     "code": "COMPONENT_NOT_FOUND",
@@ -73,6 +360,15 @@
       "package": "SMD,15x12.3mm",
       "packageMismatches": []
     }
+  },
+  "ESP32-WROOM-32E-N4::SMD,25.5x18mm": {
+    "ok": true,
+    "lcsc": "C701341",
+    "footprint": "jlcpcb:C701341",
+    "package": "SMD,25.5x18mm",
+    "description": "-40℃~+85℃ -98dBm 112mA 2.4GHz 20dBm 239mA 3V~3.6V Bluetooth4.2 ESP32-D0WD-V3、ESP32-D0WDR2-V3 On-board PCB Antenna UART、SDIO、SPI、I2C、GPIO SMD,25.5x18mm WiFi Modules ROHS",
+    "stock": 20082,
+    "matchedOn": "part_number+package"
   },
   "ESPC2-12-N4::SMD,24x16mm": {
     "ok": true,
@@ -91,6 +387,28 @@
     "description": "128KB 12bit 2.7V~5.5V 43 48MHz 8bit ARM Cortex-M0+ FLASH LQFP-48(7x7) Microcontrollers (MCU/MPU/SOC) ROHS",
     "stock": 895,
     "matchedOn": "part_number+package"
+  },
+  "FUSE-2A/32V-3::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"FUSE-2A/32V-3\".",
+    "detail": {
+      "partNumber": "FUSE-2A/32V-3",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
+  "FUSE-7A/24V-6::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"FUSE-7A/24V-6\".",
+    "detail": {
+      "partNumber": "FUSE-7A/24V-6",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
   },
   "GSAT11::插件": {
     "ok": true,
@@ -155,6 +473,15 @@
     "stock": 1821,
     "matchedOn": "part_number+package"
   },
+  "IP2312-4V35::ESOP-8": {
+    "ok": true,
+    "lcsc": "C605433",
+    "footprint": "jlcpcb:C605433",
+    "package": "ESOP-8",
+    "description": "-40℃~+150℃ 1 3A 4.5V~5.5V 40uA Charging IC Lithium Battery Support ESOP-8 Battery Management ROHS",
+    "stock": 4330,
+    "matchedOn": "part_number+package"
+  },
   "IP5310::QFN-32-EP(5x5)": {
     "ok": true,
     "lcsc": "C191176",
@@ -191,6 +518,17 @@
     "description": "I2C Inductance-to-Digital Converter Low power mode、Digital communication interface、Interrupt output、Integrated ADC、Digital filtering/signal processing QFN-16-EP(4x4) Specialized Sensors ROHS",
     "stock": 120,
     "matchedOn": "part_number+package"
+  },
+  "LED_0603_GRN::0603": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"LED_0603_GRN\".",
+    "detail": {
+      "partNumber": "LED_0603_GRN",
+      "lcsc": null,
+      "package": "0603",
+      "packageMismatches": []
+    }
   },
   "LMA2718T421-OA5-2::SMD-4P,2.8x1.9mm": {
     "ok": true,
@@ -300,6 +638,50 @@
     "stock": 513,
     "matchedOn": "part_number+package"
   },
+  "NO_MFR_PART_CUSTOM_SOLDER_JUMPER::custom_smt_jumper": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"NO_MFR_PART_CUSTOM_SOLDER_JUMPER\".",
+    "detail": {
+      "partNumber": "NO_MFR_PART_CUSTOM_SOLDER_JUMPER",
+      "lcsc": null,
+      "package": "custom_smt_jumper",
+      "packageMismatches": []
+    }
+  },
+  "NO_MFR_PART_CUSTOM_TERMINAL_PAD::custom_platedhole": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"NO_MFR_PART_CUSTOM_TERMINAL_PAD\".",
+    "detail": {
+      "partNumber": "NO_MFR_PART_CUSTOM_TERMINAL_PAD",
+      "lcsc": null,
+      "package": "custom_platedhole",
+      "packageMismatches": []
+    }
+  },
+  "NO_MFR_PART_GIVEN_0603_100R::0603": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"NO_MFR_PART_GIVEN_0603_100R\".",
+    "detail": {
+      "partNumber": "NO_MFR_PART_GIVEN_0603_100R",
+      "lcsc": null,
+      "package": "0603",
+      "packageMismatches": []
+    }
+  },
+  "NO_MFR_PART_GIVEN_2.2uH_INDUCTOR::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"NO_MFR_PART_GIVEN_2.2uH_INDUCTOR\".",
+    "detail": {
+      "partNumber": "NO_MFR_PART_GIVEN_2.2uH_INDUCTOR",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
   "PCF8563::SOP-8": {
     "ok": true,
     "lcsc": "C5795601",
@@ -325,6 +707,24 @@
     "package": "SMD,15.2x11.2mm",
     "description": "-102dBm、-99dBm、-96.5dBm、-92dBm -40℃~+85℃ 1.71V~3.8V 11mA 5.3mA 8dBm Bluetooth 5.3 CC2340R5 chip IPEX interface SPI、ADC、UART、I2C SMD,15.2x11.2mm Bluetooth Modules ROHS",
     "stock": 42,
+    "matchedOn": "part_number+package"
+  },
+  "SCR0603J1K::0603": {
+    "ok": true,
+    "lcsc": "C3017736",
+    "footprint": "jlcpcb:C3017736",
+    "package": "0603",
+    "description": "-55℃~+155℃ 100mW 1kΩ 75V Thick Film Resistor ±200ppm/℃ ±5% 0603 Chip Resistor - Surface Mount ROHS",
+    "stock": 44,
+    "matchedOn": "part_number+package"
+  },
+  "SHT30-ARP-B2.5KS::DFN-8-EP(2.5x2.5)": {
+    "ok": true,
+    "lcsc": "C86346",
+    "footprint": "jlcpcb:C86346",
+    "package": "DFN-8-EP(2.5x2.5)",
+    "description": "-40℃~+125℃ 0%RH~100%RH 14bit 2.4V~5.5V 217uA Factory calibration、Built-in temperature and humidity compensation ±0.3℃ ±3%RH DFN-8-EP(2.5x2.5) Temperature and Humidity Sensor ROHS",
+    "stock": 2025,
     "matchedOn": "part_number+package"
   },
   "SI7006-A20-IM1R::DFN-6(3x3)": {
@@ -381,6 +781,17 @@
     "stock": 5720,
     "matchedOn": "part_number+package"
   },
+  "TACTILE_SW_6MM::SMD-4P": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"TACTILE_SW_6MM\".",
+    "detail": {
+      "partNumber": "TACTILE_SW_6MM",
+      "lcsc": null,
+      "package": "SMD-4P",
+      "packageMismatches": []
+    }
+  },
   "TP4056::ESOP-8": {
     "ok": true,
     "lcsc": "C725790",
@@ -415,6 +826,26 @@
     "package": "ESOP-8L",
     "description": "-20℃~+85℃ 1 1A 2.8V 4.2V 4.5V~5.5V Linear Charging IC Lithium-ion/Polymer ESOP-8L Power Management - Specialized ROHS",
     "stock": 10613,
+    "matchedOn": "part_number+package"
+  },
+  "TYPE-C-16PF::UNVERIFIED": {
+    "ok": false,
+    "code": "COMPONENT_NOT_FOUND",
+    "message": "No catalogue entry for part number \"TYPE-C-16PF\".",
+    "detail": {
+      "partNumber": "TYPE-C-16PF",
+      "lcsc": null,
+      "package": "UNVERIFIED",
+      "packageMismatches": []
+    }
+  },
+  "XL-1608SURC-06::0603": {
+    "ok": true,
+    "lcsc": "C965799",
+    "footprint": "jlcpcb:C965799",
+    "package": "0603",
+    "description": "-40℃~+85℃ 120° 2.3V 20mA 225mcd 50mW 620nm~630nm 625nm Discrete Diode Red Top-mount Water Clear 0603 LED Indication - Discrete ROHS",
+    "stock": 5989534,
     "matchedOn": "part_number+package"
   },
   "YD2310AR-7.3::插件": {
